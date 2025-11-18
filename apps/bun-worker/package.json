@@ -1,0 +1,27 @@
+{
+	"name": "@hc/bun-worker",
+	"module": "src/index.ts",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "bun --watch src/index.ts",
+		"build": "bun build src/index.ts --outdir dist --target bun",
+		"start": "bun run ./dist",
+		"format": "prettier --write .",
+		"lint": "prettier --check ."
+	},
+	"dependencies": {
+		"@hc/channel-sync": "*",
+		"@hc/db": "*",
+		"googleapis": "^164.1.0",
+		"neverthrow": "^8.2.0",
+		"zod": "^4.1.12"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"prettier": "^3.6.2"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}

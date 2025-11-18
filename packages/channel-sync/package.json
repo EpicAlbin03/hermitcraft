@@ -1,0 +1,23 @@
+{
+	"name": "@hc/channel-sync",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"format": "prettier --write .",
+		"lint": "prettier --check ."
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"prettier": "^3.6.2"
+	},
+	"peerDependencies": {
+		"typescript": "^5",
+		"@hc/db": "*"
+	},
+	"dependencies": {
+		"googleapis": "^164.1.0",
+		"neverthrow": "^8.2.0",
+		"zod": "^4.1.12"
+	}
+}
