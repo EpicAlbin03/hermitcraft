@@ -3,7 +3,7 @@ import { channelIds } from './channeIds';
 import { getDbConnection } from './connection';
 
 async function main() {
-	const dbClient = getDbConnection(Bun.env.DATABASE_URL!);
+	const dbClient = getDbConnection(Bun.env.MYSQL_URL!);
 
 	await dbClient.insert(DB_SCHEMA.channels).values(
 		channelIds.map((channel) => ({
