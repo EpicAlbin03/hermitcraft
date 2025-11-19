@@ -47,8 +47,9 @@ const main = async () => {
 
 const DELAY_MS = 60 * 60 * 1000; // 1 hour
 
-setInterval(() => {
-	main();
-}, DELAY_MS);
+// DISABLED TEMPORARILY
+// setInterval(() => {
+// 	main();
+// }, DELAY_MS);
 
-main();
+// main();
