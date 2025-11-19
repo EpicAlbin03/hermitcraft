@@ -5,6 +5,7 @@
 	},
 	"scripts": {
 		"db:push": "drizzle-kit push",
+		"seed": "bun ./src/seed.ts",
 		"format": "prettier --write .",
 		"lint": "prettier --check ."
 	},
