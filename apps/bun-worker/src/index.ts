@@ -45,10 +45,10 @@ const main = async () => {
 	console.log(`LIVE CRAWLER TOOK ${performance.now() - start}ms`);
 };
 
-const THIRTY_MINUTES_MS = 30 * 60 * 1000;
+const DELAY_MS = 60 * 60 * 1000; // 1 hour
 
 setInterval(() => {
 	main();
-}, THIRTY_MINUTES_MS);
+}, DELAY_MS);
 
 main();
