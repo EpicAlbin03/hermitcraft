@@ -12,6 +12,7 @@ async function main() {
 	}
 
 	await dbClient.$client.end();
+	process.exit(0);
 }
 
 main();
