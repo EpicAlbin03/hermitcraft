@@ -17,7 +17,7 @@ export const DB_QUERIES = {
 				.from(DB_SCHEMA.channels)
 				.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId))
 				.limit(1),
-			() => new Error('Failed to get channel')
+			() => new Error(`Failed to get channel ${ytChannelId}`)
 		).map((channels) => channels[0] || null);
 	},
 
@@ -28,7 +28,7 @@ export const DB_QUERIES = {
 				.from(DB_SCHEMA.videos)
 				.where(eq(DB_SCHEMA.videos.ytVideoId, ytVideoId))
 				.limit(1),
-			() => new Error('Failed to get video')
+			() => new Error(`Failed to get video ${ytVideoId}`)
 		).map((videos) => videos[0] || null);
 	}
 };

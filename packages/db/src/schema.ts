@@ -4,6 +4,8 @@ import * as t from 'drizzle-orm/mysql-core';
 export const channels = table('channels', {
 	ytChannelId: t.varchar('yt_channel_id', { length: 55 }).primaryKey(),
 	name: t.text('name').notNull(),
+	description: t.text('description').notNull(),
+	thumbnailUrl: t.text('thumbnail_url').notNull(),
 	createdAt: t.timestamp('created_at').notNull().defaultNow()
 });
 

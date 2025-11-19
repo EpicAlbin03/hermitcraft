@@ -1,10 +1,37 @@
 import { google } from 'googleapis';
 import { ResultAsync, err, ok } from 'neverthrow';
+import { channelIds } from '@hc/db';
 
 const youtube = google.youtube({
 	version: 'v3',
 	auth: Bun.env.YT_API_KEY!
 });
+
+export const getAllChannels = async () => {
+	return ResultAsync.fromPromise(
+		youtube.channels.list({
+			part: ['id', 'snippet'],
+			id: channelIds.map((channel) => channel.id),
+			maxResults: channelIds.length
+		}),
+		(error) => new Error(`Failed to get all channels: ${error}`)
+	).andThen((response) => {
+		const items = response.data.items || [];
+		if (items.length !== channelIds.length) {
+			return err(new Error('Failed to get all channels'));
+		}
+
+		return ok(
+			items.map((item) => ({
+				ytChannelId: item.id!,
+				name: item.snippet?.title || '',
+				description: item.snippet?.description || '',
+				thumbnailUrl:
+					item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.default?.url || ''
+			}))
+		);
+	});
+};
 
 export const getVideosForChannel = async (args: { ytChannelId: string; maxResults?: number }) => {
 	const { ytChannelId, maxResults: maxResultsArg } = args;

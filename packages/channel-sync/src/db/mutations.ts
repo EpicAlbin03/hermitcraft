@@ -4,6 +4,38 @@ import { DB_SCHEMA, eq } from '@hc/db';
 import { DB_QUERIES } from './queries';
 
 export const DB_MUTATIONS = {
+	upsertChannel: (data: {
+		ytChannelId: string;
+		name: string;
+		description: string;
+		thumbnailUrl: string;
+	}) => {
+		return DB_QUERIES.getChannel(data.ytChannelId).andThen((existing) => {
+			if (existing) {
+				return ResultAsync.fromPromise(
+					dbClient
+						.update(DB_SCHEMA.channels)
+						.set({
+							name: data.name,
+							description: data.description,
+							thumbnailUrl: data.thumbnailUrl
+						})
+						.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId)),
+					() => new Error('Failed to update channel')
+				).map(() => ({ ytChannelId: data.ytChannelId, wasInserted: false }));
+			} else {
+				return ResultAsync.fromPromise(
+					dbClient.insert(DB_SCHEMA.channels).values({
+						ytChannelId: data.ytChannelId,
+						name: data.name,
+						description: data.description,
+						thumbnailUrl: data.thumbnailUrl
+					}),
+					() => new Error('Failed to insert channel')
+				).map(() => ({ ytChannelId: data.ytChannelId, wasInserted: true }));
+			}
+		});
+	},
 	upsertVideo: (data: {
 		ytVideoId: string;
 		ytChannelId: string;

@@ -98,8 +98,10 @@
     "packages/db": {
       "name": "@hc/db",
       "dependencies": {
+        "@hc/channel-sync": "*",
         "drizzle-orm": "^0.44.7",
         "mysql2": "^3.15.3",
+        "neverthrow": "^8.2.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
