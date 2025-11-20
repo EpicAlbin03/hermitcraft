@@ -1,6 +1,5 @@
 import { ResultAsync } from 'neverthrow';
-import { dbClient } from '.';
-import { DB_SCHEMA, eq } from '@hc/db';
+import { DB_SCHEMA, eq, dbClient } from '@hc/db';
 import { DB_QUERIES } from './queries';
 
 export const DB_MUTATIONS = {
