@@ -6,6 +6,7 @@ export const channels = table('channels', {
 	name: t.text('name').notNull(),
 	description: t.text('description').notNull(),
 	thumbnailUrl: t.text('thumbnail_url').notNull(),
+	customUrl: t.text('custom_url').notNull(),
 	createdAt: t.timestamp('created_at').notNull().defaultNow()
 });
 

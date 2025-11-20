@@ -8,6 +8,7 @@ export const DB_MUTATIONS = {
 		name: string;
 		description: string;
 		thumbnailUrl: string;
+		customUrl: string;
 	}) => {
 		return DB_QUERIES.getChannel(data.ytChannelId).andThen((existing) => {
 			if (existing) {
@@ -17,7 +18,8 @@ export const DB_MUTATIONS = {
 						.set({
 							name: data.name,
 							description: data.description,
-							thumbnailUrl: data.thumbnailUrl
+							thumbnailUrl: data.thumbnailUrl,
+							customUrl: data.customUrl
 						})
 						.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId)),
 					() => new Error('Failed to update channel')
@@ -28,7 +30,8 @@ export const DB_MUTATIONS = {
 						ytChannelId: data.ytChannelId,
 						name: data.name,
 						description: data.description,
-						thumbnailUrl: data.thumbnailUrl
+						thumbnailUrl: data.thumbnailUrl,
+						customUrl: data.customUrl
 					}),
 					() => new Error('Failed to insert channel')
 				).map(() => ({ ytChannelId: data.ytChannelId, wasInserted: true }));

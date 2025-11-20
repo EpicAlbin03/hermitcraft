@@ -27,7 +27,8 @@ export const getAllChannels = async () => {
 				name: item.snippet?.title || '',
 				description: item.snippet?.description || '',
 				thumbnailUrl:
-					item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.default?.url || ''
+					item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.default?.url || '',
+				customUrl: item.snippet?.customUrl || ''
 			}))
 		);
 	});

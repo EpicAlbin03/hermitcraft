@@ -20,8 +20,10 @@ export const remoteGetAllChannels = query(async () => {
 
 export const remoteCreateChannel = form(
 	z.object({
-		channelName: z.string(),
-		ytChannelId: z.string()
+		ytChannelId: z.string(),
+		name: z.string(),
+		description: z.string(),
+		thumbnailUrl: z.string()
 	}),
 	async (data) => {
 		// const event = getRequestEvent();

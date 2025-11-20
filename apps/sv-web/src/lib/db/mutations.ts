@@ -8,13 +8,15 @@ export const DB_MUTATIONS = {
 		name: string;
 		description: string;
 		thumbnailUrl: string;
+		customUrl: string;
 	}) => {
 		const createChannelResult = await ResultAsync.fromPromise(
 			dbClient.insert(DB_SCHEMA.channels).values({
 				ytChannelId: data.ytChannelId,
 				name: data.name,
 				description: data.description,
-				thumbnailUrl: data.thumbnailUrl
+				thumbnailUrl: data.thumbnailUrl,
+				customUrl: data.customUrl
 			}),
 			(error) => {
 				console.error(`DB MUTATIONS.createChannel: ${error}`);

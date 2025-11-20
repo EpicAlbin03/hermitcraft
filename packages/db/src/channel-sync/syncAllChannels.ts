@@ -21,7 +21,8 @@ export const syncAllChannels = async () => {
 				ytChannelId: channel.ytChannelId,
 				name: channel.name,
 				description: channel.description,
-				thumbnailUrl: channel.thumbnailUrl
+				thumbnailUrl: channel.thumbnailUrl,
+				customUrl: channel.customUrl
 			})
 		)
 	);
