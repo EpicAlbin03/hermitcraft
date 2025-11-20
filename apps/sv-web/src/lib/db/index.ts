@@ -1,6 +1,6 @@
 import { building } from '$app/environment';
 import { env } from '$env/dynamic/private';
-import { getDbConnection, type DbConnection } from '@hc/db';
+import { getDrizzleInstance, type DbConnection } from '@hc/db';
 
 const globalForDb = globalThis as unknown as {
 	client: DbConnection | undefined;
@@ -12,7 +12,7 @@ const getClient = () => {
 	}
 
 	if (!globalForDb.client) {
-		globalForDb.client = getDbConnection(env.MYSQL_URL!);
+		globalForDb.client = getDrizzleInstance(env.MYSQL_URL!);
 	}
 
 	return globalForDb.client;
