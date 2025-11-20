@@ -3,11 +3,18 @@ import { dbClient } from '.';
 import { DB_SCHEMA } from '@hc/db';
 
 export const DB_MUTATIONS = {
-	createChannel: async (data: { channelName: string; ytChannelId: string }) => {
+	createChannel: async (data: {
+		ytChannelId: string;
+		name: string;
+		description: string;
+		thumbnailUrl: string;
+	}) => {
 		const createChannelResult = await ResultAsync.fromPromise(
 			dbClient.insert(DB_SCHEMA.channels).values({
-				name: data.channelName,
-				ytChannelId: data.ytChannelId
+				ytChannelId: data.ytChannelId,
+				name: data.name,
+				description: data.description,
+				thumbnailUrl: data.thumbnailUrl
 			}),
 			(error) => {
 				console.error(`DB MUTATIONS.createChannel: ${error}`);
