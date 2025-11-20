@@ -1,14 +1,19 @@
+import { RedditSVG, TwitchSVG, TwitterSVG } from '$lib/assets/svg';
+
 export const links = [
 	{
 		title: 'HermitCraft Twitch',
-		link: 'https://twitch.tv/hermitcraft_'
+		url: 'https://twitch.tv/hermitcraft_',
+		icon: TwitchSVG
 	},
 	{
 		title: 'HermitCraft Twitter',
-		link: 'https://x.com/hermitcraft_'
+		url: 'https://x.com/hermitcraft_',
+		icon: TwitterSVG
 	},
 	{
 		title: 'HermitCraft Reddit',
-		link: 'https://reddit.com/r/HermitCraft'
+		url: 'https://reddit.com/r/HermitCraft',
+		icon: RedditSVG
 	}
 ];

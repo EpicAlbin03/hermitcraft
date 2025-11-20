@@ -1,11 +1,12 @@
 <script lang="ts">
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
-	import type { ComponentProps } from 'svelte';
+	import type { ComponentProps, Component } from 'svelte';
 	import { ChevronRightIcon, LinkIcon, MapIcon, UsersIcon } from '@lucide/svelte';
 	import type { Channel } from '@hc/db';
 	import { links } from '$lib/assets/data/links';
 	import { maps } from '$lib/assets/data/maps';
+	import { cn } from '$lib/utils';
 
 	type Props = ComponentProps<typeof Sidebar.Root> & {
 		channels: Channel[];
@@ -13,7 +14,21 @@
 
 	let { ref = $bindable(null), collapsible = 'icon', channels, ...restProps }: Props = $props();
 
-	const items = [
+	type Item = {
+		title: string;
+		icon: Component;
+		isOpen: boolean;
+		items: SubItem[];
+	};
+
+	type SubItem = {
+		title: string;
+		url: string;
+		icon?: string | Component;
+		iconClass?: string;
+	};
+
+	const items: Item[] = [
 		{
 			title: 'Members',
 			icon: UsersIcon,
@@ -22,7 +37,8 @@
 				.map((channel) => ({
 					title: channel.name,
 					url: `/${channel.customUrl}`,
-					img: channel.thumbnailUrl
+					icon: channel.thumbnailUrl,
+					iconClass: 'rounded-full'
 				}))
 				.sort((a, b) => a.title.localeCompare(b.title))
 		},
@@ -32,7 +48,8 @@
 			isOpen: false,
 			items: links.map((link) => ({
 				title: link.title,
-				url: link.link
+				url: link.url,
+				icon: link.icon
 			}))
 		},
 		{
@@ -41,7 +58,8 @@
 			isOpen: false,
 			items: maps.map((map) => ({
 				title: map.title,
-				url: map.link
+				url: map.url,
+				icon: '/favicon-32x32.png'
 			}))
 		}
 	];
@@ -75,12 +93,16 @@
 												<Sidebar.MenuSubButton>
 													{#snippet child({ props })}
 														<a href={subItem.url} {...props}>
-															{#if subItem.img}
-																<img
-																	src={subItem.img}
-																	alt={subItem.title}
-																	class="h-4 w-4 rounded-full"
-																/>
+															{#if subItem.icon}
+																{#if typeof subItem.icon === 'string'}
+																	<img
+																		src={subItem.icon}
+																		alt={subItem.title}
+																		class={cn('h-4 w-4', subItem.iconClass)}
+																	/>
+																{:else}
+																	<subItem.icon />
+																{/if}
 															{/if}
 															<span>{subItem.title}</span>
 														</a>
