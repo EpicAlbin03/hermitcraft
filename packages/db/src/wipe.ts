@@ -62,6 +62,7 @@ const main = async () => {
 		console.log(`Wiped ${name}`);
 	}
 	console.log('DB tables wiped successfully');
+	process.exit(0);
 };
 
 main();
