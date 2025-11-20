@@ -1,8 +1,6 @@
-import { DB_SCHEMA, getDbConnection } from '@hc/db';
+import { DB_SCHEMA, dbClient } from '@hc/db';
 
 const main = async () => {
-	const dbClient = getDbConnection(Bun.env.MYSQL_URL!);
-
 	const prompt = 'This will wipe DB tables. Type "yes" to continue: ';
 	const input = await new Promise((res) => {
 		process.stdout.write(prompt);

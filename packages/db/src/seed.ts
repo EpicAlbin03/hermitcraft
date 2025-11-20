@@ -1,9 +1,7 @@
+import { dbClient } from '.';
 import { syncAllChannels } from './channel-sync';
-import { getDbConnection } from './connection';
 
 async function main() {
-	const dbClient = getDbConnection(Bun.env.MYSQL_URL!);
-
 	const syncAllChannelsResult = await syncAllChannels();
 	if (syncAllChannelsResult.isOk()) {
 		console.log('All channels synced successfully');
