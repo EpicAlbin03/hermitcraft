@@ -13,7 +13,6 @@
     "apps/bun-worker": {
       "name": "@hc/bun-worker",
       "dependencies": {
-        "@hc/channel-sync": "*",
         "@hc/db": "*",
         "googleapis": "^164.1.0",
         "neverthrow": "^8.2.0",
@@ -65,27 +64,11 @@
         "zod": "^4.1.12",
       },
     },
-    "packages/channel-sync": {
-      "name": "@hc/channel-sync",
-      "dependencies": {
-        "googleapis": "^164.1.0",
-        "neverthrow": "^8.2.0",
-        "zod": "^4.1.12",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
-        "prettier": "^3.6.2",
-      },
-      "peerDependencies": {
-        "@hc/db": "*",
-        "typescript": "^5",
-      },
-    },
     "packages/db": {
       "name": "@hc/db",
       "dependencies": {
-        "@hc/channel-sync": "*",
         "drizzle-orm": "^0.44.7",
+        "googleapis": "^166.0.0",
         "mysql2": "^3.15.3",
         "neverthrow": "^8.2.0",
       },
@@ -192,8 +175,6 @@
     "@floating-ui/utils": ["@floating-ui/utils@0.2.10", "", {}, "sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ=="],
 
     "@hc/bun-worker": ["@hc/bun-worker@workspace:apps/bun-worker"],
-
-    "@hc/channel-sync": ["@hc/channel-sync@workspace:packages/channel-sync"],
 
     "@hc/db": ["@hc/db@workspace:packages/db"],
 
@@ -920,6 +901,8 @@
     "@eslint-community/eslint-utils/eslint-visitor-keys": ["eslint-visitor-keys@3.4.3", "", {}, "sha512-wpc+LXeiyiisxPlEkUzU6svyS1frIO3Mgxj1fdy7Pm8Ygzguax2N3Fa/D/ag1WqbOprdI+uY6wMUl8/a2G+iag=="],
 
     "@eslint/eslintrc/globals": ["globals@14.0.0", "", {}, "sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ=="],
+
+    "@hc/db/googleapis": ["googleapis@166.0.0", "", { "dependencies": { "google-auth-library": "^10.2.0", "googleapis-common": "^8.0.0" } }, "sha512-Xz7yG+ihVvYMwSULKIMeTp6vDX95rrSbsaR3xUmgYjwQdAkchMQ5ndFeG5QZwcBOIyvJFvG7ZLIZE7mKW2X/hw=="],
 
     "@tailwindcss/oxide-wasm32-wasi/@emnapi/core": ["@emnapi/core@1.7.1", "", { "dependencies": { "@emnapi/wasi-threads": "1.1.0", "tslib": "^2.4.0" }, "bundled": true }, "sha512-o1uhUASyo921r2XtHYOHy7gdkGLge8ghBEQHMWmyJFoXlpU58kIrhhN3w26lpQb6dspetweapMn2CSNwQ8I4wg=="],
 

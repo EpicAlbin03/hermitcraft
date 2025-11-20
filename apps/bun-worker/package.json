@@ -11,7 +11,6 @@
 		"lint": "prettier --check ."
 	},
 	"dependencies": {
-		"@hc/channel-sync": "*",
 		"@hc/db": "*",
 		"googleapis": "^164.1.0",
 		"neverthrow": "^8.2.0",

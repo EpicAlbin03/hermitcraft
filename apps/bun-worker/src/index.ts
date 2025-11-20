@@ -1,4 +1,4 @@
-import { getRecentVideosForChannel, syncVideo } from '@hc/channel-sync';
+import { getRecentVideosForChannel, syncVideo } from '@hc/db';
 import { DB_QUERIES } from './db';
 
 const main = async () => {

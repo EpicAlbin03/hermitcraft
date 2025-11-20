@@ -21,8 +21,8 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"@hc/channel-sync": "*",
 		"drizzle-orm": "^0.44.7",
+		"googleapis": "^166.0.0",
 		"mysql2": "^3.15.3",
 		"neverthrow": "^8.2.0"
 	}

@@ -1,4 +1,4 @@
-import { syncAllChannels } from '@hc/channel-sync';
+import { syncAllChannels } from './channel-sync';
 import { getDbConnection } from './connection';
 
 async function main() {
