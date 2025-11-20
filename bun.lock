@@ -27,20 +27,6 @@
         "typescript": "^5",
       },
     },
-    "apps/local-helpers": {
-      "name": "local-helpers",
-      "dependencies": {
-        "@hc/channel-sync": "*",
-        "@hc/db": "*",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
-        "prettier": "^3.6.2",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
-      },
-    },
     "apps/sv-web": {
       "name": "@hc/sv-web",
       "version": "0.0.1",
@@ -684,8 +670,6 @@
     "lightningcss-win32-x64-msvc": ["lightningcss-win32-x64-msvc@1.30.2", "", { "os": "win32", "cpu": "x64" }, "sha512-5g1yc73p+iAkid5phb4oVFMB45417DkRevRbt/El/gKXJk4jid+vPFF/AXbxn05Aky8PapwzZrdJShv5C0avjw=="],
 
     "lilconfig": ["lilconfig@2.1.0", "", {}, "sha512-utWOt/GHzuUxnLKxB6dk81RoOeoNeHgbrXiuGk4yyF5qlRz+iIVWu56E2fqGHFrXz0QNUhLB/8nKqvRH66JKGQ=="],
-
-    "local-helpers": ["local-helpers@workspace:apps/local-helpers"],
 
     "locate-character": ["locate-character@3.0.0", "", {}, "sha512-SW13ws7BjaeJ6p7Q6CO2nchbYEc3X3J6WrmTTDto7yMPqVSZTUyY5Tjbid+Ab8gLnATtygYtiDIJGQRRn2ZOiA=="],
 
