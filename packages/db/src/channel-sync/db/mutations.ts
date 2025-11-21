@@ -1,25 +1,20 @@
 import { ResultAsync } from 'neverthrow';
-import { DB_SCHEMA, eq, dbClient } from '@hc/db';
+import { DB_SCHEMA, eq, dbClient, type Channel, type Video } from '@hc/db';
 import { DB_QUERIES } from './queries';
 
 export const DB_MUTATIONS = {
-	upsertChannel: (data: {
-		ytChannelId: string;
-		name: string;
-		description: string;
-		thumbnailUrl: string;
-		customUrl: string;
-	}) => {
+	upsertChannel: (data: Omit<Channel, 'createdAt'>) => {
 		return DB_QUERIES.getChannel(data.ytChannelId).andThen((existing) => {
 			if (existing) {
 				return ResultAsync.fromPromise(
 					dbClient
 						.update(DB_SCHEMA.channels)
 						.set({
-							name: data.name,
 							description: data.description,
 							thumbnailUrl: data.thumbnailUrl,
-							customUrl: data.customUrl
+							viewCount: data.viewCount,
+							subscriberCount: data.subscriberCount,
+							videoCount: data.videoCount
 						})
 						.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId)),
 					() => new Error('Failed to update channel')
@@ -31,30 +26,26 @@ export const DB_MUTATIONS = {
 						name: data.name,
 						description: data.description,
 						thumbnailUrl: data.thumbnailUrl,
-						customUrl: data.customUrl
+						handle: data.handle,
+						viewCount: data.viewCount,
+						subscriberCount: data.subscriberCount,
+						videoCount: data.videoCount,
+						joinedAt: data.joinedAt
 					}),
 					() => new Error('Failed to insert channel')
 				).map(() => ({ ytChannelId: data.ytChannelId, wasInserted: true }));
 			}
 		});
 	},
-	upsertVideo: (data: {
-		ytVideoId: string;
-		ytChannelId: string;
-		title: string;
-		description: string;
-		thumbnailUrl: string;
-		publishedAt: Date;
-		viewCount: number;
-		likeCount: number;
-		commentCount: number;
-	}) => {
+	upsertVideo: (data: Omit<Video, 'createdAt'>) => {
 		return DB_QUERIES.getVideo(data.ytVideoId).andThen((existing) => {
 			if (existing) {
 				return ResultAsync.fromPromise(
 					dbClient
 						.update(DB_SCHEMA.videos)
 						.set({
+							title: data.title,
+							thumbnailUrl: data.thumbnailUrl,
 							viewCount: data.viewCount,
 							likeCount: data.likeCount,
 							commentCount: data.commentCount
@@ -68,7 +59,6 @@ export const DB_MUTATIONS = {
 						ytVideoId: data.ytVideoId,
 						ytChannelId: data.ytChannelId,
 						title: data.title,
-						description: data.description,
 						thumbnailUrl: data.thumbnailUrl,
 						publishedAt: data.publishedAt,
 						viewCount: data.viewCount,

@@ -1,14 +1,21 @@
 import { ResultAsync } from 'neverthrow';
 import { dbClient } from '.';
-import { DB_SCHEMA, eq, desc } from '@hc/db';
+import { DB_SCHEMA, eq } from '@hc/db';
 
 export const DB_QUERIES = {
-	getAllChannels: async () => {
+	getSidebarChannels: async () => {
 		const channelsResult = await ResultAsync.fromPromise(
-			dbClient.select().from(DB_SCHEMA.channels),
+			dbClient
+				.select({
+					name: DB_SCHEMA.channels.name,
+					handle: DB_SCHEMA.channels.handle,
+					thumbnailUrl: DB_SCHEMA.channels.thumbnailUrl
+				})
+				.from(DB_SCHEMA.channels)
+				.orderBy(DB_SCHEMA.channels.name),
 			(error) => {
-				console.error('DB QUERIES.getAllChannels:', error);
-				return new Error('Failed to get all channels');
+				console.error('DB QUERIES.getSidebarChannels:', error);
+				return new Error('Failed to get sidebar channels');
 			}
 		);
 
@@ -29,130 +36,33 @@ export const DB_QUERIES = {
 		);
 	},
 
-	getChannelDetails: async (ytChannelId: string) => {
-		const result = await ResultAsync.fromPromise(
-			dbClient
-				.select()
-				.from(DB_SCHEMA.channels)
-				.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId))
-				.limit(1),
-			(error) => {
-				console.error('DB QUERIES.getChannelDetails:', error);
-				return new Error('Failed to get channel details');
-			}
-		);
-
-		return result.match(
-			(channels) => {
-				return {
-					status: 'success' as const,
-					data: channels[0] || null
-				};
-			},
-			(error) => {
-				return {
-					status: 'error' as const,
-					message: error.message,
-					cause: error
-				};
-			}
-		);
-	},
-
-	getChannelVideos: async (ytChannelId: string) => {
-		const result = await ResultAsync.fromPromise(
-			dbClient
-				.select({
-					video: DB_SCHEMA.videos
-				})
-				.from(DB_SCHEMA.videos)
-				.where(eq(DB_SCHEMA.videos.ytChannelId, ytChannelId))
-				.orderBy(desc(DB_SCHEMA.videos.publishedAt))
-				.limit(50),
-			(error) => {
-				console.error('DB QUERIES.getChannelVideos:', error);
-				return new Error('Failed to get channel videos');
-			}
-		);
-
-		return result.match(
-			(videos) => {
-				return {
-					status: 'success' as const,
-					data: videos
-				};
-			},
-			(error) => {
-				return {
-					status: 'error' as const,
-					message: error.message,
-					cause: error
-				};
-			}
-		);
-	},
-
-	getVideoDetails: async (ytVideoId: string) => {
-		const videoResult = await ResultAsync.fromPromise(
-			dbClient
-				.select()
-				.from(DB_SCHEMA.videos)
-				.where(eq(DB_SCHEMA.videos.ytVideoId, ytVideoId))
-				.limit(1),
-			(error) => {
-				console.error('DB QUERIES.getVideoDetails (video):', error);
-				return new Error('Failed to get video');
-			}
-		);
-
-		const videoMatch = await videoResult;
-		if (videoMatch.isErr()) {
-			return {
-				status: 'error' as const,
-				message: videoMatch.error.message,
-				cause: videoMatch.error
-			};
-		}
-
-		const video = videoMatch.value[0];
-		if (!video) {
-			return {
-				status: 'error' as const,
-				message: 'Video not found',
-				cause: null
-			};
-		}
-
+	getChannelByHandle: async (handle: string) => {
 		const channelResult = await ResultAsync.fromPromise(
 			dbClient
 				.select()
 				.from(DB_SCHEMA.channels)
-				.where(eq(DB_SCHEMA.channels.ytChannelId, video.ytChannelId))
+				.where(eq(DB_SCHEMA.channels.handle, handle))
 				.limit(1),
 			(error) => {
-				console.error('DB QUERIES.getVideoDetails (channel):', error);
-				return new Error('Failed to get channel');
+				console.error('DB QUERIES.getChannelByHandle:', error);
+				return new Error('Failed to get channel by handle');
 			}
 		);
 
-		const channelMatch = await channelResult;
-
-		if (channelMatch.isErr()) {
-			return {
-				status: 'error' as const,
-				message: channelMatch.error.message,
-				cause: channelMatch.error
-			};
-		}
-
-		const channel = channelMatch.value[0] || null;
-
-		return {
-			status: 'success' as const,
-			data: {
-				video,
-				channel
+		return channelResult.match(
+			(channel) => {
+				return {
+					status: 'success' as const,
+					data: channel
+				};
+			},
+			(error) => {
+				return {
+					status: 'error' as const,
+					message: error.message,
+					cause: error
+				};
 			}
-		};
+		);
 	}
 };

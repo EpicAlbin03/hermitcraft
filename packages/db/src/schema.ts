@@ -6,7 +6,11 @@ export const channels = table('channels', {
 	name: t.text('name').notNull(),
 	description: t.text('description').notNull(),
 	thumbnailUrl: t.text('thumbnail_url').notNull(),
-	customUrl: t.text('custom_url').notNull(),
+	handle: t.text('custom_url').notNull(),
+	viewCount: t.bigint('view_count', { mode: 'number' }).notNull(),
+	subscriberCount: t.int('subscriber_count').notNull(),
+	videoCount: t.int('video_count').notNull(),
+	joinedAt: t.datetime('joined_at').notNull(),
 	createdAt: t.timestamp('created_at').notNull().defaultNow()
 });
 
@@ -16,7 +20,6 @@ export const videos = table(
 		ytVideoId: t.varchar('yt_video_id', { length: 55 }).primaryKey(),
 		ytChannelId: t.varchar('yt_channel_id', { length: 55 }).notNull(),
 		title: t.text('title').notNull(),
-		description: t.text('description').notNull(),
 		thumbnailUrl: t.text('thumbnail_url').notNull(),
 		publishedAt: t.datetime('published_at').notNull(),
 		viewCount: t.int('view_count').notNull(),

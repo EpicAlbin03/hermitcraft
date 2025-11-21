@@ -1,6 +1,6 @@
 import { err, ok } from 'neverthrow';
-import { getVideoDetails } from './youtube/helpers';
-import { DB_MUTATIONS, DB_QUERIES } from './db';
+import { getVideoDetails } from './youtube';
+import { DB_MUTATIONS } from './db';
 
 class SyncVideoError extends Error {
 	constructor(message: string) {
@@ -20,9 +20,8 @@ export const syncVideo = async (args: { ytVideoId: string }) => {
 		ytVideoId: args.ytVideoId,
 		ytChannelId: videoDetails.value.channelId,
 		title: videoDetails.value.title,
-		description: videoDetails.value.description,
 		thumbnailUrl: videoDetails.value.thumbnailUrl,
-		publishedAt: new Date(videoDetails.value.publishedAt),
+		publishedAt: videoDetails.value.publishedAt,
 		viewCount: videoDetails.value.viewCount,
 		likeCount: videoDetails.value.likeCount,
 		commentCount: videoDetails.value.commentCount
@@ -32,21 +31,27 @@ export const syncVideo = async (args: { ytVideoId: string }) => {
 		return err(new SyncVideoError(upsertVideoResult.error.message));
 	}
 
-	const { wasInserted } = upsertVideoResult.value;
-
-	const channelResult = await DB_QUERIES.getChannel(videoDetails.value.channelId);
-
-	if (channelResult.isErr()) {
-		return err(new SyncVideoError(channelResult.error.message));
-	} else if (!channelResult.value) {
-		return err(new SyncVideoError('Channel not found'));
-	}
-
-	const channel = channelResult.value;
-
-	if (wasInserted) {
-		// Do stuff
-	}
-
 	return ok(undefined);
+};
+
+export const syncVideos = async (args: { ytVideoIds: string[] }) => {
+	let successCount = 0;
+	let errorCount = 0;
+
+	await Promise.allSettled(
+		args.ytVideoIds.map(async (ytVideoId) => {
+			console.log(`Syncing video ${ytVideoId}`);
+			const syncVideoResult = await syncVideo({ ytVideoId });
+			if (syncVideoResult.isOk()) {
+				successCount++;
+				console.log(`Synced video ${ytVideoId}`);
+			} else {
+				errorCount++;
+				console.error('Failed to sync video:', syncVideoResult.error);
+			}
+		})
+	);
+
+	console.log(`Synced ${successCount} videos, failed to sync ${errorCount} videos`);
+	return ok({ successCount, errorCount });
 };
