@@ -1,14 +1,13 @@
 <script lang="ts">
-	import { remoteGetAllChannels } from '$lib/remote/channels.remote';
-	import type { Channel } from '@hc/db';
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import ToggleMode from '$lib/components/toggle-mode.svelte';
+	import { remoteGetSidebarChannels, type SidebarChannel } from '$lib/remote/channels.remote';
 
 	let { children } = $props();
 
-	const channels = $derived<Channel[]>(await remoteGetAllChannels());
+	const channels = $derived<SidebarChannel[]>(await remoteGetSidebarChannels());
 </script>
 
 <Sidebar.Provider>

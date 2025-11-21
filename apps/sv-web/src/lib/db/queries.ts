@@ -39,7 +39,14 @@ export const DB_QUERIES = {
 	getChannelByHandle: async (handle: string) => {
 		const channelResult = await ResultAsync.fromPromise(
 			dbClient
-				.select()
+				.select({
+					name: DB_SCHEMA.channels.name,
+					thumbnailUrl: DB_SCHEMA.channels.thumbnailUrl,
+					description: DB_SCHEMA.channels.description,
+					viewCount: DB_SCHEMA.channels.viewCount,
+					subscriberCount: DB_SCHEMA.channels.subscriberCount,
+					videoCount: DB_SCHEMA.channels.videoCount
+				})
 				.from(DB_SCHEMA.channels)
 				.where(eq(DB_SCHEMA.channels.handle, handle))
 				.limit(1),
@@ -53,7 +60,7 @@ export const DB_QUERIES = {
 			(channel) => {
 				return {
 					status: 'success' as const,
-					data: channel
+					data: channel[0]
 				};
 			},
 			(error) => {

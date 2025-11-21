@@ -3,13 +3,13 @@
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import type { ComponentProps, Component } from 'svelte';
 	import { ChevronRightIcon, LinkIcon, MapIcon, UsersIcon } from '@lucide/svelte';
-	import type { Channel } from '@hc/db';
 	import { links } from '$lib/assets/data/links';
 	import { maps } from '$lib/assets/data/maps';
 	import { cn } from '$lib/utils';
+	import type { SidebarChannel } from '$lib/remote/channels.remote';
 
 	type Props = ComponentProps<typeof Sidebar.Root> & {
-		channels: Channel[];
+		channels: SidebarChannel[];
 	};
 
 	let { ref = $bindable(null), collapsible = 'icon', channels, ...restProps }: Props = $props();
@@ -36,9 +36,9 @@
 			items: channels
 				.map((channel) => ({
 					title: channel.name,
-					url: `/${channel.customUrl}`,
+					url: `/${channel.handle}`,
 					icon: channel.thumbnailUrl,
-					iconClass: 'rounded-full'
+					iconClass: 'rounded-full h-5 w-5'
 				}))
 				.sort((a, b) => a.title.localeCompare(b.title))
 		},
