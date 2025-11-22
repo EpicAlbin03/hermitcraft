@@ -9,7 +9,7 @@ const youtube = google.youtube({
 export const getChannelDetails = (data: { ytChannelId: string }) => {
 	return ResultAsync.fromPromise(
 		youtube.channels.list({
-			part: ['id', 'snippet', 'statistics'],
+			part: ['id', 'snippet', 'statistics', 'brandingSettings'],
 			id: [data.ytChannelId]
 		}),
 		(error) => new Error(`Failed to get details for channel ${data.ytChannelId}: ${error}`)
@@ -25,6 +25,7 @@ export const getChannelDetails = (data: { ytChannelId: string }) => {
 			description: item.snippet.description || '',
 			thumbnailUrl:
 				item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '',
+			bannerUrl: item.brandingSettings?.image?.bannerExternalUrl || '',
 			handle: item.snippet.customUrl || '',
 			viewCount: parseInt(item.statistics?.viewCount || '0', 10),
 			subscriberCount: parseInt(item.statistics?.subscriberCount || '0', 10),

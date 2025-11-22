@@ -6,6 +6,7 @@ export const channels = table('channels', {
 	name: t.text('name').notNull(),
 	description: t.text('description').notNull(),
 	thumbnailUrl: t.text('thumbnail_url').notNull(),
+	bannerUrl: t.text('banner_url').notNull(),
 	handle: t.text('custom_url').notNull(),
 	viewCount: t.bigint('view_count', { mode: 'number' }).notNull(),
 	subscriberCount: t.int('subscriber_count').notNull(),

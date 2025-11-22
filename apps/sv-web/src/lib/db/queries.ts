@@ -42,6 +42,7 @@ export const DB_QUERIES = {
 				.select({
 					name: DB_SCHEMA.channels.name,
 					thumbnailUrl: DB_SCHEMA.channels.thumbnailUrl,
+					bannerUrl: DB_SCHEMA.channels.bannerUrl,
 					description: DB_SCHEMA.channels.description,
 					viewCount: DB_SCHEMA.channels.viewCount,
 					subscriberCount: DB_SCHEMA.channels.subscriberCount,

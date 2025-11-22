@@ -8,7 +8,6 @@ export const getRecentVideosForChannel = async (args: { ytChannelId: string }) =
 		return err(new Error(`Channel ${args.ytChannelId} not found`));
 	}
 
-	// Latest 15 videos
 	const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${args.ytChannelId}`;
 
 	const response = await fetch(rssUrl);

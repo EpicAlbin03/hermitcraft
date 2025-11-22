@@ -12,6 +12,7 @@ export const DB_MUTATIONS = {
 						.set({
 							description: data.description,
 							thumbnailUrl: data.thumbnailUrl,
+							bannerUrl: data.bannerUrl,
 							viewCount: data.viewCount,
 							subscriberCount: data.subscriberCount,
 							videoCount: data.videoCount
@@ -26,6 +27,7 @@ export const DB_MUTATIONS = {
 						name: data.name,
 						description: data.description,
 						thumbnailUrl: data.thumbnailUrl,
+						bannerUrl: data.bannerUrl,
 						handle: data.handle,
 						viewCount: data.viewCount,
 						subscriberCount: data.subscriberCount,

@@ -21,6 +21,7 @@ export const syncChannel = async (args: { ytChannelId: string }) => {
 		name: channelDetails.value.name,
 		description: channelDetails.value.description,
 		thumbnailUrl: channelDetails.value.thumbnailUrl,
+		bannerUrl: channelDetails.value.bannerUrl,
 		handle: channelDetails.value.handle,
 		viewCount: channelDetails.value.viewCount,
 		subscriberCount: channelDetails.value.subscriberCount,
