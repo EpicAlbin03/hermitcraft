@@ -24,7 +24,10 @@ export const getChannelDetails = (data: { ytChannelId: string }) => {
 			name: item.snippet.title || '',
 			description: item.snippet.description || '',
 			thumbnailUrl:
-				item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '',
+				item.snippet.thumbnails?.high?.url ||
+				item.snippet.thumbnails?.medium?.url ||
+				item.snippet.thumbnails?.default?.url ||
+				'',
 			bannerUrl: item.brandingSettings?.image?.bannerExternalUrl || '',
 			handle: item.snippet.customUrl || '',
 			viewCount: parseInt(item.statistics?.viewCount || '0', 10),
@@ -54,7 +57,12 @@ export const getVideoDetails = (data: { ytVideoId: string }) => {
 			title: item.snippet.title || '',
 			description: item.snippet.description || '',
 			thumbnailUrl:
-				item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '',
+				item.snippet.thumbnails?.maxres?.url ||
+				item.snippet.thumbnails?.standard?.url ||
+				item.snippet.thumbnails?.high?.url ||
+				item.snippet.thumbnails?.medium?.url ||
+				item.snippet.thumbnails?.default?.url ||
+				'',
 			publishedAt: new Date(item.snippet.publishedAt || 0),
 			viewCount: parseInt(item.statistics?.viewCount || '0', 10),
 			likeCount: parseInt(item.statistics?.likeCount || '0', 10),
