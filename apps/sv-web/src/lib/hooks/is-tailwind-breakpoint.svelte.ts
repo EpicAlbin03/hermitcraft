@@ -9,7 +9,7 @@ const BREAKPOINTS = {
 } as const;
 
 export type TailwindBreakpointKey = keyof typeof BREAKPOINTS;
-export type ActiveTailwindBreakpoint = TailwindBreakpointKey | 'base';
+export type ActiveTailwindBreakpoint = TailwindBreakpointKey | 'xs';
 
 type BreakpointEntry = {
 	key: TailwindBreakpointKey;
@@ -24,7 +24,7 @@ export class IsTailwindBreakpoint {
 	#queries: BreakpointEntry[];
 	#fallback: ActiveTailwindBreakpoint;
 
-	constructor(fallback: ActiveTailwindBreakpoint = 'base') {
+	constructor(fallback: ActiveTailwindBreakpoint = 'xs') {
 		this.#fallback = fallback;
 		this.#queries = SORTED_BREAKPOINTS.map(([key, minWidth]) => ({
 			key,

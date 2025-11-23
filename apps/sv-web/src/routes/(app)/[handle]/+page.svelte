@@ -10,26 +10,157 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { AspectRatio } from '$lib/components/ui/aspect-ratio';
+	import { SIDEBAR_WIDTH } from '$lib/components/ui/sidebar/constants';
 	import {
 		Eye,
 		Users,
 		Video,
 		MessageCircle,
-		Heart,
+		ThumbsUp,
 		Calendar,
 		ChevronDown,
 		ChevronUp
 	} from '@lucide/svelte';
 	import { cn } from '$lib/utils';
-	import { IsTailwindBreakpoint } from '$lib/hooks/is-tailwind-breakpoint.svelte';
+	import {
+		IsTailwindBreakpoint,
+		type ActiveTailwindBreakpoint
+	} from '$lib/hooks/is-tailwind-breakpoint.svelte';
+	import { useSidebar } from '$lib/components/ui/sidebar';
+	import { useResizeObserver } from 'runed';
 
 	const handle = $derived(page.params.handle as string);
 	const channel = $derived<ChannelDetails>(await remoteGetChannelDetails(handle));
 	const videos = $derived<ChannelVideos>(await remoteGetChannelVideos(channel.ytChannelId));
 
 	let isDescriptionExpanded = $state(false);
+	const sidebar = useSidebar();
+	const isSidebarOpen = $derived(sidebar.open);
 
 	const isTailwindBreakpoint = $derived(new IsTailwindBreakpoint().current);
+
+	const DESKTOP_BREAKPOINTS: ActiveTailwindBreakpoint[] = ['md', 'lg', 'xl', '2xl'];
+
+	const BANNER_RATIOS: Record<ActiveTailwindBreakpoint, number> = {
+		xs: 2,
+		sm: 5 / 2,
+		md: 8 / 3,
+		lg: 4,
+		xl: 5,
+		'2xl': 7
+	};
+
+	const BANNER_WIDTHS: Record<ActiveTailwindBreakpoint, number> = {
+		xs: 960,
+		sm: 1280,
+		md: 1600,
+		lg: 1920,
+		xl: 2120,
+		'2xl': 2560
+	};
+
+	const BANNER_SRCSET_WIDTHS = [960, 1280, 1600, 1920, 2120, 2560] as const;
+
+	const bannerRatio = $derived(BANNER_RATIOS[isTailwindBreakpoint] ?? BANNER_RATIOS.xs);
+	const bannerSrc = $derived(
+		`${channel.bannerUrl}=w${BANNER_WIDTHS[isTailwindBreakpoint] ?? BANNER_WIDTHS.xs}`
+	);
+	const bannerSrcSet = $derived(
+		BANNER_SRCSET_WIDTHS.map((width) => `${channel.bannerUrl}=w${width} ${width}w`).join(', ')
+	);
+
+	const shouldReserveSidebarSpace = $derived(
+		DESKTOP_BREAKPOINTS.includes(isTailwindBreakpoint) && isSidebarOpen
+	);
+	const contentWidthRaw = $derived(
+		shouldReserveSidebarSpace ? `(100vw - ${SIDEBAR_WIDTH})` : '100vw'
+	);
+	const contentWidthResolved = $derived(
+		shouldReserveSidebarSpace ? `calc(${contentWidthRaw})` : contentWidthRaw
+	);
+
+	const bannerSizes = $derived(
+		[
+			`(min-width: 1536px) ${contentWidthResolved}`,
+			`(min-width: 1024px) ${contentWidthResolved}`,
+			`(min-width: 640px) ${contentWidthResolved}`,
+			'100vw'
+		].join(', ')
+	);
+
+	const VIDEO_CARD_MIN_WIDTH = 260;
+	const VIDEO_CARD_MAX_WIDTH = 420;
+	const VIDEO_CARD_MAX_COLUMNS = 6;
+	let videoGridElement = $state<HTMLElement | null>(null);
+	let videoGridWidth = $state(0);
+	let videoGridGap = $state(16);
+
+	useResizeObserver(
+		() => videoGridElement,
+		(entries) => {
+			const entry = entries[0];
+			if (!entry) return;
+			videoGridWidth = entry.contentRect.width;
+			const gapValue = getComputedStyle(entry.target).columnGap;
+			const parsedGap = Number.parseFloat(gapValue);
+			if (!Number.isNaN(parsedGap)) {
+				videoGridGap = parsedGap;
+			}
+		}
+	);
+
+	const fallbackVideoColumnsByBreakpoint = $derived({
+		xs: 1,
+		sm: 2,
+		md: shouldReserveSidebarSpace ? 1 : 2,
+		lg: shouldReserveSidebarSpace ? 2 : 3,
+		xl: shouldReserveSidebarSpace ? 3 : 4,
+		'2xl': shouldReserveSidebarSpace ? 5 : 6
+	});
+
+	const fallbackVideoColumns = $derived(
+		fallbackVideoColumnsByBreakpoint[isTailwindBreakpoint] ?? 1
+	);
+
+	function getColumnsForWidth(width: number): number {
+		if (width <= 0) {
+			return fallbackVideoColumns;
+		}
+
+		for (let cols = VIDEO_CARD_MAX_COLUMNS; cols >= 1; cols--) {
+			const totalGap = Math.max(0, cols - 1) * videoGridGap;
+			const cardWidth = (width - totalGap) / cols;
+			if (cardWidth >= VIDEO_CARD_MIN_WIDTH && cardWidth <= VIDEO_CARD_MAX_WIDTH) {
+				return cols;
+			}
+		}
+
+		const widestWidth =
+			(width - Math.max(0, VIDEO_CARD_MAX_COLUMNS - 1) * videoGridGap) / VIDEO_CARD_MAX_COLUMNS;
+		if (widestWidth > VIDEO_CARD_MAX_WIDTH) {
+			return VIDEO_CARD_MAX_COLUMNS;
+		}
+
+		const estimatedColumns = Math.floor(
+			(width + videoGridGap) / (VIDEO_CARD_MIN_WIDTH + videoGridGap)
+		);
+		return Math.max(1, Math.min(estimatedColumns, VIDEO_CARD_MAX_COLUMNS));
+	}
+
+	const videoColumnCount = $derived(Math.max(1, getColumnsForWidth(videoGridWidth)));
+
+	const videoGridTemplate = $derived(`repeat(${Math.max(1, videoColumnCount)}, minmax(0, 1fr))`);
+
+	const videoSizes = $derived(
+		[
+			`(min-width: 1536px) calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint['2xl']})`,
+			`(min-width: 1280px) calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint.xl})`,
+			`(min-width: 1024px) calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint.lg})`,
+			`(min-width: 768px) calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint.md})`,
+			`(min-width: 640px) calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint.sm})`,
+			`calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint.xs})`
+		].join(', ')
+	);
 
 	function formatNumber(num: number) {
 		return new Intl.NumberFormat('en-US', {
@@ -41,16 +172,21 @@
 
 <div class="w-full rounded-xl bg-card pb-4 shadow-sm md:pb-6">
 	<div class="w-full overflow-hidden rounded-t-xl">
-		<AspectRatio ratio={isTailwindBreakpoint === '2xl' ? 8 / 1 : 6 / 1} class="bg-muted">
+		<AspectRatio ratio={bannerRatio} class="bg-muted">
 			<img
-				src={channel.bannerUrl + '=w2120'}
-				alt="Channel Banner"
+				src={bannerSrc}
+				srcset={bannerSrcSet}
+				sizes={bannerSizes}
+				alt={`${channel.name} channel banner`}
 				class="h-full w-full object-cover"
+				loading="eager"
+				fetchpriority="high"
+				decoding="async"
 			/>
 		</AspectRatio>
 	</div>
 
-	<div class="relative flex flex-col items-start gap-4 px-4 md:flex-row md:gap-6 md:px-6">
+	<div class="relative flex flex-col items-start gap-2 px-4 md:flex-row md:gap-6 md:px-6">
 		<div class="relative z-10 -mt-12 shrink-0 md:mt-6">
 			<Avatar.Root class="h-24 w-24 border-4 border-card text-3xl shadow-sm md:h-32 md:w-32">
 				<Avatar.Image src={channel.thumbnailUrl} alt={channel.name} />
@@ -110,21 +246,30 @@
 	</div>
 </div>
 
-<div class="rounded-xl bg-card p-4 shadow-sm md:p-6">
+<div>
 	<h2 class="mb-4 text-xl font-semibold">Recent Videos</h2>
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+	<div
+		bind:this={videoGridElement}
+		class="grid gap-4 sm:gap-5"
+		style:grid-template-columns={videoGridTemplate}
+	>
 		{#each videos as video}
 			<div class="group cursor-pointer">
-				<Card.Root class="h-full bg-background p-0 shadow-sm transition-all hover:shadow-md">
-					<Card.Content class="p-0">
+				<Card.Root
+					class="flex h-full flex-col p-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+				>
+					<Card.Content class="flex h-full flex-col p-0">
 						<AspectRatio ratio={16 / 9} class="overflow-hidden rounded-t-xl bg-muted">
 							<img
 								src={video.thumbnailUrl}
 								alt={video.title}
+								sizes={videoSizes}
+								loading="lazy"
+								decoding="async"
 								class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 							/>
 						</AspectRatio>
-						<div class="flex flex-col gap-2 p-4">
+						<div class="flex flex-1 flex-col gap-2 p-4">
 							<h3
 								class="line-clamp-2 leading-snug font-semibold transition-colors group-hover:text-primary"
 							>
@@ -137,7 +282,7 @@
 										{formatNumber(video.viewCount)}
 									</span>
 									<span class="flex items-center gap-1">
-										<Heart class="h-3 w-3" />
+										<ThumbsUp class="h-3 w-3" />
 										{formatNumber(video.likeCount)}
 									</span>
 									<span class="flex items-center gap-1">
