@@ -1,6 +1,6 @@
 import { ResultAsync } from 'neverthrow';
 import { dbClient } from '.';
-import { DB_SCHEMA, eq } from '@hc/db';
+import { DB_SCHEMA, desc, eq } from '@hc/db';
 
 export const DB_QUERIES = {
 	getSidebarChannels: async () => {
@@ -40,6 +40,7 @@ export const DB_QUERIES = {
 		const channelResult = await ResultAsync.fromPromise(
 			dbClient
 				.select({
+					ytChannelId: DB_SCHEMA.channels.ytChannelId,
 					name: DB_SCHEMA.channels.name,
 					thumbnailUrl: DB_SCHEMA.channels.thumbnailUrl,
 					bannerUrl: DB_SCHEMA.channels.bannerUrl,
@@ -62,6 +63,45 @@ export const DB_QUERIES = {
 				return {
 					status: 'success' as const,
 					data: channel[0]
+				};
+			},
+			(error) => {
+				return {
+					status: 'error' as const,
+					message: error.message,
+					cause: error
+				};
+			}
+		);
+	},
+
+	getChannelVideos: async (ytChannelId: string) => {
+		const videosResult = await ResultAsync.fromPromise(
+			dbClient
+				.select({
+					ytVideoId: DB_SCHEMA.videos.ytVideoId,
+					title: DB_SCHEMA.videos.title,
+					thumbnailUrl: DB_SCHEMA.videos.thumbnailUrl,
+					publishedAt: DB_SCHEMA.videos.publishedAt,
+					viewCount: DB_SCHEMA.videos.viewCount,
+					likeCount: DB_SCHEMA.videos.likeCount,
+					commentCount: DB_SCHEMA.videos.commentCount
+				})
+				.from(DB_SCHEMA.videos)
+				.where(eq(DB_SCHEMA.videos.ytChannelId, ytChannelId))
+				.orderBy(desc(DB_SCHEMA.videos.publishedAt))
+				.limit(50),
+			(error) => {
+				console.error('DB QUERIES.getChannelVideos:', error);
+				return new Error('Failed to get channel videos');
+			}
+		);
+
+		return videosResult.match(
+			(videos) => {
+				return {
+					status: 'success' as const,
+					data: videos
 				};
 			},
 			(error) => {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import TailwindIndicator from '$lib/components/tailwind-indicator.svelte';
 	import './layout.css';
 	import { ModeWatcher } from 'mode-watcher';
 
@@ -6,4 +7,5 @@
 </script>
 
 <ModeWatcher />
+<TailwindIndicator />
 {@render children()}

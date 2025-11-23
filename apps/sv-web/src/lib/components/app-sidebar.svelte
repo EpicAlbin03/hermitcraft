@@ -12,7 +12,12 @@
 		channels: SidebarChannel[];
 	};
 
-	let { ref = $bindable(null), collapsible = 'icon', channels, ...restProps }: Props = $props();
+	let {
+		ref = $bindable(null),
+		collapsible = 'offcanvas',
+		channels,
+		...restProps
+	}: Props = $props();
 
 	type Item = {
 		title: string;
@@ -56,17 +61,19 @@
 			title: 'Maps',
 			icon: MapIcon,
 			isOpen: false,
-			items: maps.map((map) => ({
-				title: map.title,
-				url: map.url,
-				icon: '/favicon-32x32.png'
-			}))
+			items: maps
+				.map((map) => ({
+					title: map.title,
+					url: map.url,
+					icon: '/favicon-32x32.png'
+				}))
+				.reverse()
 		}
 	];
 </script>
 
 <Sidebar.Root {collapsible} {...restProps}>
-	<Sidebar.Content>
+	<Sidebar.Content class="no-scrollbar">
 		<Sidebar.Group>
 			<Sidebar.Menu>
 				{#each items as item (item.title)}
@@ -92,7 +99,7 @@
 											<Sidebar.MenuSubItem>
 												<Sidebar.MenuSubButton>
 													{#snippet child({ props })}
-														<a href={subItem.url} {...props}>
+														<a href={subItem.url} {...props} data-sveltekit-preload-data="tap">
 															{#if subItem.icon}
 																{#if typeof subItem.icon === 'string'}
 																	<img
