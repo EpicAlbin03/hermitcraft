@@ -107,7 +107,7 @@
 				<Card.Root
 					class="flex h-full flex-col p-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
 				>
-					<a href={`https://www.youtube.com/watch?v=/${video.ytVideoId}`} target="_blank">
+					<a href={`https://www.youtube.com/watch?v=${video.ytVideoId}`} target="_blank">
 						<Card.Content class="flex h-full flex-col p-0">
 							<AspectRatio ratio={16 / 9} class="overflow-hidden rounded-t-xl bg-muted">
 								<img
