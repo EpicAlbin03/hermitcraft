@@ -85,7 +85,8 @@ export const DB_QUERIES = {
 					publishedAt: DB_SCHEMA.videos.publishedAt,
 					viewCount: DB_SCHEMA.videos.viewCount,
 					likeCount: DB_SCHEMA.videos.likeCount,
-					commentCount: DB_SCHEMA.videos.commentCount
+					commentCount: DB_SCHEMA.videos.commentCount,
+					duration: DB_SCHEMA.videos.duration
 				})
 				.from(DB_SCHEMA.videos)
 				.where(eq(DB_SCHEMA.videos.ytChannelId, ytChannelId))

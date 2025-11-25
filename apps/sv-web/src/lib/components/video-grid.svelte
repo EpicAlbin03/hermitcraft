@@ -7,6 +7,7 @@
 	import { Eye, ThumbsUp, MessageCircle, Calendar } from '@lucide/svelte';
 	import type { ChannelVideos } from '$lib/remote/channels.remote';
 	import { formatCompactNumber } from '$lib/format-number';
+	import { formatVideoDuration } from '$lib/format-duration';
 
 	type Props = {
 		videos: ChannelVideos;
@@ -103,13 +104,14 @@
 		style:grid-template-columns={videoGridTemplate}
 	>
 		{#each videos as video}
+			{@const formattedDuration = formatVideoDuration(video.duration)}
 			<div class="group cursor-pointer">
 				<Card.Root
 					class="flex h-full flex-col p-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
 				>
 					<a href={`https://www.youtube.com/watch?v=${video.ytVideoId}`} target="_blank">
 						<Card.Content class="flex h-full flex-col p-0">
-							<AspectRatio ratio={16 / 9} class="overflow-hidden rounded-t-xl bg-muted">
+							<AspectRatio ratio={16 / 9} class="relative overflow-hidden rounded-t-xl bg-muted">
 								<img
 									src={video.thumbnailUrl}
 									alt={video.title}
@@ -118,6 +120,13 @@
 									decoding="async"
 									class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 								/>
+								{#if formattedDuration}
+									<span
+										class="absolute right-2 bottom-2 rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-semibold text-white"
+									>
+										{formattedDuration}
+									</span>
+								{/if}
 							</AspectRatio>
 							<div class="flex flex-1 flex-col gap-2 p-4">
 								<h3

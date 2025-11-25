@@ -66,7 +66,8 @@ export const getVideoDetails = (data: { ytVideoId: string }) => {
 			publishedAt: new Date(item.snippet.publishedAt || 0),
 			viewCount: parseInt(item.statistics?.viewCount || '0', 10),
 			likeCount: parseInt(item.statistics?.likeCount || '0', 10),
-			commentCount: parseInt(item.statistics?.commentCount || '0', 10)
+			commentCount: parseInt(item.statistics?.commentCount || '0', 10),
+			duration: item.contentDetails?.duration || ''
 		});
 	});
 };

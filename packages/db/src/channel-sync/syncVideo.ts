@@ -24,7 +24,8 @@ export const syncVideo = async (args: { ytVideoId: string }) => {
 		publishedAt: videoDetails.value.publishedAt,
 		viewCount: videoDetails.value.viewCount,
 		likeCount: videoDetails.value.likeCount,
-		commentCount: videoDetails.value.commentCount
+		commentCount: videoDetails.value.commentCount,
+		duration: videoDetails.value.duration
 	});
 
 	if (upsertVideoResult.isErr()) {
