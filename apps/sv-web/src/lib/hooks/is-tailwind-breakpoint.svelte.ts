@@ -8,6 +8,8 @@ const BREAKPOINTS = {
 	'2xl': 1536
 } as const;
 
+export const DESKTOP_BREAKPOINTS = ['md', 'lg', 'xl', '2xl'];
+
 export type TailwindBreakpointKey = keyof typeof BREAKPOINTS;
 export type ActiveTailwindBreakpoint = TailwindBreakpointKey | 'xs';
 
