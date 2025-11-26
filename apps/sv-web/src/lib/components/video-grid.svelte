@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { useResizeObserver } from 'runed';
+	import { useResizeObserver, useIntersectionObserver } from 'runed';
 	import { AspectRatio } from '$lib/components/ui/aspect-ratio';
 	import * as Card from '$lib/components/ui/card';
 	import { IsTailwindBreakpoint } from '$lib/hooks/is-tailwind-breakpoint.svelte';
@@ -8,20 +8,38 @@
 	import type { ChannelVideos } from '$lib/remote/channels.remote';
 	import { formatCompactNumber } from '$lib/format-number';
 	import { formatVideoDuration } from '$lib/format-duration';
+	import { Spinner } from '$lib/components/ui/spinner';
 
 	type Props = {
-		videos: ChannelVideos;
+		fetchVideos: (params: { limit: number; offset: number }) => Promise<ChannelVideos>;
+		key: string;
 	};
 
-	const { videos }: Props = $props();
+	const { fetchVideos, key }: Props = $props();
 
 	const VIDEO_CARD_MIN_WIDTH = 260;
 	const VIDEO_CARD_MAX_WIDTH = 420;
 	const VIDEO_CARD_MAX_COLUMNS = 6;
+	const ROWS_PER_BATCH = 3;
 
 	let videoGridElement = $state<HTMLElement | null>(null);
+	let sentinelElement = $state<HTMLElement | null>(null);
 	let videoGridWidth = $state(0);
 	let videoGridGap = $state(16);
+
+	let videos = $state<ChannelVideos>([]);
+	let isLoading = $state(false);
+	let hasMore = $state(true);
+	let isIntersecting = $state(false);
+	let error = $state<string | null>(null);
+
+	// Reset state when key changes (e.g., navigating between channels)
+	$effect(() => {
+		key;
+		videos = [];
+		hasMore = true;
+		error = null;
+	});
 
 	const isTailwindBreakpoint = $derived(new IsTailwindBreakpoint().current);
 	const sidebarSpace = useSidebarSpace(() => isTailwindBreakpoint);
@@ -50,7 +68,6 @@
 		xl: shouldReserveSidebarSpace ? 3 : 4,
 		'2xl': shouldReserveSidebarSpace ? 5 : 6
 	});
-
 	const fallbackVideoColumns = $derived(
 		fallbackVideoColumnsByBreakpoint[isTailwindBreakpoint] ?? 1
 	);
@@ -81,9 +98,9 @@
 	}
 
 	const videoColumnCount = $derived(Math.max(1, getColumnsForWidth(videoGridWidth)));
+	const batchSize = $derived(Math.max(6, videoColumnCount * ROWS_PER_BATCH));
 
 	const videoGridTemplate = $derived(`repeat(${Math.max(1, videoColumnCount)}, minmax(0, 1fr))`);
-
 	const videoSizes = $derived(
 		[
 			`(min-width: 1536px) calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint['2xl']})`,
@@ -94,6 +111,40 @@
 			`calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint.xs})`
 		].join(', ')
 	);
+
+	async function loadMore() {
+		if (isLoading || !hasMore || error) return;
+
+		isLoading = true;
+		try {
+			const newVideos = await fetchVideos({ limit: batchSize, offset: videos.length });
+			if (newVideos.length < batchSize) {
+				hasMore = false;
+			}
+			videos = [...videos, ...newVideos];
+		} catch (e) {
+			console.error('Failed to load videos:', e);
+			error = 'Failed to load videos';
+			hasMore = false;
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	useIntersectionObserver(
+		() => sentinelElement,
+		(entries) => {
+			const entry = entries[0];
+			isIntersecting = entry?.isIntersecting ?? false;
+		},
+		{ rootMargin: '200px' }
+	);
+
+	$effect(() => {
+		if (isIntersecting && hasMore && !isLoading && !error) {
+			loadMore();
+		}
+	});
 </script>
 
 <div>
@@ -103,7 +154,7 @@
 		class="grid gap-4 sm:gap-5"
 		style:grid-template-columns={videoGridTemplate}
 	>
-		{#each videos as video}
+		{#each videos as video (video.ytVideoId)}
 			{@const formattedDuration = formatVideoDuration(video.duration)}
 			<div class="group cursor-pointer">
 				<Card.Root
@@ -160,5 +211,15 @@
 				</Card.Root>
 			</div>
 		{/each}
+	</div>
+
+	<div bind:this={sentinelElement} class="flex items-center justify-center py-8">
+		{#if isLoading}
+			<Spinner class="h-8 w-8" />
+		{:else if error}
+			<p class="text-sm text-destructive">{error}</p>
+		{:else if !hasMore && videos.length > 0}
+			<p class="text-sm text-muted-foreground">No more videos</p>
+		{/if}
 	</div>
 </div>

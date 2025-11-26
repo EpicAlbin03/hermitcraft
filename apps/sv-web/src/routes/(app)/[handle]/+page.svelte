@@ -6,8 +6,11 @@
 
 	const handle = $derived(page.params.handle as string);
 	const channel = $derived(await remoteGetChannelDetails(handle));
-	const videos = $derived(await remoteGetChannelVideos(channel.ytChannelId));
 </script>
 
 <ChannelHeader {channel} {handle} />
-<VideoGrid {videos} />
+<VideoGrid
+	fetchVideos={({ limit, offset }) =>
+		remoteGetChannelVideos({ ytChannelId: channel.ytChannelId, limit, offset })}
+	key={channel.ytChannelId}
+/>

@@ -93,8 +93,12 @@
 				{#each items as item (item.title)}
 					<Sidebar.MenuItem>
 						<Sidebar.MenuButton>
-							<item.icon />
-							<span>{item.title}</span>
+							{#snippet child({ props })}
+								<a {...props} href={item.url}>
+									<item.icon />
+									<span>{item.title}</span>
+								</a>
+							{/snippet}
 						</Sidebar.MenuButton>
 					</Sidebar.MenuItem>
 				{/each}

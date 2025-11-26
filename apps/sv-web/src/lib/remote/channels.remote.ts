@@ -28,19 +28,30 @@ export const remoteGetChannelDetails = query(z.string(), async (handle) => {
 
 export type ChannelDetails = Awaited<ReturnType<typeof remoteGetChannelDetails>>;
 
-export const remoteGetChannelVideos = query(z.string(), async (ytChannelId) => {
-	const videos = await DB_QUERIES.getChannelVideos(ytChannelId);
-	if (videos.status === 'error') {
-		console.error(videos.cause);
-		return error(500, { message: videos.message });
-	}
-	return videos.data;
+const paginationSchema = z.object({
+	limit: z.number().min(1).max(100),
+	offset: z.number().min(0)
 });
+
+export const remoteGetChannelVideos = query(
+	z.object({
+		ytChannelId: z.string(),
+		...paginationSchema.shape
+	}),
+	async ({ ytChannelId, limit, offset }) => {
+		const videos = await DB_QUERIES.getChannelVideos(ytChannelId, limit, offset);
+		if (videos.status === 'error') {
+			console.error(videos.cause);
+			return error(500, { message: videos.message });
+		}
+		return videos.data;
+	}
+);
 
 export type ChannelVideos = Awaited<ReturnType<typeof remoteGetChannelVideos>>;
 
-export const remoteGetAllVideos = query(async () => {
-	const videos = await DB_QUERIES.getAllVideos();
+export const remoteGetAllVideos = query(paginationSchema, async ({ limit, offset }) => {
+	const videos = await DB_QUERIES.getAllVideos(limit, offset);
 	if (videos.status === 'error') {
 		console.error(videos.cause);
 		return error(500, { message: videos.message });

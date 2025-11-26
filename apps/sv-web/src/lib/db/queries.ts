@@ -75,7 +75,7 @@ export const DB_QUERIES = {
 		);
 	},
 
-	getChannelVideos: async (ytChannelId: string) => {
+	getChannelVideos: async (ytChannelId: string, limit: number, offset: number) => {
 		const videosResult = await ResultAsync.fromPromise(
 			dbClient
 				.select({
@@ -91,7 +91,8 @@ export const DB_QUERIES = {
 				.from(DB_SCHEMA.videos)
 				.where(eq(DB_SCHEMA.videos.ytChannelId, ytChannelId))
 				.orderBy(desc(DB_SCHEMA.videos.publishedAt))
-				.limit(50),
+				.limit(limit)
+				.offset(offset),
 			(error) => {
 				console.error('DB QUERIES.getChannelVideos:', error);
 				return new Error('Failed to get channel videos');
@@ -115,7 +116,7 @@ export const DB_QUERIES = {
 		);
 	},
 
-	getAllVideos: async () => {
+	getAllVideos: async (limit: number, offset: number) => {
 		const videosResult = await ResultAsync.fromPromise(
 			dbClient
 				.select({
@@ -130,7 +131,8 @@ export const DB_QUERIES = {
 				})
 				.from(DB_SCHEMA.videos)
 				.orderBy(desc(DB_SCHEMA.videos.publishedAt))
-				.limit(50),
+				.limit(limit)
+				.offset(offset),
 			(error) => {
 				console.error('DB QUERIES.getAllVideos:', error);
 				return new Error('Failed to get all videos');
