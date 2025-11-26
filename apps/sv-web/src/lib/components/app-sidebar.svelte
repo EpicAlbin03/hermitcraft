@@ -2,7 +2,7 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import type { ComponentProps, Component } from 'svelte';
-	import { ChevronRightIcon, LinkIcon, MapIcon, UsersIcon } from '@lucide/svelte';
+	import { ChevronRightIcon, LinkIcon, MapIcon, UsersIcon, VideoIcon } from '@lucide/svelte';
 	import { links } from '$lib/assets/data/links';
 	import { maps } from '$lib/assets/data/maps';
 	import { cn } from '$lib/utils';
@@ -19,11 +19,17 @@
 		...restProps
 	}: Props = $props();
 
-	type Item = {
+	type DropdownItem = {
 		title: string;
 		icon: Component;
 		isOpen: boolean;
 		items: SubItem[];
+	};
+
+	type Item = {
+		title: string;
+		icon: Component;
+		url: string;
 	};
 
 	type SubItem = {
@@ -34,6 +40,14 @@
 	};
 
 	const items: Item[] = [
+		{
+			title: 'Videos',
+			icon: VideoIcon,
+			url: '/videos'
+		}
+	];
+
+	const dropdownItems: DropdownItem[] = [
 		{
 			title: 'Members',
 			icon: UsersIcon,
@@ -77,6 +91,14 @@
 		<Sidebar.Group>
 			<Sidebar.Menu>
 				{#each items as item (item.title)}
+					<Sidebar.MenuItem>
+						<Sidebar.MenuButton>
+							<item.icon />
+							<span>{item.title}</span>
+						</Sidebar.MenuButton>
+					</Sidebar.MenuItem>
+				{/each}
+				{#each dropdownItems as item (item.title)}
 					<Collapsible.Root open={item.isOpen} class="group/collapsible">
 						{#snippet child({ props })}
 							<Sidebar.MenuItem {...props}>

@@ -113,5 +113,44 @@ export const DB_QUERIES = {
 				};
 			}
 		);
+	},
+
+	getAllVideos: async () => {
+		const videosResult = await ResultAsync.fromPromise(
+			dbClient
+				.select({
+					ytVideoId: DB_SCHEMA.videos.ytVideoId,
+					title: DB_SCHEMA.videos.title,
+					thumbnailUrl: DB_SCHEMA.videos.thumbnailUrl,
+					publishedAt: DB_SCHEMA.videos.publishedAt,
+					viewCount: DB_SCHEMA.videos.viewCount,
+					likeCount: DB_SCHEMA.videos.likeCount,
+					commentCount: DB_SCHEMA.videos.commentCount,
+					duration: DB_SCHEMA.videos.duration
+				})
+				.from(DB_SCHEMA.videos)
+				.orderBy(desc(DB_SCHEMA.videos.publishedAt))
+				.limit(50),
+			(error) => {
+				console.error('DB QUERIES.getAllVideos:', error);
+				return new Error('Failed to get all videos');
+			}
+		);
+
+		return videosResult.match(
+			(videos) => {
+				return {
+					status: 'success' as const,
+					data: videos
+				};
+			},
+			(error) => {
+				return {
+					status: 'error' as const,
+					message: error.message,
+					cause: error
+				};
+			}
+		);
 	}
 };

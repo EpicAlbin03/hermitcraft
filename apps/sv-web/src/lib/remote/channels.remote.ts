@@ -38,3 +38,12 @@ export const remoteGetChannelVideos = query(z.string(), async (ytChannelId) => {
 });
 
 export type ChannelVideos = Awaited<ReturnType<typeof remoteGetChannelVideos>>;
+
+export const remoteGetAllVideos = query(async () => {
+	const videos = await DB_QUERIES.getAllVideos();
+	if (videos.status === 'error') {
+		console.error(videos.cause);
+		return error(500, { message: videos.message });
+	}
+	return videos.data;
+});
