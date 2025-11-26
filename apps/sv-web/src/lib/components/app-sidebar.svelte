@@ -125,7 +125,7 @@
 											<Sidebar.MenuSubItem>
 												<Sidebar.MenuSubButton>
 													{#snippet child({ props })}
-														<a href={subItem.url} {...props} data-sveltekit-preload-data="tap">
+														<a href={subItem.url} {...props}>
 															{#if subItem.icon}
 																{#if typeof subItem.icon === 'string'}
 																	<img

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { afterNavigate } from '$app/navigation';
 	import { Eye, Users, Video, ChevronDown, ChevronUp } from '@lucide/svelte';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import { AspectRatio } from '$lib/components/ui/aspect-ratio';
@@ -18,6 +19,12 @@
 	};
 
 	const { channel, handle }: Props = $props();
+
+	// Prevent preloading of avatar image
+	let avatarUrl = $state(channel.thumbnailUrl);
+	afterNavigate(() => {
+		avatarUrl = channel.thumbnailUrl;
+	});
 
 	const BANNER_RATIOS: Record<ActiveTailwindBreakpoint, number> = {
 		xs: 2,
@@ -81,7 +88,7 @@
 			<Avatar.Root class="h-24 w-24 border-4 border-card text-3xl shadow-sm md:h-32 md:w-32">
 				{#snippet child({ props })}
 					<a {...props} href={`https://www.youtube.com/${handle}`} target="_blank">
-						<Avatar.Image src={channel.thumbnailUrl} alt={channel.name} />
+						<Avatar.Image src={avatarUrl} alt={channel.name} />
 						<Avatar.Fallback>{channel.name.slice(0, 2).toUpperCase()}</Avatar.Fallback>
 					</a>
 				{/snippet}
