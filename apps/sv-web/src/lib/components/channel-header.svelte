@@ -12,6 +12,7 @@
 	import { formatCompactNumber } from '$lib/format-number';
 	import { cn } from '$lib/utils';
 	import type { ChannelDetails } from '$lib/remote/channels.remote';
+	import { Image } from '@unpic/svelte';
 
 	type Props = {
 		channel: ChannelDetails;
@@ -20,10 +21,12 @@
 
 	const { channel, handle }: Props = $props();
 
-	// Prevent preloading of avatar image
+	// Prevent preloading of images
 	let avatarUrl = $state(channel.thumbnailUrl);
+	let bannerUrl = $state(channel.bannerUrl);
 	afterNavigate(() => {
 		avatarUrl = channel.thumbnailUrl;
+		bannerUrl = channel.bannerUrl;
 	});
 
 	const BANNER_RATIOS: Record<ActiveTailwindBreakpoint, number> = {
@@ -51,12 +54,8 @@
 
 	const bannerRatio = $derived(BANNER_RATIOS[isTailwindBreakpoint] ?? BANNER_RATIOS.xs);
 	const bannerSrc = $derived(
-		`${channel.bannerUrl}=w${BANNER_WIDTHS[isTailwindBreakpoint] ?? BANNER_WIDTHS.xs}`
+		`${bannerUrl}=w${BANNER_WIDTHS[isTailwindBreakpoint] ?? BANNER_WIDTHS.xs}`
 	);
-	const bannerSrcSet = $derived(
-		BANNER_SRCSET_WIDTHS.map((width) => `${channel.bannerUrl}=w${width} ${width}w`).join(', ')
-	);
-
 	const bannerSizes = $derived(
 		[
 			`(min-width: 1536px) ${contentWidthResolved}`,
@@ -65,20 +64,23 @@
 			'100vw'
 		].join(', ')
 	);
+	const bannerWidth = $derived(BANNER_WIDTHS[isTailwindBreakpoint] ?? BANNER_WIDTHS.xs);
+	const bannerHeight = $derived(Math.round(bannerWidth / bannerRatio));
 </script>
 
 <div class="w-full rounded-xl bg-card pb-4 shadow-sm md:pb-6">
 	<div class="w-full overflow-hidden rounded-t-xl">
 		<AspectRatio ratio={bannerRatio} class="bg-muted">
-			<img
+			<Image
 				src={bannerSrc}
-				srcset={bannerSrcSet}
+				layout="fullWidth"
+				width={bannerWidth}
+				height={bannerHeight}
+				breakpoints={BANNER_SRCSET_WIDTHS}
 				sizes={bannerSizes}
+				priority
 				alt={`${channel.name} channel banner`}
 				class="h-full w-full object-cover"
-				loading="eager"
-				fetchpriority="high"
-				decoding="async"
 			/>
 		</AspectRatio>
 	</div>
