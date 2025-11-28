@@ -67,6 +67,8 @@ export const DB_MUTATIONS = {
 						ytChannelId: data.ytChannelId,
 						title: data.title,
 						thumbnailUrl: data.thumbnailUrl,
+						thumbnailWidth: data.thumbnailWidth,
+						thumbnailHeight: data.thumbnailHeight,
 						publishedAt: data.publishedAt,
 						viewCount: data.viewCount,
 						likeCount: data.likeCount,

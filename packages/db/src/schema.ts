@@ -22,6 +22,8 @@ export const videos = table(
 		ytChannelId: t.varchar('yt_channel_id', { length: 55 }).notNull(),
 		title: t.text('title').notNull(),
 		thumbnailUrl: t.text('thumbnail_url').notNull(),
+		thumbnailWidth: t.int('thumbnail_width').notNull(),
+		thumbnailHeight: t.int('thumbnail_height').notNull(),
 		publishedAt: t.datetime('published_at').notNull(),
 		viewCount: t.int('view_count').notNull(),
 		likeCount: t.int('like_count').notNull(),

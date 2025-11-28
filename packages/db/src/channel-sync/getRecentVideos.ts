@@ -53,6 +53,8 @@ const parseYouTubeRSS = async (xml: string) => {
 			ytVideoId: videoIdMatch[1]!,
 			title: titleMatch[1]!,
 			thumbnailUrl: thumbnailMatch?.[1] || '',
+			thumbnailWidth: remainingVideoDetails.value.thumbnailWidth,
+			thumbnailHeight: remainingVideoDetails.value.thumbnailHeight,
 			publishedAt: new Date(publishedMatch[1]!),
 			viewCount: parseInt(viewCountMatch?.[1] || '0', 10),
 			likeCount: parseInt(likeCountMatch?.[1] || '0', 10),

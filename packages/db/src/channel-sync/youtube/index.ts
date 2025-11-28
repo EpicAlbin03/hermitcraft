@@ -51,18 +51,21 @@ export const getVideoDetails = (data: { ytVideoId: string }) => {
 			return err(new Error(`Video ${data.ytVideoId} not found`));
 		}
 
+		const thumbnail =
+			item.snippet.thumbnails?.maxres ||
+			item.snippet.thumbnails?.standard ||
+			item.snippet.thumbnails?.high ||
+			item.snippet.thumbnails?.medium ||
+			item.snippet.thumbnails?.default;
+
 		return ok({
 			ytVideoId: item.id,
 			ytChannelId: item.snippet.channelId,
 			title: item.snippet.title || '',
 			description: item.snippet.description || '',
-			thumbnailUrl:
-				item.snippet.thumbnails?.maxres?.url ||
-				item.snippet.thumbnails?.standard?.url ||
-				item.snippet.thumbnails?.high?.url ||
-				item.snippet.thumbnails?.medium?.url ||
-				item.snippet.thumbnails?.default?.url ||
-				'',
+			thumbnailUrl: thumbnail?.url || '',
+			thumbnailWidth: thumbnail?.width || 0,
+			thumbnailHeight: thumbnail?.height || 0,
 			publishedAt: new Date(item.snippet.publishedAt || 0),
 			viewCount: parseInt(item.statistics?.viewCount || '0', 10),
 			likeCount: parseInt(item.statistics?.likeCount || '0', 10),
@@ -76,7 +79,7 @@ export const getVideoDetails = (data: { ytVideoId: string }) => {
 export const getRSSVideoDetails = (data: { ytVideoId: string }) => {
 	return ResultAsync.fromPromise(
 		youtube.videos.list({
-			part: ['statistics', 'contentDetails', 'liveStreamingDetails'],
+			part: ['snippet', 'statistics', 'contentDetails', 'liveStreamingDetails'],
 			id: [data.ytVideoId]
 		}),
 		(error) => new Error(`Failed to get details for video ${data.ytVideoId}: ${error}`)
@@ -86,7 +89,16 @@ export const getRSSVideoDetails = (data: { ytVideoId: string }) => {
 			return err(new Error(`Video ${data.ytVideoId} not found`));
 		}
 
+		const thumbnail =
+			item.snippet.thumbnails?.maxres ||
+			item.snippet.thumbnails?.standard ||
+			item.snippet.thumbnails?.high ||
+			item.snippet.thumbnails?.medium ||
+			item.snippet.thumbnails?.default;
+
 		return ok({
+			thumbnailWidth: thumbnail?.width || 0,
+			thumbnailHeight: thumbnail?.height || 0,
 			commentCount: parseInt(item.statistics?.commentCount || '0', 10),
 			duration: item.contentDetails?.duration || '',
 			isLiveStream: item.liveStreamingDetails ? true : false

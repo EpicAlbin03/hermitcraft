@@ -21,6 +21,8 @@ export const syncVideo = async (args: { ytVideoId: string }) => {
 		ytChannelId: videoDetails.value.ytChannelId,
 		title: videoDetails.value.title,
 		thumbnailUrl: videoDetails.value.thumbnailUrl,
+		thumbnailWidth: videoDetails.value.thumbnailWidth,
+		thumbnailHeight: videoDetails.value.thumbnailHeight,
 		publishedAt: videoDetails.value.publishedAt,
 		viewCount: videoDetails.value.viewCount,
 		likeCount: videoDetails.value.likeCount,

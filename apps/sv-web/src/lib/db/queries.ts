@@ -82,6 +82,8 @@ export const DB_QUERIES = {
 					ytVideoId: DB_SCHEMA.videos.ytVideoId,
 					title: DB_SCHEMA.videos.title,
 					thumbnailUrl: DB_SCHEMA.videos.thumbnailUrl,
+					thumbnailWidth: DB_SCHEMA.videos.thumbnailWidth,
+					thumbnailHeight: DB_SCHEMA.videos.thumbnailHeight,
 					publishedAt: DB_SCHEMA.videos.publishedAt,
 					viewCount: DB_SCHEMA.videos.viewCount,
 					likeCount: DB_SCHEMA.videos.likeCount,
@@ -104,7 +106,10 @@ export const DB_QUERIES = {
 			(videos) => {
 				return {
 					status: 'success' as const,
-					data: videos
+					data: videos.map((video) => ({
+						...video,
+						isShort: isShort(video.duration, video.thumbnailWidth, video.thumbnailHeight)
+					}))
 				};
 			},
 			(error) => {
@@ -124,6 +129,8 @@ export const DB_QUERIES = {
 					ytVideoId: DB_SCHEMA.videos.ytVideoId,
 					title: DB_SCHEMA.videos.title,
 					thumbnailUrl: DB_SCHEMA.videos.thumbnailUrl,
+					thumbnailWidth: DB_SCHEMA.videos.thumbnailWidth,
+					thumbnailHeight: DB_SCHEMA.videos.thumbnailHeight,
 					publishedAt: DB_SCHEMA.videos.publishedAt,
 					viewCount: DB_SCHEMA.videos.viewCount,
 					likeCount: DB_SCHEMA.videos.likeCount,
@@ -145,7 +152,10 @@ export const DB_QUERIES = {
 			(videos) => {
 				return {
 					status: 'success' as const,
-					data: videos
+					data: videos.map((video) => ({
+						...video,
+						isShort: isShort(video.duration, video.thumbnailWidth, video.thumbnailHeight)
+					}))
 				};
 			},
 			(error) => {
@@ -158,3 +168,10 @@ export const DB_QUERIES = {
 		);
 	}
 };
+
+function isShort(duration: string, thumbnailWidth: number, thumbnailHeight: number) {
+	if (duration <= 'PT3M') {
+		return thumbnailWidth < thumbnailHeight;
+	}
+	return false;
+}
