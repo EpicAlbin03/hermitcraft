@@ -1,6 +1,7 @@
 import { ResultAsync } from 'neverthrow';
 import { dbClient } from '.';
 import { DB_SCHEMA, desc, eq } from '@hc/db';
+import { parseIsoDurationToSeconds } from '$lib/format-duration';
 
 export const DB_QUERIES = {
 	getSidebarChannels: async () => {
@@ -82,8 +83,6 @@ export const DB_QUERIES = {
 					ytVideoId: DB_SCHEMA.videos.ytVideoId,
 					title: DB_SCHEMA.videos.title,
 					thumbnailUrl: DB_SCHEMA.videos.thumbnailUrl,
-					thumbnailWidth: DB_SCHEMA.videos.thumbnailWidth,
-					thumbnailHeight: DB_SCHEMA.videos.thumbnailHeight,
 					publishedAt: DB_SCHEMA.videos.publishedAt,
 					viewCount: DB_SCHEMA.videos.viewCount,
 					likeCount: DB_SCHEMA.videos.likeCount,
@@ -108,7 +107,7 @@ export const DB_QUERIES = {
 					status: 'success' as const,
 					data: videos.map((video) => ({
 						...video,
-						isShort: isShort(video.duration, video.thumbnailWidth, video.thumbnailHeight)
+						isShort: isShort(video.duration)
 					}))
 				};
 			},
@@ -129,8 +128,6 @@ export const DB_QUERIES = {
 					ytVideoId: DB_SCHEMA.videos.ytVideoId,
 					title: DB_SCHEMA.videos.title,
 					thumbnailUrl: DB_SCHEMA.videos.thumbnailUrl,
-					thumbnailWidth: DB_SCHEMA.videos.thumbnailWidth,
-					thumbnailHeight: DB_SCHEMA.videos.thumbnailHeight,
 					publishedAt: DB_SCHEMA.videos.publishedAt,
 					viewCount: DB_SCHEMA.videos.viewCount,
 					likeCount: DB_SCHEMA.videos.likeCount,
@@ -154,7 +151,7 @@ export const DB_QUERIES = {
 					status: 'success' as const,
 					data: videos.map((video) => ({
 						...video,
-						isShort: isShort(video.duration, video.thumbnailWidth, video.thumbnailHeight)
+						isShort: isShort(video.duration)
 					}))
 				};
 			},
@@ -169,9 +166,9 @@ export const DB_QUERIES = {
 	}
 };
 
-function isShort(duration: string, thumbnailWidth: number, thumbnailHeight: number) {
-	if (duration <= 'PT3M') {
-		return thumbnailWidth < thumbnailHeight;
-	}
-	return false;
+// TODO: Better check for shorts
+function isShort(duration: string) {
+	const durationSeconds = parseIsoDurationToSeconds(duration);
+	if (durationSeconds === null) return false;
+	return durationSeconds <= 3 * 60;
 }

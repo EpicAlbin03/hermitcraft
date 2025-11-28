@@ -79,7 +79,7 @@ export const getVideoDetails = (data: { ytVideoId: string }) => {
 export const getRSSVideoDetails = (data: { ytVideoId: string }) => {
 	return ResultAsync.fromPromise(
 		youtube.videos.list({
-			part: ['snippet', 'statistics', 'contentDetails', 'liveStreamingDetails'],
+			part: ['statistics', 'contentDetails', 'liveStreamingDetails'],
 			id: [data.ytVideoId]
 		}),
 		(error) => new Error(`Failed to get details for video ${data.ytVideoId}: ${error}`)
@@ -89,16 +89,7 @@ export const getRSSVideoDetails = (data: { ytVideoId: string }) => {
 			return err(new Error(`Video ${data.ytVideoId} not found`));
 		}
 
-		const thumbnail =
-			item.snippet.thumbnails?.maxres ||
-			item.snippet.thumbnails?.standard ||
-			item.snippet.thumbnails?.high ||
-			item.snippet.thumbnails?.medium ||
-			item.snippet.thumbnails?.default;
-
 		return ok({
-			thumbnailWidth: thumbnail?.width || 0,
-			thumbnailHeight: thumbnail?.height || 0,
 			commentCount: parseInt(item.statistics?.commentCount || '0', 10),
 			duration: item.contentDetails?.duration || '',
 			isLiveStream: item.liveStreamingDetails ? true : false

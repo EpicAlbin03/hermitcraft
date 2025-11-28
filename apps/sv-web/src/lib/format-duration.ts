@@ -1,6 +1,6 @@
 const ISO_DURATION_PATTERN = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/;
 
-function parseIsoDurationToSeconds(duration: string): number | null {
+export function parseIsoDurationToSeconds(duration: string): number | null {
 	const match = ISO_DURATION_PATTERN.exec(duration);
 	if (!match) return null;
 
