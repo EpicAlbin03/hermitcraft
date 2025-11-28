@@ -1,6 +1,5 @@
 import { google } from 'googleapis';
 import { ResultAsync, err, ok } from 'neverthrow';
-import type { Video } from '../..';
 
 const youtube = google.youtube({
 	version: 'v3',
@@ -67,6 +66,27 @@ export const getVideoDetails = (data: { ytVideoId: string }) => {
 			publishedAt: new Date(item.snippet.publishedAt || 0),
 			viewCount: parseInt(item.statistics?.viewCount || '0', 10),
 			likeCount: parseInt(item.statistics?.likeCount || '0', 10),
+			commentCount: parseInt(item.statistics?.commentCount || '0', 10),
+			duration: item.contentDetails?.duration || '',
+			isLiveStream: item.liveStreamingDetails ? true : false
+		});
+	});
+};
+
+export const getRSSVideoDetails = (data: { ytVideoId: string }) => {
+	return ResultAsync.fromPromise(
+		youtube.videos.list({
+			part: ['statistics', 'contentDetails', 'liveStreamingDetails'],
+			id: [data.ytVideoId]
+		}),
+		(error) => new Error(`Failed to get details for video ${data.ytVideoId}: ${error}`)
+	).andThen((response) => {
+		const item = response.data.items?.[0];
+		if (!item || !item.id || !item.snippet || !item.snippet.channelId) {
+			return err(new Error(`Video ${data.ytVideoId} not found`));
+		}
+
+		return ok({
 			commentCount: parseInt(item.statistics?.commentCount || '0', 10),
 			duration: item.contentDetails?.duration || '',
 			isLiveStream: item.liveStreamingDetails ? true : false
