@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { useResizeObserver, useIntersectionObserver } from 'runed';
+	import { useResizeObserver, useIntersectionObserver, watch } from 'runed';
 	import { AspectRatio } from '$lib/components/ui/aspect-ratio';
 	import * as Card from '$lib/components/ui/card';
 	import { IsTailwindBreakpoint } from '$lib/hooks/is-tailwind-breakpoint.svelte';
@@ -34,12 +34,14 @@
 	let error = $state<string | null>(null);
 
 	// Reset state when key changes (e.g., navigating between channels)
-	$effect(() => {
-		key;
-		videos = [];
-		hasMore = true;
-		error = null;
-	});
+	watch(
+		() => key,
+		() => {
+			videos = [];
+			hasMore = true;
+			error = null;
+		}
+	);
 
 	const isTailwindBreakpoint = $derived(new IsTailwindBreakpoint().current);
 	const sidebarSpace = useSidebarSpace(() => isTailwindBreakpoint);
