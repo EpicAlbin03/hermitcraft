@@ -1,4 +1,4 @@
-import { ResultAsync } from 'neverthrow';
+import { err, ResultAsync } from 'neverthrow';
 import { DB_SCHEMA, eq, dbClient, type Channel, type Video } from '@hc/db';
 import { DB_QUERIES } from './queries';
 
@@ -51,12 +51,16 @@ export const DB_MUTATIONS = {
 							viewCount: data.viewCount,
 							likeCount: data.likeCount,
 							commentCount: data.commentCount,
-							duration: data.duration
+							duration: data.duration,
+							isLiveStream: data.isLiveStream
 						})
 						.where(eq(DB_SCHEMA.videos.ytVideoId, data.ytVideoId)),
 					() => new Error('Failed to update video')
 				).map(() => ({ ytVideoId: data.ytVideoId, wasInserted: false }));
 			} else {
+				if (data.duration === 'P0D') {
+					return err(new Error('Video duration is 0'));
+				}
 				return ResultAsync.fromPromise(
 					dbClient.insert(DB_SCHEMA.videos).values({
 						ytVideoId: data.ytVideoId,
@@ -67,7 +71,8 @@ export const DB_MUTATIONS = {
 						viewCount: data.viewCount,
 						likeCount: data.likeCount,
 						commentCount: data.commentCount,
-						duration: data.duration
+						duration: data.duration,
+						isLiveStream: data.isLiveStream
 					}),
 					() => new Error('Failed to insert video')
 				).map(() => ({ ytVideoId: data.ytVideoId, wasInserted: true }));

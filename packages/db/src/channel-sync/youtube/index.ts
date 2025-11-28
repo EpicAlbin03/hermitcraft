@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { ResultAsync, err, ok } from 'neverthrow';
+import type { Video } from '../..';
 
 const youtube = google.youtube({
 	version: 'v3',
@@ -41,7 +42,7 @@ export const getChannelDetails = (data: { ytChannelId: string }) => {
 export const getVideoDetails = (data: { ytVideoId: string }) => {
 	return ResultAsync.fromPromise(
 		youtube.videos.list({
-			part: ['snippet', 'statistics', 'contentDetails'],
+			part: ['snippet', 'statistics', 'contentDetails', 'liveStreamingDetails'],
 			id: [data.ytVideoId]
 		}),
 		(error) => new Error(`Failed to get details for video ${data.ytVideoId}: ${error}`)
@@ -52,8 +53,8 @@ export const getVideoDetails = (data: { ytVideoId: string }) => {
 		}
 
 		return ok({
-			channelId: item.snippet.channelId,
-			videoId: item.id,
+			ytVideoId: item.id,
+			ytChannelId: item.snippet.channelId,
 			title: item.snippet.title || '',
 			description: item.snippet.description || '',
 			thumbnailUrl:
@@ -67,7 +68,8 @@ export const getVideoDetails = (data: { ytVideoId: string }) => {
 			viewCount: parseInt(item.statistics?.viewCount || '0', 10),
 			likeCount: parseInt(item.statistics?.likeCount || '0', 10),
 			commentCount: parseInt(item.statistics?.commentCount || '0', 10),
-			duration: item.contentDetails?.duration || ''
+			duration: item.contentDetails?.duration || '',
+			isLiveStream: item.liveStreamingDetails ? true : false
 		});
 	});
 };

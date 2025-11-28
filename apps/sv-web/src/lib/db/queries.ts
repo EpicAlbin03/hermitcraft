@@ -86,7 +86,8 @@ export const DB_QUERIES = {
 					viewCount: DB_SCHEMA.videos.viewCount,
 					likeCount: DB_SCHEMA.videos.likeCount,
 					commentCount: DB_SCHEMA.videos.commentCount,
-					duration: DB_SCHEMA.videos.duration
+					duration: DB_SCHEMA.videos.duration,
+					isLiveStream: DB_SCHEMA.videos.isLiveStream
 				})
 				.from(DB_SCHEMA.videos)
 				.where(eq(DB_SCHEMA.videos.ytChannelId, ytChannelId))
@@ -127,7 +128,8 @@ export const DB_QUERIES = {
 					viewCount: DB_SCHEMA.videos.viewCount,
 					likeCount: DB_SCHEMA.videos.likeCount,
 					commentCount: DB_SCHEMA.videos.commentCount,
-					duration: DB_SCHEMA.videos.duration
+					duration: DB_SCHEMA.videos.duration,
+					isLiveStream: DB_SCHEMA.videos.isLiveStream
 				})
 				.from(DB_SCHEMA.videos)
 				.orderBy(desc(DB_SCHEMA.videos.publishedAt))

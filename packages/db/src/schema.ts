@@ -27,6 +27,7 @@ export const videos = table(
 		likeCount: t.int('like_count').notNull(),
 		commentCount: t.int('comment_count').notNull(),
 		duration: t.varchar('duration', { length: 30 }).notNull(),
+		isLiveStream: t.boolean('is_live_stream').notNull().default(false),
 		createdAt: t.timestamp('created_at').notNull().defaultNow()
 	},
 	(table) => [t.index('yt_channel_id_and_published_at').on(table.ytChannelId, table.publishedAt)]

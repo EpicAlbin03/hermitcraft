@@ -18,14 +18,15 @@ export const syncVideo = async (args: { ytVideoId: string }) => {
 
 	const upsertVideoResult = await DB_MUTATIONS.upsertVideo({
 		ytVideoId: args.ytVideoId,
-		ytChannelId: videoDetails.value.channelId,
+		ytChannelId: videoDetails.value.ytChannelId,
 		title: videoDetails.value.title,
 		thumbnailUrl: videoDetails.value.thumbnailUrl,
 		publishedAt: videoDetails.value.publishedAt,
 		viewCount: videoDetails.value.viewCount,
 		likeCount: videoDetails.value.likeCount,
 		commentCount: videoDetails.value.commentCount,
-		duration: videoDetails.value.duration
+		duration: videoDetails.value.duration,
+		isLiveStream: videoDetails.value.isLiveStream
 	});
 
 	if (upsertVideoResult.isErr()) {
