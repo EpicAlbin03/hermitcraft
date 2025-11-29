@@ -3,7 +3,13 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "docker compose up -d && dotenv -- turbo run dev",
+    "dev:no-db": "dotenv -- turbo run dev",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:destroy": "docker compose down -v",
+    "db:setup": "docker compose up -d && bun run scripts/wait-for-db.ts && bun run --filter @hc/db db:push",
+    "db:push": "dotenv -- bun run --filter @hc/db db:push",
     "check": "turbo run check",
     "lint": "turbo run lint",
     "clean": "find . -type d \\( -name \"node_modules\" -o -name \"dist\" -o -name \"build\" -o -name \".turbo\" -o -name \".svelte-kit\" \\) -prune -exec rm -rf {} + 2>/dev/null || true",
@@ -12,16 +18,22 @@
     "build:web": "turbo run build --filter @hc/sv-web",
     "build:worker": "turbo run build --filter @hc/bun-worker",
     "start:web": "bun --filter @hc/sv-web start",
-    "start:worker": "bun --filter @hc/bun-worker start"
+    "start:worker": "bun --filter @hc/bun-worker start",
+    "prepare": "effect-language-service patch"
   },
   "devDependencies": {
+    "@effect/language-service": "^0.56.0",
+    "dotenv-cli": "^11.0.0",
     "prettier": "^3.6.2",
-    "turbo": "^2.6.0",
+    "turbo": "^2.6.1",
     "typescript": "^5.9.3"
   },
   "packageManager": "bun@1.3.2",
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@typescript/native-preview": "^7.0.0-dev.20251123.1"
+  }
 }

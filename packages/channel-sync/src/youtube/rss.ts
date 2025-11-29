@@ -1,29 +1,6 @@
-import { err, ok } from 'neverthrow';
-import { DB_QUERIES } from '../db';
-import type { Video } from '../..';
+import type { Video } from '@hc/db';
 
-export const getRSSVideos = async (args: { ytChannelId: string }) => {
-	const channel = await DB_QUERIES.getChannel(args.ytChannelId);
-	if (!channel) {
-		return err(new Error(`Channel ${args.ytChannelId} not found`));
-	}
-
-	// Latest 15 videos
-	const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${args.ytChannelId}`;
-
-	const response = await fetch(rssUrl);
-
-	if (!response.ok) {
-		return err(new Error(`Failed to fetch RSS for channel ${args.ytChannelId}`));
-	}
-
-	const xml = await response.text();
-	const entries = await parseYouTubeRSS(xml);
-
-	return ok(entries);
-};
-
-const parseYouTubeRSS = async (xml: string) => {
+export const parseYouTubeRSS = async (xml: string) => {
 	const entries: Pick<
 		Video,
 		'ytVideoId' | 'title' | 'thumbnailUrl' | 'publishedAt' | 'viewCount' | 'likeCount'

@@ -1,26 +1,25 @@
 {
-	"name": "@hc/db",
+	"name": "@hc/channel-sync",
 	"exports": {
 		".": "./src/index.ts"
 	},
 	"scripts": {
-		"db:push": "drizzle-kit push",
 		"check": "tsc --noEmit",
 		"format": "prettier --write .",
-		"lint": "prettier --check ."
+		"lint": "prettier --check .",
+		"backfill": "bun run scripts/backfill.ts"
 	},
-	"private": true,
 	"devDependencies": {
 		"@types/bun": "latest",
-		"dotenv": "^17.2.3",
-		"drizzle-kit": "^0.31.7",
 		"prettier": "^3.6.2"
 	},
 	"peerDependencies": {
-		"typescript": "^5.9.3"
+		"typescript": "^5",
+		"@hc/db": "*"
 	},
 	"dependencies": {
-		"drizzle-orm": "^0.44.7",
-		"mysql2": "^3.15.3"
+		"effect": "^3.19.5",
+		"googleapis": "^164.1.0",
+		"zod": "^4.1.12"
 	}
 }
