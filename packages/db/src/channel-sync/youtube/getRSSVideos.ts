@@ -1,9 +1,8 @@
 import { err, ok } from 'neverthrow';
-import { DB_QUERIES } from './db';
-import type { Video } from '..';
-import { getRSSVideoDetails } from './youtube';
+import { DB_QUERIES } from '../db';
+import type { Video } from '../..';
 
-export const getRecentVideosForChannel = async (args: { ytChannelId: string }) => {
+export const getRSSVideos = async (args: { ytChannelId: string }) => {
 	const channel = await DB_QUERIES.getChannel(args.ytChannelId);
 	if (!channel) {
 		return err(new Error(`Channel ${args.ytChannelId} not found`));
@@ -25,7 +24,10 @@ export const getRecentVideosForChannel = async (args: { ytChannelId: string }) =
 };
 
 const parseYouTubeRSS = async (xml: string) => {
-	const entries: Omit<Video, 'createdAt' | 'ytChannelId'>[] = [];
+	const entries: Pick<
+		Video,
+		'ytVideoId' | 'title' | 'thumbnailUrl' | 'publishedAt' | 'viewCount' | 'likeCount'
+	>[] = [];
 
 	const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
 	let match;
@@ -44,21 +46,13 @@ const parseYouTubeRSS = async (xml: string) => {
 
 		if (!videoIdMatch || !titleMatch || !publishedMatch) continue;
 
-		const remainingVideoDetails = await getRSSVideoDetails({ ytVideoId: videoIdMatch[1]! });
-		if (remainingVideoDetails.isErr()) {
-			continue;
-		}
-
 		entries.push({
 			ytVideoId: videoIdMatch[1]!,
 			title: titleMatch[1]!,
 			thumbnailUrl: thumbnailMatch?.[1] || '',
 			publishedAt: new Date(publishedMatch[1]!),
 			viewCount: parseInt(viewCountMatch?.[1] || '0', 10),
-			likeCount: parseInt(likeCountMatch?.[1] || '0', 10),
-			commentCount: remainingVideoDetails.value.commentCount,
-			duration: remainingVideoDetails.value.duration,
-			isLiveStream: remainingVideoDetails.value.isLiveStream
+			likeCount: parseInt(likeCountMatch?.[1] || '0', 10)
 		});
 	}
 

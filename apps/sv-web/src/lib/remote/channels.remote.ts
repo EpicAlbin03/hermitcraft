@@ -3,6 +3,8 @@ import { DB_QUERIES } from '$lib/db/queries';
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
 
+const videoFilterSchema = z.enum(['videos', 'shorts', 'livestreams']);
+
 export const remoteGetSidebarChannels = query(async () => {
 	const channels = await DB_QUERIES.getSidebarChannels();
 	if (channels.status === 'error') {
@@ -30,7 +32,8 @@ export type ChannelDetails = Awaited<ReturnType<typeof remoteGetChannelDetails>>
 
 const paginationSchema = z.object({
 	limit: z.number().min(1).max(100),
-	offset: z.number().min(0)
+	offset: z.number().min(0),
+	filter: videoFilterSchema
 });
 
 export const remoteGetChannelVideos = query(
@@ -38,8 +41,8 @@ export const remoteGetChannelVideos = query(
 		ytChannelId: z.string(),
 		...paginationSchema.shape
 	}),
-	async ({ ytChannelId, limit, offset }) => {
-		const videos = await DB_QUERIES.getChannelVideos(ytChannelId, limit, offset);
+	async ({ ytChannelId, limit, offset, filter }) => {
+		const videos = await DB_QUERIES.getChannelVideos(ytChannelId, limit, offset, filter);
 		if (videos.status === 'error') {
 			console.error(videos.cause);
 			return error(500, { message: videos.message });
@@ -50,8 +53,8 @@ export const remoteGetChannelVideos = query(
 
 export type ChannelVideos = Awaited<ReturnType<typeof remoteGetChannelVideos>>;
 
-export const remoteGetAllVideos = query(paginationSchema, async ({ limit, offset }) => {
-	const videos = await DB_QUERIES.getAllVideos(limit, offset);
+export const remoteGetAllVideos = query(paginationSchema, async ({ limit, offset, filter }) => {
+	const videos = await DB_QUERIES.getAllVideos(limit, offset, filter);
 	if (videos.status === 'error') {
 		console.error(videos.cause);
 		return error(500, { message: videos.message });

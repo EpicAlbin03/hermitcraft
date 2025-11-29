@@ -51,8 +51,7 @@ export const DB_MUTATIONS = {
 							viewCount: data.viewCount,
 							likeCount: data.likeCount,
 							commentCount: data.commentCount,
-							duration: data.duration,
-							isLiveStream: data.isLiveStream
+							duration: data.duration
 						})
 						.where(eq(DB_SCHEMA.videos.ytVideoId, data.ytVideoId)),
 					() => new Error('Failed to update video')
@@ -72,7 +71,8 @@ export const DB_MUTATIONS = {
 						likeCount: data.likeCount,
 						commentCount: data.commentCount,
 						duration: data.duration,
-						isLiveStream: data.isLiveStream
+						isLiveStream: data.isLiveStream,
+						isShort: data.isShort
 					}),
 					() => new Error('Failed to insert video')
 				).map(() => ({ ytVideoId: data.ytVideoId, wasInserted: true }));

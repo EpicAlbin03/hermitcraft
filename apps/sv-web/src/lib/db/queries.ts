@@ -1,7 +1,9 @@
 import { ResultAsync } from 'neverthrow';
 import { dbClient } from '.';
-import { DB_SCHEMA, desc, eq } from '@hc/db';
+import { and, DB_SCHEMA, desc, eq, not } from '@hc/db';
 import { parseIsoDurationToSeconds } from '$lib/format-duration';
+
+export type VideoFilter = 'videos' | 'shorts' | 'livestreams';
 
 export const DB_QUERIES = {
 	getSidebarChannels: async () => {
@@ -76,7 +78,12 @@ export const DB_QUERIES = {
 		);
 	},
 
-	getChannelVideos: async (ytChannelId: string, limit: number, offset: number) => {
+	getChannelVideos: async (
+		ytChannelId: string,
+		limit: number,
+		offset: number,
+		filter: VideoFilter
+	) => {
 		const videosResult = await ResultAsync.fromPromise(
 			dbClient
 				.select({
@@ -91,7 +98,22 @@ export const DB_QUERIES = {
 					isLiveStream: DB_SCHEMA.videos.isLiveStream
 				})
 				.from(DB_SCHEMA.videos)
-				.where(eq(DB_SCHEMA.videos.ytChannelId, ytChannelId))
+				.where(() => {
+					if (filter === 'livestreams') {
+						return and(
+							eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
+							eq(DB_SCHEMA.videos.isLiveStream, true)
+						);
+					} else if (filter === 'shorts') {
+						// Add isShort to db
+						return and(
+							eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
+							isShort(DB_SCHEMA.videos.duration)
+						);
+					} else {
+						return eq(DB_SCHEMA.videos.ytChannelId, ytChannelId);
+					}
+				})
 				.orderBy(desc(DB_SCHEMA.videos.publishedAt))
 				.limit(limit)
 				.offset(offset),

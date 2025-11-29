@@ -1,4 +1,4 @@
 export * from './syncVideo';
-export * from './getRecentVideos';
 export * from './syncChannel';
-export * from './channelIds';
+export * from './youtube';
+export * from './db';

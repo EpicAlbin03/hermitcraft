@@ -3,4 +3,7 @@
 	import { remoteGetAllVideos } from '$lib/remote/channels.remote';
 </script>
 
-<VideoGrid fetchVideos={remoteGetAllVideos} key="all-videos" />
+<VideoGrid
+	fetchVideos={({ limit, offset, filter }) => remoteGetAllVideos({ limit, offset, filter })}
+	key="all-videos"
+/>

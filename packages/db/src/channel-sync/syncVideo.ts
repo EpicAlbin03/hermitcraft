@@ -1,5 +1,5 @@
 import { err, ok } from 'neverthrow';
-import { getVideoDetails } from './youtube';
+import { YT_QUERIES } from './youtube';
 import { DB_MUTATIONS } from './db';
 
 class SyncVideoError extends Error {
@@ -10,7 +10,7 @@ class SyncVideoError extends Error {
 }
 
 export const syncVideo = async (args: { ytVideoId: string }) => {
-	const videoDetails = await getVideoDetails(args);
+	const videoDetails = await YT_QUERIES.getVideoDetails(args);
 
 	if (videoDetails.isErr()) {
 		return err(new SyncVideoError(videoDetails.error.message));
@@ -26,7 +26,8 @@ export const syncVideo = async (args: { ytVideoId: string }) => {
 		likeCount: videoDetails.value.likeCount,
 		commentCount: videoDetails.value.commentCount,
 		duration: videoDetails.value.duration,
-		isLiveStream: videoDetails.value.isLiveStream
+		isLiveStream: videoDetails.value.isLiveStream,
+		isShort: videoDetails.value.isShort
 	});
 
 	if (upsertVideoResult.isErr()) {

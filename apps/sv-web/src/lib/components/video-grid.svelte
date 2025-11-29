@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { useResizeObserver, useIntersectionObserver, watch } from 'runed';
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { AspectRatio } from '$lib/components/ui/aspect-ratio';
 	import * as Card from '$lib/components/ui/card';
+	import * as Tabs from '$lib/components/ui/tabs';
 	import { IsTailwindBreakpoint } from '$lib/hooks/is-tailwind-breakpoint.svelte';
 	import { useSidebarSpace } from '$lib/hooks/use-sidebar-space.svelte';
 	import { Eye, ThumbsUp, MessageCircle, Calendar } from '@lucide/svelte';
@@ -9,9 +12,14 @@
 	import { formatCompactNumber } from '$lib/format-number';
 	import { formatVideoDuration } from '$lib/format-duration';
 	import { Spinner } from '$lib/components/ui/spinner';
+	import type { VideoFilter } from '$lib/db/queries';
 
 	type Props = {
-		fetchVideos: (params: { limit: number; offset: number }) => Promise<ChannelVideos>;
+		fetchVideos: (params: {
+			limit: number;
+			offset: number;
+			filter: VideoFilter;
+		}) => Promise<ChannelVideos>;
 		key: string;
 	};
 
@@ -21,6 +29,13 @@
 	const VIDEO_CARD_MAX_WIDTH = 420;
 	const VIDEO_CARD_MAX_COLUMNS = 6;
 	const ROWS_PER_BATCH = 3;
+
+	const validFilters: VideoFilter[] = ['videos', 'shorts', 'livestreams'];
+	const tabLabels: Record<VideoFilter, string> = {
+		videos: 'Videos',
+		shorts: 'Shorts',
+		livestreams: 'Livestreams'
+	};
 
 	let videoGridElement = $state<HTMLElement | null>(null);
 	let sentinelElement = $state<HTMLElement | null>(null);
@@ -33,13 +48,32 @@
 	let isIntersecting = $state(false);
 	let error = $state<string | null>(null);
 
-	// Reset state when key changes (e.g., navigating between channels)
+	const activeFilter = $derived.by((): VideoFilter => {
+		const filterParam = page.url.searchParams.get('filter');
+		if (filterParam && validFilters.includes(filterParam as VideoFilter)) {
+			return filterParam as VideoFilter;
+		}
+		return 'videos';
+	});
+
+	function handleTabChange(newFilter: VideoFilter) {
+		const url = new URL(page.url);
+		if (newFilter === 'videos') {
+			url.searchParams.delete('filter');
+		} else {
+			url.searchParams.set('filter', newFilter);
+		}
+		goto(url.toString(), { replaceState: true, noScroll: true, keepFocus: true });
+	}
+
+	// Reset state when key or filter changes
 	watch(
-		() => key,
+		() => [key, activeFilter] as const,
 		() => {
 			videos = [];
 			hasMore = true;
 			error = null;
+			isLoading = false;
 		}
 	);
 
@@ -101,6 +135,7 @@
 
 	const videoColumnCount = $derived(Math.max(1, getColumnsForWidth(videoGridWidth)));
 	const batchSize = $derived(Math.max(6, videoColumnCount * ROWS_PER_BATCH));
+	const currentTabLabel = $derived(tabLabels[activeFilter]);
 
 	const videoGridTemplate = $derived(`repeat(${Math.max(1, videoColumnCount)}, minmax(0, 1fr))`);
 	const videoSizes = $derived(
@@ -119,7 +154,11 @@
 
 		isLoading = true;
 		try {
-			const newVideos = await fetchVideos({ limit: batchSize, offset: videos.length });
+			const newVideos = await fetchVideos({
+				limit: batchSize,
+				offset: videos.length,
+				filter: activeFilter
+			});
 			if (newVideos.length < batchSize) {
 				hasMore = false;
 			}
@@ -150,78 +189,87 @@
 </script>
 
 <div>
-	<h2 class="mb-4 text-xl font-semibold">Recent Videos</h2>
-	<div
-		bind:this={videoGridElement}
-		class="grid gap-4 sm:gap-5"
-		style:grid-template-columns={videoGridTemplate}
-	>
-		{#each videos as video (video.ytVideoId)}
-			{@const formattedDuration = formatVideoDuration(video.duration)}
-			<div class="group cursor-pointer">
-				<Card.Root
-					class="flex h-full flex-col p-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-				>
-					<a href={`https://www.youtube.com/watch?v=${video.ytVideoId}`} target="_blank">
-						<Card.Content class="flex h-full flex-col p-0">
-							<AspectRatio ratio={16 / 9} class="relative overflow-hidden rounded-t-xl bg-muted">
-								<img
-									src={video.thumbnailUrl}
-									alt={video.title}
-									sizes={videoSizes}
-									loading="lazy"
-									decoding="async"
-									class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-								/>
-								{#if formattedDuration}
-									<span
-										class="absolute right-2 bottom-2 rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-semibold text-white"
+	<Tabs.Root value={activeFilter} onValueChange={(value) => handleTabChange(value as VideoFilter)}>
+		<Tabs.List class="mb-4">
+			<Tabs.Trigger value="videos">{tabLabels.videos}</Tabs.Trigger>
+			<Tabs.Trigger value="shorts">{tabLabels.shorts}</Tabs.Trigger>
+			<Tabs.Trigger value="livestreams">{tabLabels.livestreams}</Tabs.Trigger>
+		</Tabs.List>
+
+		<div
+			bind:this={videoGridElement}
+			class="grid gap-4 sm:gap-5"
+			style:grid-template-columns={videoGridTemplate}
+		>
+			{#each videos as video (video.ytVideoId)}
+				{@const formattedDuration = formatVideoDuration(video.duration)}
+				<div class="group cursor-pointer">
+					<Card.Root
+						class="flex h-full flex-col p-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+					>
+						<a href={`https://www.youtube.com/watch?v=${video.ytVideoId}`} target="_blank">
+							<Card.Content class="flex h-full flex-col p-0">
+								<AspectRatio ratio={16 / 9} class="relative overflow-hidden rounded-t-xl bg-muted">
+									<img
+										src={video.thumbnailUrl}
+										alt={video.title}
+										sizes={videoSizes}
+										loading="lazy"
+										decoding="async"
+										class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+									/>
+									{#if formattedDuration}
+										<span
+											class="absolute right-2 bottom-2 rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-semibold text-white"
+										>
+											{formattedDuration}
+										</span>
+									{/if}
+								</AspectRatio>
+								<div class="flex flex-1 flex-col gap-2 p-4">
+									<h3
+										class="line-clamp-2 leading-snug font-semibold transition-colors group-hover:text-primary"
 									>
-										{formattedDuration}
-									</span>
-								{/if}
-							</AspectRatio>
-							<div class="flex flex-1 flex-col gap-2 p-4">
-								<h3
-									class="line-clamp-2 leading-snug font-semibold transition-colors group-hover:text-primary"
-								>
-									{video.title}
-								</h3>
-								<div class="flex flex-col gap-2 text-xs text-muted-foreground">
-									<div class="flex items-center gap-3">
+										{video.title}
+									</h3>
+									<div class="flex flex-col gap-2 text-xs text-muted-foreground">
+										<div class="flex items-center gap-3">
+											<span class="flex items-center gap-1">
+												<Eye class="h-3 w-3" />
+												{formatCompactNumber(video.viewCount)}
+											</span>
+											<span class="flex items-center gap-1">
+												<ThumbsUp class="h-3 w-3" />
+												{formatCompactNumber(video.likeCount)}
+											</span>
+											<span class="flex items-center gap-1">
+												<MessageCircle class="h-3 w-3" />
+												{formatCompactNumber(video.commentCount)}
+											</span>
+										</div>
 										<span class="flex items-center gap-1">
-											<Eye class="h-3 w-3" />
-											{formatCompactNumber(video.viewCount)}
-										</span>
-										<span class="flex items-center gap-1">
-											<ThumbsUp class="h-3 w-3" />
-											{formatCompactNumber(video.likeCount)}
-										</span>
-										<span class="flex items-center gap-1">
-											<MessageCircle class="h-3 w-3" />
-											{formatCompactNumber(video.commentCount)}
+											<Calendar class="h-3 w-3" />
+											{new Date(video.publishedAt).toLocaleDateString()}
 										</span>
 									</div>
-									<span class="flex items-center gap-1">
-										<Calendar class="h-3 w-3" />
-										{new Date(video.publishedAt).toLocaleDateString()}
-									</span>
 								</div>
-							</div>
-						</Card.Content>
-					</a>
-				</Card.Root>
-			</div>
-		{/each}
-	</div>
+							</Card.Content>
+						</a>
+					</Card.Root>
+				</div>
+			{/each}
+		</div>
 
-	<div bind:this={sentinelElement} class="flex items-center justify-center py-8">
-		{#if isLoading}
-			<Spinner class="h-8 w-8" />
-		{:else if error}
-			<p class="text-sm text-destructive">{error}</p>
-		{:else if !hasMore && videos.length > 0}
-			<p class="text-sm text-muted-foreground">No more videos</p>
-		{/if}
-	</div>
+		<div bind:this={sentinelElement} class="flex items-center justify-center py-8">
+			{#if isLoading}
+				<Spinner class="h-8 w-8" />
+			{:else if error}
+				<p class="text-sm text-destructive">{error}</p>
+			{:else if !hasMore && videos.length > 0}
+				<p class="text-sm text-muted-foreground">No more {currentTabLabel.toLowerCase()}</p>
+			{:else if !hasMore && videos.length === 0}
+				<p class="text-sm text-muted-foreground">No {currentTabLabel.toLowerCase()} available</p>
+			{/if}
+		</div>
+	</Tabs.Root>
 </div>
