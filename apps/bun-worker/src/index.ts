@@ -4,18 +4,32 @@ import { Effect, Layer, Schedule } from 'effect';
 
 const appLayer = Layer.provideMerge(ChannelSyncService.Default, DbService.Default);
 
-const runSync = Effect.fn('BgWorker.runSync')(function* () {
+const runChannelSync = Effect.fn('BgWorker.runChannelSync')(function* () {
 	const channelSync = yield* ChannelSyncService;
 	yield* Effect.log('starting sync');
-	yield* channelSync.syncAllChannels();
+	yield* channelSync.syncChannels();
 	yield* Effect.log('finished sync');
 });
 
-const program = runSync().pipe(
-	Effect.catchAllCause((cause) => Effect.logError('sync failed', cause)),
-	Effect.repeat(Schedule.spaced('30 minutes')),
-	Effect.provide(appLayer),
-	Effect.withSpan('BgWorker.main')
+const runVideoSync = Effect.fn('BgWorker.runVideoSync')(function* () {
+	const channelSync = yield* ChannelSyncService;
+	yield* Effect.log('starting sync');
+	yield* channelSync.syncVideos();
+	yield* Effect.log('finished sync');
+});
+
+const channelSyncProgram = runChannelSync().pipe(
+	Effect.catchAllCause((cause) => Effect.logError('channel sync failed', cause)),
+	Effect.repeat(Schedule.spaced('24 hours'))
 );
+
+const videoSyncProgram = runVideoSync().pipe(
+	Effect.catchAllCause((cause) => Effect.logError('video sync failed', cause)),
+	Effect.repeat(Schedule.spaced('1 hour'))
+);
+
+const program = Effect.all([channelSyncProgram, videoSyncProgram], {
+	concurrency: 2
+}).pipe(Effect.provide(appLayer), Effect.withSpan('BgWorker.main'));
 
 BunRuntime.runMain(program);

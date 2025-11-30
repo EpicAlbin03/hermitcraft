@@ -1,6 +1,6 @@
 import type { Video } from '@hc/db';
 
-export const parseYouTubeRSS = async (xml: string) => {
+export const parseYouTubeRSS = (xml: string) => {
 	const entries: Pick<
 		Video,
 		'ytVideoId' | 'title' | 'thumbnailUrl' | 'publishedAt' | 'viewCount' | 'likeCount'
