@@ -47,7 +47,7 @@
 		}
 	];
 
-	const dropdownItems: DropdownItem[] = [
+	const dropdownItems: DropdownItem[] = $derived([
 		{
 			title: 'Members',
 			icon: UsersIcon,
@@ -83,7 +83,7 @@
 				}))
 				.reverse()
 		}
-	];
+	]);
 </script>
 
 <Sidebar.Root {collapsible} {...restProps}>
