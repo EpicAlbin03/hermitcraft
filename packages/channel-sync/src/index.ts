@@ -73,7 +73,7 @@ const channelSyncService = Effect.gen(function* () {
 
 	const syncRSSVideo = (video: Video) =>
 		Effect.gen(function* () {
-			yield* db.upsertVideo(video);
+			return yield* db.upsertVideo(video);
 		}).pipe(
 			Effect.catchTag(
 				'DbError',
@@ -119,6 +119,7 @@ const channelSyncService = Effect.gen(function* () {
 
 			let successCount = 0;
 			let errorCount = 0;
+			let skipCount = 0;
 			const BATCH_SIZE = 50;
 
 			yield* Effect.forEach(channelIds, (ytChannelId) =>
@@ -160,8 +161,13 @@ const channelSyncService = Effect.gen(function* () {
 							);
 
 							if (result._tag === 'Right') {
-								successCount++;
-								console.log(`Synced video ${rssVideo.ytVideoId} - ${rssVideo.title}`);
+								if (result.right?.wasSkipped) {
+									skipCount++;
+									console.log(`Skipped video ${rssVideo.ytVideoId} - ${rssVideo.title}`);
+								} else {
+									successCount++;
+									console.log(`Synced video ${rssVideo.ytVideoId} - ${rssVideo.title}`);
+								}
 							} else {
 								errorCount++;
 								console.error('LIVE CRAWLER: Failed to sync video', result.left);
@@ -172,7 +178,7 @@ const channelSyncService = Effect.gen(function* () {
 			);
 
 			yield* Console.log(
-				`VIDEO SYNC COMPLETED: ${successCount} videos synced, ${errorCount} videos failed`
+				`VIDEO SYNC COMPLETED: ${successCount} videos synced, ${errorCount} videos failed, ${skipCount} videos skipped`
 			);
 			yield* Console.log(`VIDEO SYNC TOOK ${performance.now() - start}ms`);
 		});
@@ -236,3 +242,4 @@ export class ChannelSyncService extends Effect.Service<ChannelSyncService>()('Ch
 }) {}
 
 export * from './db';
+export * from './youtube';

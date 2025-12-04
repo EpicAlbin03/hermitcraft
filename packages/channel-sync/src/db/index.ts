@@ -1,6 +1,7 @@
 import { DB_SCHEMA, getDrizzleInstance, eq, type Video, type Channel } from '@hc/db';
 import { Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
+import { parseIsoDurationToSeconds } from '../youtube';
 
 class DbError extends TaggedError('DbError') {
 	constructor(message: string, options?: { cause?: unknown }) {
@@ -132,6 +133,14 @@ const dbService = Effect.gen(function* () {
 
 	const upsertVideo = (data: Omit<Video, 'createdAt'>) =>
 		Effect.gen(function* () {
+			const durationSeconds = parseIsoDurationToSeconds(data.duration);
+			if (durationSeconds === null || durationSeconds === 0) {
+				console.warn(
+					`\x1b[33mDuration is 0 or invalid for video ${data.ytVideoId}, skipping\x1b[0m`
+				);
+				return { ytVideoId: data.ytVideoId, wasInserted: false, wasSkipped: true };
+			}
+
 			const existing = yield* getVideo(data.ytVideoId);
 
 			if (existing) {
@@ -154,7 +163,7 @@ const dbService = Effect.gen(function* () {
 						})
 				});
 
-				return { ytVideoId: data.ytVideoId, wasInserted: false };
+				return { ytVideoId: data.ytVideoId, wasInserted: false, wasSkipped: false };
 			} else {
 				yield* Effect.tryPromise({
 					try: () =>
@@ -177,7 +186,7 @@ const dbService = Effect.gen(function* () {
 						})
 				});
 
-				return { ytVideoId: data.ytVideoId, wasInserted: true };
+				return { ytVideoId: data.ytVideoId, wasInserted: true, wasSkipped: false };
 			}
 		});
 
