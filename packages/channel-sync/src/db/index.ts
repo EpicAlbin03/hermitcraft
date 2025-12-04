@@ -181,12 +181,32 @@ const dbService = Effect.gen(function* () {
 			}
 		});
 
+	const deleteAllVideos = () =>
+		Effect.tryPromise({
+			try: () => drizzle.delete(DB_SCHEMA.videos),
+			catch: (err) =>
+				new DbError('Failed to wipe videos table', {
+					cause: err
+				})
+		});
+
+	const deleteAllChannels = () =>
+		Effect.tryPromise({
+			try: () => drizzle.delete(DB_SCHEMA.channels),
+			catch: (err) =>
+				new DbError('Failed to wipe channels table', {
+					cause: err
+				})
+		});
+
 	return {
 		getAllChannels,
 		getChannel,
 		getVideo,
 		upsertChannel,
-		upsertVideo
+		upsertVideo,
+		deleteAllVideos,
+		deleteAllChannels
 	};
 });
 
