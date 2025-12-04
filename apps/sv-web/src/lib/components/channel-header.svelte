@@ -123,7 +123,7 @@
 						!isDescriptionExpanded && 'line-clamp-1 lg:line-clamp-2'
 					)}
 				>
-					{channel.description}
+					{@html channel.description}
 				</p>
 				{#if channel.description.length > 150}
 					<Button

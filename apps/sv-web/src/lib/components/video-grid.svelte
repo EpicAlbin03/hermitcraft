@@ -230,7 +230,7 @@
 									<h3
 										class="line-clamp-2 leading-snug font-semibold transition-colors group-hover:text-primary"
 									>
-										{video.title}
+										{@html video.title}
 									</h3>
 									<div class="flex flex-col gap-2 text-xs text-muted-foreground">
 										<div class="flex items-center gap-3">
