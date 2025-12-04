@@ -9,7 +9,7 @@
 	import { useSidebarSpace } from '$lib/hooks/use-sidebar-space.svelte';
 	import { Eye, ThumbsUp, MessageCircle, Calendar } from '@lucide/svelte';
 	import type { ChannelVideos } from '$lib/remote/channels.remote';
-	import { formatCompactNumber } from '$lib/format-number';
+	import { formatCompactNumber, formatDate } from '$lib/utils';
 	import { formatVideoDuration } from '$lib/format-duration';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import type { VideoFilter } from '$lib/db/queries';
@@ -249,7 +249,7 @@
 										</div>
 										<span class="flex items-center gap-1">
 											<Calendar class="h-3 w-3" />
-											{new Date(video.publishedAt).toLocaleDateString()}
+											{formatDate(video.publishedAt)}
 										</span>
 									</div>
 								</div>

@@ -9,7 +9,7 @@
 		type ActiveTailwindBreakpoint
 	} from '$lib/hooks/is-tailwind-breakpoint.svelte';
 	import { useSidebarSpace } from '$lib/hooks/use-sidebar-space.svelte';
-	import { formatCompactNumber } from '$lib/format-number';
+	import { formatCompactNumber } from '$lib/utils';
 	import { cn } from '$lib/utils';
 	import type { ChannelDetails } from '$lib/remote/channels.remote';
 	import { Image } from '@unpic/svelte';
