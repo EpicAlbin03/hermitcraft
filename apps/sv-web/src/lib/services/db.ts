@@ -1,0 +1,189 @@
+import { DB_SCHEMA, getDrizzleInstance, eq, desc, and } from '@hc/db';
+import { Effect } from 'effect';
+import { TaggedError } from 'effect/Data';
+import { env } from '$env/dynamic/private';
+import { parseIsoDurationToSeconds } from '$lib/format-duration';
+
+export class DbError extends TaggedError('DbError') {
+	constructor(message: string, options?: { cause?: unknown }) {
+		super();
+		this.message = message;
+		this.cause = options?.cause;
+	}
+}
+
+export type VideoFilter = 'videos' | 'shorts' | 'livestreams';
+
+// TODO: Better check for shorts
+export function isShort(duration: string) {
+	const durationSeconds = parseIsoDurationToSeconds(duration);
+	if (durationSeconds === null) return false;
+	return durationSeconds <= 3 * 60;
+}
+
+const dbService = Effect.gen(function* () {
+	const dbUrl = yield* Effect.sync(() => env.MYSQL_URL);
+
+	if (!dbUrl) {
+		return yield* Effect.die('MYSQL_URL is not set...');
+	}
+
+	const drizzle = yield* Effect.acquireRelease(
+		Effect.try(() => getDrizzleInstance(dbUrl)),
+		(db) =>
+			Effect.sync(() => {
+				console.log('Releasing database connection...');
+				db.$client.end();
+			})
+	).pipe(
+		Effect.catchAll((err) => {
+			console.error('Failed to connect to database...', err);
+			return Effect.die('Failed to connect to database...');
+		})
+	);
+
+	const getSidebarChannels = () =>
+		Effect.gen(function* () {
+			const channels = yield* Effect.tryPromise({
+				try: () =>
+					drizzle
+						.select({
+							name: DB_SCHEMA.channels.name,
+							handle: DB_SCHEMA.channels.handle,
+							thumbnailUrl: DB_SCHEMA.channels.thumbnailUrl
+						})
+						.from(DB_SCHEMA.channels)
+						.orderBy(DB_SCHEMA.channels.name),
+				catch: (err) =>
+					new DbError('Failed to get sidebar channels', {
+						cause: err
+					})
+			});
+			return channels;
+		});
+
+	const getChannelByHandle = (handle: string) =>
+		Effect.gen(function* () {
+			const channels = yield* Effect.tryPromise({
+				try: () =>
+					drizzle
+						.select({
+							ytChannelId: DB_SCHEMA.channels.ytChannelId,
+							name: DB_SCHEMA.channels.name,
+							thumbnailUrl: DB_SCHEMA.channels.thumbnailUrl,
+							bannerUrl: DB_SCHEMA.channels.bannerUrl,
+							description: DB_SCHEMA.channels.description,
+							viewCount: DB_SCHEMA.channels.viewCount,
+							subscriberCount: DB_SCHEMA.channels.subscriberCount,
+							videoCount: DB_SCHEMA.channels.videoCount
+						})
+						.from(DB_SCHEMA.channels)
+						.where(eq(DB_SCHEMA.channels.handle, handle))
+						.limit(1),
+				catch: (err) =>
+					new DbError('Failed to get channel by handle', {
+						cause: err
+					})
+			});
+
+			if (!channels[0]) {
+				return yield* Effect.fail(
+					new DbError('Channel not found', {
+						cause: new Error('Channel not found')
+					})
+				);
+			}
+
+			return channels[0];
+		});
+
+	const getChannelVideos = (
+		ytChannelId: string,
+		limit: number,
+		offset: number,
+		filter: VideoFilter
+	) =>
+		Effect.gen(function* () {
+			const videos = yield* Effect.tryPromise({
+				try: () =>
+					drizzle
+						.select({
+							ytVideoId: DB_SCHEMA.videos.ytVideoId,
+							title: DB_SCHEMA.videos.title,
+							thumbnailUrl: DB_SCHEMA.videos.thumbnailUrl,
+							publishedAt: DB_SCHEMA.videos.publishedAt,
+							viewCount: DB_SCHEMA.videos.viewCount,
+							likeCount: DB_SCHEMA.videos.likeCount,
+							commentCount: DB_SCHEMA.videos.commentCount,
+							duration: DB_SCHEMA.videos.duration,
+							isLiveStream: DB_SCHEMA.videos.isLiveStream
+						})
+						.from(DB_SCHEMA.videos)
+						.where(() => {
+							if (filter === 'livestreams') {
+								return and(
+									eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
+									eq(DB_SCHEMA.videos.isLiveStream, true)
+								);
+							} else if (filter === 'shorts') {
+								return eq(DB_SCHEMA.videos.ytChannelId, ytChannelId);
+							} else {
+								return eq(DB_SCHEMA.videos.ytChannelId, ytChannelId);
+							}
+						})
+						.orderBy(desc(DB_SCHEMA.videos.publishedAt))
+						.limit(limit)
+						.offset(offset),
+				catch: (err) =>
+					new DbError('Failed to get channel videos', {
+						cause: err
+					})
+			});
+			return videos.map((video) => ({
+				...video,
+				isShort: isShort(video.duration)
+			}));
+		});
+
+	const getAllVideos = (limit: number, offset: number) =>
+		Effect.gen(function* () {
+			const videos = yield* Effect.tryPromise({
+				try: () =>
+					drizzle
+						.select({
+							ytVideoId: DB_SCHEMA.videos.ytVideoId,
+							title: DB_SCHEMA.videos.title,
+							thumbnailUrl: DB_SCHEMA.videos.thumbnailUrl,
+							publishedAt: DB_SCHEMA.videos.publishedAt,
+							viewCount: DB_SCHEMA.videos.viewCount,
+							likeCount: DB_SCHEMA.videos.likeCount,
+							commentCount: DB_SCHEMA.videos.commentCount,
+							duration: DB_SCHEMA.videos.duration,
+							isLiveStream: DB_SCHEMA.videos.isLiveStream
+						})
+						.from(DB_SCHEMA.videos)
+						.orderBy(desc(DB_SCHEMA.videos.publishedAt))
+						.limit(limit)
+						.offset(offset),
+				catch: (err) =>
+					new DbError('Failed to get all videos', {
+						cause: err
+					})
+			});
+			return videos.map((video) => ({
+				...video,
+				isShort: isShort(video.duration)
+			}));
+		});
+
+	return {
+		getSidebarChannels,
+		getChannelByHandle,
+		getChannelVideos,
+		getAllVideos
+	};
+});
+
+export class DbService extends Effect.Service<DbService>()('DbService', {
+	scoped: dbService
+}) {}
