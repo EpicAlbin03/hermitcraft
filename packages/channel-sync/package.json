@@ -8,7 +8,8 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check .",
 		"seed": "bun run scripts/seed.ts",
-		"wipe": "bun run scripts/wipe.ts"
+		"wipe": "bun run scripts/wipe.ts",
+		"backfill": "bun run scripts/backfill.ts"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",

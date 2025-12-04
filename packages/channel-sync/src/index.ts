@@ -179,12 +179,56 @@ const channelSyncService = Effect.gen(function* () {
 			yield* Console.log(`VIDEO SYNC TOOK ${performance.now() - start}ms`);
 		});
 
+	const backfillChannel = (args: { ytChannelId: string }) =>
+		Effect.gen(function* () {
+			const start = performance.now();
+			yield* Console.log(`BACKFILL: Starting backfill for channel ${args.ytChannelId}`);
+
+			const channel = yield* db.getChannel(args.ytChannelId);
+			if (!channel) {
+				return yield* Effect.fail(new SyncVideoError('Channel not found'));
+			}
+
+			const videoIds = yield* yt.getVideosFromUploadsPlaylist({
+				ytChannelId: args.ytChannelId
+			});
+
+			yield* Console.log(`BACKFILL: Found ${videoIds.length} videos to backfill`);
+
+			let successCount = 0;
+			let errorCount = 0;
+
+			yield* Effect.forEach(
+				videoIds,
+				(videoId) =>
+					Effect.gen(function* () {
+						console.log(`BACKFILL: Syncing video ${videoId}`);
+						const result = yield* syncVideo({ ytVideoId: videoId }).pipe(Effect.either);
+
+						if (result._tag === 'Right') {
+							successCount++;
+							console.log(`BACKFILL: Successfully synced video ${videoId}`);
+						} else {
+							errorCount++;
+							console.error(`BACKFILL: Failed to sync video ${videoId}`, result.left);
+						}
+					}),
+				{ concurrency: 5 }
+			);
+
+			yield* Console.log(
+				`BACKFILL COMPLETED: ${successCount} videos synced, ${errorCount} videos failed`
+			);
+			yield* Console.log(`BACKFILL TOOK ${performance.now() - start}ms`);
+		});
+
 	return {
 		syncChannel,
 		syncVideo,
 		syncRSSVideo,
 		syncChannels,
-		syncVideos
+		syncVideos,
+		backfillChannel
 	};
 });
 

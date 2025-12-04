@@ -172,11 +172,70 @@ const youtubeService = Effect.gen(function* () {
 			return parseYouTubeRSS(xml);
 		});
 
+	const getVideosFromUploadsPlaylist = (args: { ytChannelId: string; maxResults?: number }) =>
+		Effect.gen(function* () {
+			const playlists = yield* Effect.tryPromise({
+				try: () =>
+					youtube.channels.list({
+						part: ['contentDetails'],
+						id: [args.ytChannelId]
+					}),
+				catch: (err) =>
+					new YoutubeError(`Failed to get playlists for channel ${args.ytChannelId}`, {
+						cause: err
+					})
+			});
+
+			const uploadsPlaylistId =
+				playlists.data.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+
+			if (!uploadsPlaylistId) {
+				return yield* Effect.fail(
+					new YoutubeError(`Could not find uploads playlist for channel ${args.ytChannelId}`)
+				);
+			}
+
+			yield* Effect.log(`Uploads playlist ID: ${uploadsPlaylistId}`);
+
+			let videoIds: string[] = [];
+			let nextPageToken: string | undefined;
+
+			do {
+				const playlistResponse = yield* Effect.tryPromise({
+					try: () =>
+						youtube.playlistItems.list({
+							part: ['contentDetails'],
+							playlistId: uploadsPlaylistId,
+							maxResults: 50,
+							...(nextPageToken !== undefined && { pageToken: nextPageToken })
+						}),
+					catch: (err) =>
+						new YoutubeError(`Failed to get playlist items for playlist ${uploadsPlaylistId}`, {
+							cause: err
+						})
+				});
+
+				const items = playlistResponse.data.items || [];
+				for (const item of items) {
+					if (item.contentDetails?.videoId) {
+						videoIds.push(item.contentDetails.videoId);
+					}
+				}
+				nextPageToken = playlistResponse.data.nextPageToken || undefined;
+			} while (
+				nextPageToken &&
+				(args.maxResults === undefined || videoIds.length < args.maxResults)
+			);
+
+			return videoIds;
+		});
+
 	return {
 		getChannelDetails,
 		getVideoDetails,
 		getBatchRSSVideoDetails,
-		getRSSVideos
+		getRSSVideos,
+		getVideosFromUploadsPlaylist
 	};
 });
 
