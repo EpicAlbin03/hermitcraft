@@ -81,24 +81,23 @@ const channelSyncService = Effect.gen(function* () {
 			)
 		);
 
-	const syncChannels = () =>
+	const syncChannels = (args?: { ytChannelIds?: string[] }) =>
 		Effect.gen(function* () {
 			const start = performance.now();
-			const channels = yield* db.getAllChannels();
+			const channelIds =
+				args?.ytChannelIds ?? (yield* db.getAllChannels()).map((c) => c.ytChannelId);
 
 			let successCount = 0;
 			let errorCount = 0;
 
-			yield* Effect.forEach(channels, (channel) =>
+			yield* Effect.forEach(channelIds, (ytChannelId) =>
 				Effect.gen(function* () {
-					console.log(`Syncing channel ${channel.ytChannelId} - ${channel.name}`);
-					const result = yield* syncChannel({ ytChannelId: channel.ytChannelId }).pipe(
-						Effect.either
-					);
+					console.log(`Syncing channel ${ytChannelId}`);
+					const result = yield* syncChannel({ ytChannelId }).pipe(Effect.either);
 
 					if (result._tag === 'Right') {
 						successCount++;
-						console.log(`Synced channel ${channel.ytChannelId} - ${channel.name}`);
+						console.log(`Synced channel ${ytChannelId}`);
 					} else {
 						errorCount++;
 						console.error('LIVE CRAWLER: Failed to sync channel', result.left);
@@ -112,20 +111,19 @@ const channelSyncService = Effect.gen(function* () {
 			yield* Console.log(`LIVE CRAWLER TOOK ${performance.now() - start}ms`);
 		});
 
-	const syncVideos = () =>
+	const syncVideos = (args?: { ytChannelIds?: string[] }) =>
 		Effect.gen(function* () {
 			const start = performance.now();
-			const channels = yield* db.getAllChannels();
+			const channelIds =
+				args?.ytChannelIds ?? (yield* db.getAllChannels()).map((c) => c.ytChannelId);
 
 			let successCount = 0;
 			let errorCount = 0;
 			const BATCH_SIZE = 50;
 
-			yield* Effect.forEach(channels, (channel) =>
+			yield* Effect.forEach(channelIds, (ytChannelId) =>
 				Effect.gen(function* () {
-					const rssVideosResult = yield* yt
-						.getRSSVideos({ ytChannelId: channel.ytChannelId })
-						.pipe(Effect.either);
+					const rssVideosResult = yield* yt.getRSSVideos({ ytChannelId }).pipe(Effect.either);
 					if (rssVideosResult._tag === 'Left') {
 						console.error('LIVE CRAWLER: Failed to get recent videos', rssVideosResult.left);
 						return;

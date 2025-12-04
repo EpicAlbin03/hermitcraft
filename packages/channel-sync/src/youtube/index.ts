@@ -169,7 +169,7 @@ const youtubeService = Effect.gen(function* () {
 				catch: (err) => new YoutubeError(`Failed to read RSS text`, { cause: err })
 			});
 
-			return parseYouTubeRSS(xml);
+			return parseYouTubeRSS(xml).map((v) => ({ ...v, ytChannelId: args.ytChannelId }));
 		});
 
 	const getVideosFromUploadsPlaylist = (args: { ytChannelId: string; maxResults?: number }) =>
