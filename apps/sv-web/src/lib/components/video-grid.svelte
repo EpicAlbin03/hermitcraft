@@ -9,10 +9,9 @@
 	import { useSidebarSpace } from '$lib/hooks/use-sidebar-space.svelte';
 	import { Eye, ThumbsUp, MessageCircle, Calendar } from '@lucide/svelte';
 	import type { ChannelVideos } from '$lib/remote/channels.remote';
-	import { formatCompactNumber, formatDate } from '$lib/utils';
-	import { formatVideoDuration } from '$lib/format-duration';
+	import { formatCompactNumber, formatDate, formatVideoDuration } from '$lib/utils';
 	import { Spinner } from '$lib/components/ui/spinner';
-	import type { VideoFilter } from '$lib/db/queries';
+	import type { VideoFilter } from '$lib/services/db';
 
 	type Props = {
 		fetchVideos: (params: {

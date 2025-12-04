@@ -1,7 +1,7 @@
 import { DB_SCHEMA, getDrizzleInstance, eq, type Video, type Channel } from '@hc/db';
 import { Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
-import { parseIsoDurationToSeconds } from '../youtube';
+import { parseIsoDurationToSeconds } from '../youtube/utils';
 
 class DbError extends TaggedError('DbError') {
 	constructor(message: string, options?: { cause?: unknown }) {

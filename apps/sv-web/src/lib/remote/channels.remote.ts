@@ -34,6 +34,6 @@ export const remoteGetChannelVideos = query(
 
 export type ChannelVideos = Awaited<ReturnType<typeof remoteGetChannelVideos>>;
 
-export const remoteGetAllVideos = query(paginationSchema, async ({ limit, offset }) => {
-	return DbRemoteRunner(({ db }) => db.getAllVideos(limit, offset));
+export const remoteGetAllVideos = query(paginationSchema, async ({ limit, offset, filter }) => {
+	return DbRemoteRunner(({ db }) => db.getAllVideos(limit, offset, filter));
 });

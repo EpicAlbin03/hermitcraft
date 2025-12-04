@@ -43,6 +43,7 @@
         "@effect/platform-bun": "^0.86.0",
         "@eslint/compat": "^1.4.0",
         "@eslint/js": "^9.38.0",
+        "@hc/channel-sync": "*",
         "@hc/db": "*",
         "@internationalized/date": "^3.8.1",
         "@lucide/svelte": "^0.544.0",

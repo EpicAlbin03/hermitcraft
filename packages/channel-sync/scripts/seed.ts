@@ -3,7 +3,7 @@
 import { Effect, Layer } from 'effect';
 import { ChannelSyncService, DbService } from '../src';
 import { askQuestion, selectOperations } from './utils';
-import { channelIds } from '../src/youtube/channelIds';
+import { channelIds } from '../src/youtube/utils';
 
 const main = Effect.gen(function* () {
 	const channelSync = yield* ChannelSyncService;

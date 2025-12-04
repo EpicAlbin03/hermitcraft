@@ -2,7 +2,7 @@ import { google } from 'googleapis';
 import { Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { DbService } from '../db';
-import { isShort } from './isShort';
+import { isShort } from './utils';
 import type { Video } from '@hc/db';
 import { parseYouTubeRSS } from './rss';
 

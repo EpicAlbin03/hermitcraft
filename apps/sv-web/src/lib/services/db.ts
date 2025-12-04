@@ -2,7 +2,6 @@ import { DB_SCHEMA, getDrizzleInstance, eq, desc, and } from '@hc/db';
 import { Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { env } from '$env/dynamic/private';
-import { parseIsoDurationToSeconds } from '$lib/format-duration';
 
 export class DbError extends TaggedError('DbError') {
 	constructor(message: string, options?: { cause?: unknown }) {
@@ -13,13 +12,6 @@ export class DbError extends TaggedError('DbError') {
 }
 
 export type VideoFilter = 'videos' | 'shorts' | 'livestreams';
-
-// TODO: Better check for shorts
-export function isShort(duration: string) {
-	const durationSeconds = parseIsoDurationToSeconds(duration);
-	if (durationSeconds === null) return false;
-	return durationSeconds <= 3 * 60;
-}
 
 const dbService = Effect.gen(function* () {
 	const dbUrl = yield* Effect.sync(() => env.MYSQL_URL);
@@ -116,7 +108,8 @@ const dbService = Effect.gen(function* () {
 							likeCount: DB_SCHEMA.videos.likeCount,
 							commentCount: DB_SCHEMA.videos.commentCount,
 							duration: DB_SCHEMA.videos.duration,
-							isLiveStream: DB_SCHEMA.videos.isLiveStream
+							isLiveStream: DB_SCHEMA.videos.isLiveStream,
+							isShort: DB_SCHEMA.videos.isShort
 						})
 						.from(DB_SCHEMA.videos)
 						.where(() => {
@@ -126,7 +119,10 @@ const dbService = Effect.gen(function* () {
 									eq(DB_SCHEMA.videos.isLiveStream, true)
 								);
 							} else if (filter === 'shorts') {
-								return eq(DB_SCHEMA.videos.ytChannelId, ytChannelId);
+								return and(
+									eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
+									eq(DB_SCHEMA.videos.isShort, true)
+								);
 							} else {
 								return eq(DB_SCHEMA.videos.ytChannelId, ytChannelId);
 							}
@@ -139,13 +135,10 @@ const dbService = Effect.gen(function* () {
 						cause: err
 					})
 			});
-			return videos.map((video) => ({
-				...video,
-				isShort: isShort(video.duration)
-			}));
+			return videos;
 		});
 
-	const getAllVideos = (limit: number, offset: number) =>
+	const getAllVideos = (limit: number, offset: number, filter: VideoFilter) =>
 		Effect.gen(function* () {
 			const videos = yield* Effect.tryPromise({
 				try: () =>
@@ -159,9 +152,19 @@ const dbService = Effect.gen(function* () {
 							likeCount: DB_SCHEMA.videos.likeCount,
 							commentCount: DB_SCHEMA.videos.commentCount,
 							duration: DB_SCHEMA.videos.duration,
-							isLiveStream: DB_SCHEMA.videos.isLiveStream
+							isLiveStream: DB_SCHEMA.videos.isLiveStream,
+							isShort: DB_SCHEMA.videos.isShort
 						})
 						.from(DB_SCHEMA.videos)
+						.where(() => {
+							if (filter === 'livestreams') {
+								return eq(DB_SCHEMA.videos.isLiveStream, true);
+							} else if (filter === 'shorts') {
+								return eq(DB_SCHEMA.videos.isShort, true);
+							} else {
+								return undefined;
+							}
+						})
 						.orderBy(desc(DB_SCHEMA.videos.publishedAt))
 						.limit(limit)
 						.offset(offset),
@@ -170,10 +173,7 @@ const dbService = Effect.gen(function* () {
 						cause: err
 					})
 			});
-			return videos.map((video) => ({
-				...video,
-				isShort: isShort(video.duration)
-			}));
+			return videos;
 		});
 
 	return {
