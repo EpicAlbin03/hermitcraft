@@ -127,7 +127,11 @@ const dbService = Effect.gen(function* () {
 									eq(DB_SCHEMA.videos.isShort, true)
 								);
 							} else {
-								return eq(DB_SCHEMA.videos.ytChannelId, ytChannelId);
+								return and(
+									eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
+									eq(DB_SCHEMA.videos.isLiveStream, false),
+									eq(DB_SCHEMA.videos.isShort, false)
+								);
 							}
 						})
 						.orderBy(() => {
@@ -189,7 +193,10 @@ const dbService = Effect.gen(function* () {
 							} else if (filter === 'shorts') {
 								return eq(DB_SCHEMA.videos.isShort, true);
 							} else {
-								return undefined;
+								return and(
+									eq(DB_SCHEMA.videos.isLiveStream, false),
+									eq(DB_SCHEMA.videos.isShort, false)
+								);
 							}
 						})
 						.orderBy(() => {
