@@ -7,7 +7,14 @@
 	import * as Tabs from '$lib/components/ui/tabs';
 	import { IsTailwindBreakpoint } from '$lib/hooks/is-tailwind-breakpoint.svelte';
 	import { useSidebarSpace } from '$lib/hooks/use-sidebar-space.svelte';
-	import { Eye, ThumbsUp, MessageCircle, Calendar } from '@lucide/svelte';
+	import {
+		Eye,
+		ThumbsUp,
+		MessageCircle,
+		Calendar,
+		CalendarArrowDown,
+		CalendarArrowUp
+	} from '@lucide/svelte';
 	import type { ChannelVideos, ChannelDetails } from '$lib/remote/channels.remote';
 	import { formatCompactNumber, formatDate, formatVideoDuration } from '$lib/utils';
 	import { Spinner } from '$lib/components/ui/spinner';
@@ -48,11 +55,16 @@
 	};
 
 	const validSorts: VideoSort[] = ['latest', 'most_viewed', 'most_liked', 'oldest'];
-	const sortOptions: { value: VideoSort; label: string }[] = [
-		{ value: 'latest', label: 'Latest' },
-		{ value: 'most_viewed', label: 'Most Viewed' },
-		{ value: 'most_liked', label: 'Most Liked' },
-		{ value: 'oldest', label: 'Oldest' }
+	type SortOption = {
+		value: VideoSort;
+		label: string;
+		icon: LucideIcon;
+	};
+	const sortOptions: SortOption[] = [
+		{ value: 'latest', label: 'Latest', icon: CalendarArrowDown },
+		{ value: 'most_viewed', label: 'Views', icon: Eye },
+		{ value: 'most_liked', label: 'Likes', icon: ThumbsUp },
+		{ value: 'oldest', label: 'Oldest', icon: CalendarArrowUp }
 	];
 
 	let videoGridElement = $state<HTMLElement | null>(null);
@@ -82,8 +94,8 @@
 		return 'latest';
 	});
 
-	const sortTriggerContent = $derived(
-		sortOptions.find((s) => s.value === activeSort)?.label ?? 'Latest'
+	const selectedSortOption = $derived<SortOption>(
+		sortOptions.find((s) => s.value === activeSort) ?? sortOptions[0]!
 	);
 
 	function handleTabChange(newFilter: VideoFilter) {
@@ -243,13 +255,18 @@
 				value={activeSort}
 				onValueChange={(value) => handleSortChange(value as VideoSort)}
 			>
-				<Select.Trigger class="w-[140px]">
-					{sortTriggerContent}
+				<Select.Trigger class="w-[120px]">
+					<span class="flex items-center gap-2">
+						<selectedSortOption.icon />
+						{selectedSortOption.label}
+					</span>
 				</Select.Trigger>
 				<Select.Content>
 					<Select.Group>
+						<Select.Label>Sort by</Select.Label>
 						{#each sortOptions as option (option.value)}
 							<Select.Item value={option.value} label={option.label}>
+								<option.icon />
 								{option.label}
 							</Select.Item>
 						{/each}

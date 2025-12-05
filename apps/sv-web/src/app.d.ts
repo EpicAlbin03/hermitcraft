@@ -1,3 +1,5 @@
+import { type Icon as IconType } from '@lucide/svelte';
+
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {
@@ -12,6 +14,8 @@ declare global {
 		// interface PageState {}
 		// interface Platform {}
 	}
+
+	type LucideIcon = typeof IconType;
 }
 
 export {};
