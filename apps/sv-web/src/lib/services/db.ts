@@ -63,6 +63,7 @@ const dbService = Effect.gen(function* () {
 						.select({
 							ytChannelId: DB_SCHEMA.channels.ytChannelId,
 							name: DB_SCHEMA.channels.name,
+							handle: DB_SCHEMA.channels.handle,
 							thumbnailUrl: DB_SCHEMA.channels.thumbnailUrl,
 							bannerUrl: DB_SCHEMA.channels.bannerUrl,
 							description: DB_SCHEMA.channels.description,
@@ -172,9 +173,16 @@ const dbService = Effect.gen(function* () {
 							commentCount: DB_SCHEMA.videos.commentCount,
 							duration: DB_SCHEMA.videos.duration,
 							isLiveStream: DB_SCHEMA.videos.isLiveStream,
-							isShort: DB_SCHEMA.videos.isShort
+							isShort: DB_SCHEMA.videos.isShort,
+							channelName: DB_SCHEMA.channels.name,
+							channelThumbnailUrl: DB_SCHEMA.channels.thumbnailUrl,
+							channelHandle: DB_SCHEMA.channels.handle
 						})
 						.from(DB_SCHEMA.videos)
+						.innerJoin(
+							DB_SCHEMA.channels,
+							eq(DB_SCHEMA.videos.ytChannelId, DB_SCHEMA.channels.ytChannelId)
+						)
 						.where(() => {
 							if (filter === 'livestreams') {
 								return eq(DB_SCHEMA.videos.isLiveStream, true);

@@ -8,11 +8,19 @@
 	import { IsTailwindBreakpoint } from '$lib/hooks/is-tailwind-breakpoint.svelte';
 	import { useSidebarSpace } from '$lib/hooks/use-sidebar-space.svelte';
 	import { Eye, ThumbsUp, MessageCircle, Calendar } from '@lucide/svelte';
-	import type { ChannelVideos } from '$lib/remote/channels.remote';
+	import type { ChannelVideos, ChannelDetails } from '$lib/remote/channels.remote';
 	import { formatCompactNumber, formatDate, formatVideoDuration } from '$lib/utils';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import type { VideoFilter, VideoSort } from '$lib/services/db';
 	import * as Select from '$lib/components/ui/select';
+	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
+	import { Button } from '$lib/components/ui/button';
+
+	type VideoWithChannel = ChannelVideos[number] & {
+		channelName?: string;
+		channelThumbnailUrl?: string;
+		channelHandle?: string;
+	};
 
 	type Props = {
 		fetchVideos: (params: {
@@ -20,11 +28,12 @@
 			offset: number;
 			filter: VideoFilter;
 			sort: VideoSort;
-		}) => Promise<ChannelVideos>;
+		}) => Promise<VideoWithChannel[]>;
 		key: string;
+		channel?: ChannelDetails;
 	};
 
-	const { fetchVideos, key }: Props = $props();
+	const { fetchVideos, key, channel }: Props = $props();
 
 	const VIDEO_CARD_MIN_WIDTH = 260;
 	const VIDEO_CARD_MAX_WIDTH = 420;
@@ -51,7 +60,7 @@
 	let videoGridWidth = $state(0);
 	let videoGridGap = $state(16);
 
-	let videos = $state<ChannelVideos>([]);
+	let videos = $state<VideoWithChannel[]>([]);
 	let isLoading = $state(false);
 	let hasMore = $state(true);
 	let isIntersecting = $state(false);
@@ -256,12 +265,20 @@
 		>
 			{#each videos as video (video.ytVideoId)}
 				{@const formattedDuration = formatVideoDuration(video.duration)}
-				<div class="group cursor-pointer">
+				{@const channelName = channel?.name ?? video.channelName}
+				{@const channelThumbnail = channel?.thumbnailUrl ?? video.channelThumbnailUrl}
+				{@const channelHandle = channel?.handle ?? video.channelHandle}
+
+				<div class="group">
 					<Card.Root
 						class="flex h-full flex-col p-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
 					>
-						<a href={`https://www.youtube.com/watch?v=${video.ytVideoId}`} target="_blank">
-							<Card.Content class="flex h-full flex-col p-0">
+						<Card.Content class="flex h-full flex-col p-0">
+							<a
+								href={`https://www.youtube.com/watch?v=${video.ytVideoId}`}
+								target="_blank"
+								class="block"
+							>
 								<AspectRatio ratio={16 / 9} class="relative overflow-hidden rounded-t-xl bg-muted">
 									<img
 										src={video.thumbnailUrl}
@@ -279,13 +296,46 @@
 										</span>
 									{/if}
 								</AspectRatio>
-								<div class="flex flex-1 flex-col gap-2 p-4">
+							</a>
+
+							<div class="flex flex-1 flex-col gap-3 p-4">
+								<a
+									href={`https://www.youtube.com/watch?v=${video.ytVideoId}`}
+									target="_blank"
+									class="block"
+								>
 									<h3
 										class="line-clamp-2 leading-snug font-semibold transition-colors group-hover:text-primary"
 									>
 										{@html video.title}
 									</h3>
-									<div class="flex flex-col gap-2 text-xs text-muted-foreground">
+								</a>
+
+								{#if !channel}
+									<div class="flex items-center gap-2">
+										{#if channelName && channelHandle && channelThumbnail}
+											<a
+												href="/{channelHandle}"
+												class="group/channel flex items-center gap-2 text-muted-foreground hover:text-foreground"
+											>
+												<Avatar class="h-6 w-6 shrink-0">
+													<AvatarImage src={channelThumbnail} alt={channelName} />
+													<AvatarFallback>{channelName.slice(0, 2).toUpperCase()}</AvatarFallback>
+												</Avatar>
+												<span class="truncate text-xs font-medium group-hover/channel:underline">
+													{channelName}
+												</span>
+											</a>
+										{/if}
+									</div>
+								{/if}
+
+								<a
+									href={`https://www.youtube.com/watch?v=${video.ytVideoId}`}
+									target="_blank"
+									class="block text-muted-foreground hover:text-muted-foreground"
+								>
+									<div class="flex flex-col gap-2 text-xs">
 										<div class="flex items-center gap-3">
 											<span class="flex items-center gap-1">
 												<Eye class="h-3 w-3" />
@@ -305,9 +355,9 @@
 											{formatDate(video.publishedAt)}
 										</span>
 									</div>
-								</div>
-							</Card.Content>
-						</a>
+								</a>
+							</div>
+						</Card.Content>
 					</Card.Root>
 				</div>
 			{/each}

@@ -13,4 +13,5 @@
 	fetchVideos={({ limit, offset, filter, sort }) =>
 		remoteGetChannelVideos({ ytChannelId: channel.ytChannelId, limit, offset, filter, sort })}
 	key={channel.ytChannelId}
+	{channel}
 />
