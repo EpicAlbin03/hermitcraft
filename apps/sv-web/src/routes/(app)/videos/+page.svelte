@@ -4,6 +4,7 @@
 </script>
 
 <VideoGrid
-	fetchVideos={({ limit, offset, filter }) => remoteGetAllVideos({ limit, offset, filter })}
+	fetchVideos={({ limit, offset, filter, sort }) =>
+		remoteGetAllVideos({ limit, offset, filter, sort })}
 	key="all-videos"
 />

@@ -10,7 +10,7 @@
 
 <ChannelHeader {channel} {handle} />
 <VideoGrid
-	fetchVideos={({ limit, offset, filter }) =>
-		remoteGetChannelVideos({ ytChannelId: channel.ytChannelId, limit, offset, filter })}
+	fetchVideos={({ limit, offset, filter, sort }) =>
+		remoteGetChannelVideos({ ytChannelId: channel.ytChannelId, limit, offset, filter, sort })}
 	key={channel.ytChannelId}
 />

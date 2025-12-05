@@ -11,13 +11,15 @@
 	import type { ChannelVideos } from '$lib/remote/channels.remote';
 	import { formatCompactNumber, formatDate, formatVideoDuration } from '$lib/utils';
 	import { Spinner } from '$lib/components/ui/spinner';
-	import type { VideoFilter } from '$lib/services/db';
+	import type { VideoFilter, VideoSort } from '$lib/services/db';
+	import * as Select from '$lib/components/ui/select';
 
 	type Props = {
 		fetchVideos: (params: {
 			limit: number;
 			offset: number;
 			filter: VideoFilter;
+			sort: VideoSort;
 		}) => Promise<ChannelVideos>;
 		key: string;
 	};
@@ -35,6 +37,14 @@
 		shorts: 'Shorts',
 		livestreams: 'Livestreams'
 	};
+
+	const validSorts: VideoSort[] = ['latest', 'most_viewed', 'most_liked', 'oldest'];
+	const sortOptions: { value: VideoSort; label: string }[] = [
+		{ value: 'latest', label: 'Latest' },
+		{ value: 'most_viewed', label: 'Most Viewed' },
+		{ value: 'most_liked', label: 'Most Liked' },
+		{ value: 'oldest', label: 'Oldest' }
+	];
 
 	let videoGridElement = $state<HTMLElement | null>(null);
 	let sentinelElement = $state<HTMLElement | null>(null);
@@ -55,6 +65,18 @@
 		return 'videos';
 	});
 
+	const activeSort = $derived.by((): VideoSort => {
+		const sortParam = page.url.searchParams.get('sort');
+		if (sortParam && validSorts.includes(sortParam as VideoSort)) {
+			return sortParam as VideoSort;
+		}
+		return 'latest';
+	});
+
+	const sortTriggerContent = $derived(
+		sortOptions.find((s) => s.value === activeSort)?.label ?? 'Latest'
+	);
+
 	function handleTabChange(newFilter: VideoFilter) {
 		const url = new URL(page.url);
 		if (newFilter === 'videos') {
@@ -65,9 +87,19 @@
 		goto(url.toString(), { replaceState: true, noScroll: true, keepFocus: true });
 	}
 
-	// Reset state when key or filter changes
+	function handleSortChange(newSort: VideoSort) {
+		const url = new URL(page.url);
+		if (newSort === 'latest') {
+			url.searchParams.delete('sort');
+		} else {
+			url.searchParams.set('sort', newSort);
+		}
+		goto(url.toString(), { replaceState: true, noScroll: true, keepFocus: true });
+	}
+
+	// Reset state when key, filter, or sort changes
 	watch(
-		() => [key, activeFilter] as const,
+		() => [key, activeFilter, activeSort] as const,
 		() => {
 			videos = [];
 			hasMore = true;
@@ -156,7 +188,8 @@
 			const newVideos = await fetchVideos({
 				limit: batchSize,
 				offset: videos.length,
-				filter: activeFilter
+				filter: activeFilter,
+				sort: activeSort
 			});
 			if (newVideos.length < batchSize) {
 				hasMore = false;
@@ -189,11 +222,32 @@
 
 <div>
 	<Tabs.Root value={activeFilter} onValueChange={(value) => handleTabChange(value as VideoFilter)}>
-		<Tabs.List class="mb-4">
-			<Tabs.Trigger value="videos">{tabLabels.videos}</Tabs.Trigger>
-			<Tabs.Trigger value="shorts">{tabLabels.shorts}</Tabs.Trigger>
-			<Tabs.Trigger value="livestreams">{tabLabels.livestreams}</Tabs.Trigger>
-		</Tabs.List>
+		<div class="mb-4 flex items-center justify-between gap-4">
+			<Tabs.List>
+				<Tabs.Trigger value="videos">{tabLabels.videos}</Tabs.Trigger>
+				<Tabs.Trigger value="shorts">{tabLabels.shorts}</Tabs.Trigger>
+				<Tabs.Trigger value="livestreams">{tabLabels.livestreams}</Tabs.Trigger>
+			</Tabs.List>
+
+			<Select.Root
+				type="single"
+				value={activeSort}
+				onValueChange={(value) => handleSortChange(value as VideoSort)}
+			>
+				<Select.Trigger class="w-[140px]">
+					{sortTriggerContent}
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Group>
+						{#each sortOptions as option (option.value)}
+							<Select.Item value={option.value} label={option.label}>
+								{option.label}
+							</Select.Item>
+						{/each}
+					</Select.Group>
+				</Select.Content>
+			</Select.Root>
+		</div>
 
 		<div
 			bind:this={videoGridElement}

@@ -3,6 +3,7 @@ import { DbRemoteRunner } from '$lib/remote/helpers';
 import { z } from 'zod';
 
 const videoFilterSchema = z.enum(['videos', 'shorts', 'livestreams']);
+const videoSortSchema = z.enum(['latest', 'most_viewed', 'most_liked', 'oldest']);
 
 export const remoteGetSidebarChannels = query(async () => {
 	return DbRemoteRunner(({ db }) => db.getSidebarChannels());
@@ -19,7 +20,8 @@ export type ChannelDetails = Awaited<ReturnType<typeof remoteGetChannelDetails>>
 const paginationSchema = z.object({
 	limit: z.number().min(1).max(100),
 	offset: z.number().min(0),
-	filter: videoFilterSchema
+	filter: videoFilterSchema.default('videos'),
+	sort: videoSortSchema.default('latest')
 });
 
 export const remoteGetChannelVideos = query(
@@ -27,13 +29,18 @@ export const remoteGetChannelVideos = query(
 		ytChannelId: z.string(),
 		...paginationSchema.shape
 	}),
-	async ({ ytChannelId, limit, offset, filter }) => {
-		return DbRemoteRunner(({ db }) => db.getChannelVideos(ytChannelId, limit, offset, filter));
+	async ({ ytChannelId, limit, offset, filter, sort }) => {
+		return DbRemoteRunner(({ db }) =>
+			db.getChannelVideos(ytChannelId, limit, offset, filter, sort)
+		);
 	}
 );
 
 export type ChannelVideos = Awaited<ReturnType<typeof remoteGetChannelVideos>>;
 
-export const remoteGetAllVideos = query(paginationSchema, async ({ limit, offset, filter }) => {
-	return DbRemoteRunner(({ db }) => db.getAllVideos(limit, offset, filter));
-});
+export const remoteGetAllVideos = query(
+	paginationSchema,
+	async ({ limit, offset, filter, sort }) => {
+		return DbRemoteRunner(({ db }) => db.getAllVideos(limit, offset, filter, sort));
+	}
+);

@@ -1,4 +1,4 @@
-import { DB_SCHEMA, getDrizzleInstance, eq, desc, and } from '@hc/db';
+import { DB_SCHEMA, getDrizzleInstance, eq, desc, asc, and } from '@hc/db';
 import { Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { env } from '$env/dynamic/private';
@@ -12,6 +12,7 @@ export class DbError extends TaggedError('DbError') {
 }
 
 export type VideoFilter = 'videos' | 'shorts' | 'livestreams';
+export type VideoSort = 'latest' | 'most_viewed' | 'most_liked' | 'oldest';
 
 const dbService = Effect.gen(function* () {
 	const dbUrl = yield* Effect.sync(() => env.MYSQL_URL);
@@ -93,7 +94,8 @@ const dbService = Effect.gen(function* () {
 		ytChannelId: string,
 		limit: number,
 		offset: number,
-		filter: VideoFilter
+		filter: VideoFilter,
+		sort: VideoSort = 'latest'
 	) =>
 		Effect.gen(function* () {
 			const videos = yield* Effect.tryPromise({
@@ -127,7 +129,19 @@ const dbService = Effect.gen(function* () {
 								return eq(DB_SCHEMA.videos.ytChannelId, ytChannelId);
 							}
 						})
-						.orderBy(desc(DB_SCHEMA.videos.publishedAt))
+						.orderBy(() => {
+							switch (sort) {
+								case 'most_viewed':
+									return desc(DB_SCHEMA.videos.viewCount);
+								case 'most_liked':
+									return desc(DB_SCHEMA.videos.likeCount);
+								case 'oldest':
+									return asc(DB_SCHEMA.videos.publishedAt);
+								case 'latest':
+								default:
+									return desc(DB_SCHEMA.videos.publishedAt);
+							}
+						})
 						.limit(limit)
 						.offset(offset),
 				catch: (err) =>
@@ -138,7 +152,12 @@ const dbService = Effect.gen(function* () {
 			return videos;
 		});
 
-	const getAllVideos = (limit: number, offset: number, filter: VideoFilter) =>
+	const getAllVideos = (
+		limit: number,
+		offset: number,
+		filter: VideoFilter,
+		sort: VideoSort = 'latest'
+	) =>
 		Effect.gen(function* () {
 			const videos = yield* Effect.tryPromise({
 				try: () =>
@@ -165,7 +184,19 @@ const dbService = Effect.gen(function* () {
 								return undefined;
 							}
 						})
-						.orderBy(desc(DB_SCHEMA.videos.publishedAt))
+						.orderBy(() => {
+							switch (sort) {
+								case 'most_viewed':
+									return desc(DB_SCHEMA.videos.viewCount);
+								case 'most_liked':
+									return desc(DB_SCHEMA.videos.likeCount);
+								case 'oldest':
+									return asc(DB_SCHEMA.videos.publishedAt);
+								case 'latest':
+								default:
+									return desc(DB_SCHEMA.videos.publishedAt);
+							}
+						})
 						.limit(limit)
 						.offset(offset),
 				catch: (err) =>
