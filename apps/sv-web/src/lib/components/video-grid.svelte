@@ -292,16 +292,18 @@
 				{@const channelThumbnail = channel?.thumbnailUrl ?? video.channelThumbnailUrl}
 				{@const channelHandle = channel?.handle ?? video.channelHandle}
 
-				<div class="group">
+				<div class="group relative">
 					<Card.Root
 						class="flex h-full flex-col p-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
 					>
+						<a
+							href={`https://www.youtube.com/watch?v=${video.ytVideoId}`}
+							target="_blank"
+							class="absolute inset-0 z-10"
+							aria-label={video.title}
+						></a>
 						<Card.Content class="flex h-full flex-col p-0">
-							<a
-								href={`https://www.youtube.com/watch?v=${video.ytVideoId}`}
-								target="_blank"
-								class="block"
-							>
+							<div>
 								<AspectRatio ratio={16 / 9} class="relative overflow-hidden rounded-t-xl bg-muted">
 									<img
 										src={video.thumbnailUrl}
@@ -319,23 +321,19 @@
 										</span>
 									{/if}
 								</AspectRatio>
-							</a>
+							</div>
 
 							<div class="flex flex-1 flex-col gap-3 p-4">
-								<a
-									href={`https://www.youtube.com/watch?v=${video.ytVideoId}`}
-									target="_blank"
-									class="block"
-								>
+								<div>
 									<h3
 										class="line-clamp-2 leading-snug font-semibold transition-colors group-hover:text-primary"
 									>
 										{@html video.title}
 									</h3>
-								</a>
+								</div>
 
 								{#if !channel}
-									<div class="flex items-center gap-2">
+									<div class="relative z-20 flex items-center gap-2">
 										{#if channelName && channelHandle && channelThumbnail}
 											<a
 												href="/{channelHandle}"
@@ -353,11 +351,7 @@
 									</div>
 								{/if}
 
-								<a
-									href={`https://www.youtube.com/watch?v=${video.ytVideoId}`}
-									target="_blank"
-									class="block text-muted-foreground hover:text-muted-foreground"
-								>
+								<div class="text-muted-foreground">
 									<div class="flex flex-col gap-2 text-xs">
 										<div class="flex items-center gap-3">
 											<span class="flex items-center gap-1">
@@ -384,7 +378,7 @@
 											</span>
 										</div>
 									</div>
-								</a>
+								</div>
 							</div>
 						</Card.Content>
 					</Card.Root>
