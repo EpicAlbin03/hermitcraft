@@ -2,7 +2,7 @@ import { google } from 'googleapis';
 import { Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { DbService } from '../db';
-import { isShort } from './utils';
+import { getShortsPlaylistId } from './utils';
 import type { Video } from '@hc/db';
 import { parseYouTubeRSS } from './rss';
 
@@ -68,6 +68,28 @@ const youtubeService = Effect.gen(function* () {
 			};
 		});
 
+	const checkIfVideoIsShort = (args: { ytVideoId: string; ytChannelId: string }) =>
+		Effect.gen(function* () {
+			const shortsPlaylistId = getShortsPlaylistId(args.ytChannelId);
+			if (!shortsPlaylistId) return false;
+
+			const response = yield* Effect.tryPromise({
+				try: () =>
+					youtube.playlistItems.list({
+						part: ['id'],
+						playlistId: shortsPlaylistId,
+						videoId: args.ytVideoId,
+						maxResults: 1
+					}),
+				catch: (err) =>
+					new YoutubeError(`Failed to check if video ${args.ytVideoId} is a short`, {
+						cause: err
+					})
+			});
+
+			return (response.data.items?.length ?? 0) > 0;
+		});
+
 	const getVideoDetails = (data: { ytVideoId: string }) =>
 		Effect.gen(function* () {
 			const response = yield* Effect.tryPromise({
@@ -92,6 +114,11 @@ const youtubeService = Effect.gen(function* () {
 				item.snippet.thumbnails?.medium ||
 				item.snippet.thumbnails?.default;
 
+			const videoIsShort = yield* checkIfVideoIsShort({
+				ytVideoId: data.ytVideoId,
+				ytChannelId: item.snippet.channelId
+			}).pipe(Effect.catchAll(() => Effect.succeed(false)));
+
 			return {
 				ytVideoId: item.id,
 				ytChannelId: item.snippet.channelId,
@@ -104,7 +131,7 @@ const youtubeService = Effect.gen(function* () {
 				commentCount: parseInt(item.statistics?.commentCount || '0', 10),
 				duration: item.contentDetails?.duration || '',
 				isLiveStream: item.liveStreamingDetails ? true : false,
-				isShort: isShort(item.contentDetails?.duration || '')
+				isShort: videoIsShort
 			};
 		});
 
@@ -123,7 +150,7 @@ const youtubeService = Effect.gen(function* () {
 			});
 
 			const items = response.data.items || [];
-			type Details = Pick<Video, 'commentCount' | 'duration' | 'isLiveStream' | 'isShort'>;
+			type Details = Pick<Video, 'commentCount' | 'duration' | 'isLiveStream'>;
 			const detailsMap: Record<string, Details> = {};
 
 			for (const item of items) {
@@ -131,8 +158,7 @@ const youtubeService = Effect.gen(function* () {
 					detailsMap[item.id] = {
 						commentCount: parseInt(item.statistics?.commentCount || '0', 10),
 						duration: item.contentDetails?.duration || '',
-						isLiveStream: item.liveStreamingDetails ? true : false,
-						isShort: isShort(item.contentDetails?.duration || '')
+						isLiveStream: item.liveStreamingDetails ? true : false
 					};
 				}
 			}
@@ -230,12 +256,62 @@ const youtubeService = Effect.gen(function* () {
 			return videoIds;
 		});
 
+	const getShortsVideoIds = (args: { ytChannelId: string }) =>
+		Effect.gen(function* () {
+			const shortsPlaylistId = getShortsPlaylistId(args.ytChannelId);
+			if (!shortsPlaylistId) return new Set<string>();
+
+			const shortsSet = new Set<string>();
+			let nextPageToken: string | undefined;
+
+			do {
+				const response = yield* Effect.tryPromise({
+					try: () =>
+						youtube.playlistItems.list({
+							part: ['contentDetails'],
+							playlistId: shortsPlaylistId,
+							maxResults: 50,
+							...(nextPageToken !== undefined && { pageToken: nextPageToken })
+						}),
+					catch: (err) =>
+						new YoutubeError(`Failed to fetch shorts playlist for ${args.ytChannelId}`, {
+							cause: err
+						})
+				});
+
+				for (const item of response.data.items || []) {
+					if (item.contentDetails?.videoId) {
+						shortsSet.add(item.contentDetails.videoId);
+					}
+				}
+				nextPageToken = response.data.nextPageToken || undefined;
+			} while (nextPageToken);
+
+			return shortsSet;
+		});
+
+	const checkIfVideosAreShorts = (args: { ytVideoIds: string[]; ytChannelId: string }) =>
+		Effect.gen(function* () {
+			const shortsSet = yield* getShortsVideoIds({ ytChannelId: args.ytChannelId }).pipe(
+				Effect.catchAll(() => Effect.succeed(new Set<string>()))
+			);
+
+			const result = new Map<string, boolean>();
+			for (const videoId of args.ytVideoIds) {
+				result.set(videoId, shortsSet.has(videoId));
+			}
+			return result;
+		});
+
 	return {
 		getChannelDetails,
 		getVideoDetails,
 		getBatchRSSVideoDetails,
 		getRSSVideos,
-		getVideosFromUploadsPlaylist
+		getVideosFromUploadsPlaylist,
+		checkIfVideoIsShort,
+		checkIfVideosAreShorts,
+		getShortsVideoIds
 	};
 });
 

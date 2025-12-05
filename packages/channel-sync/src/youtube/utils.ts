@@ -41,8 +41,9 @@ export function parseIsoDurationToSeconds(duration: string): number | null {
 	return Number.isNaN(totalSeconds) ? null : totalSeconds;
 }
 
-export const isShort = (duration: string) => {
-	const durationSeconds = parseIsoDurationToSeconds(duration);
-	if (durationSeconds === null) return false;
-	return durationSeconds <= 3 * 60;
+export const getShortsPlaylistId = (ytChannelId: string) => {
+	if (!ytChannelId.startsWith('UC')) {
+		return null;
+	}
+	return 'UUSH' + ytChannelId.slice(2);
 };

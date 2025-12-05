@@ -143,7 +143,7 @@ const channelSyncService = Effect.gen(function* () {
 
 					const detailsMap: Record<
 						string,
-						Pick<Video, 'commentCount' | 'duration' | 'isLiveStream' | 'isShort'>
+						Pick<Video, 'commentCount' | 'duration' | 'isLiveStream'>
 					> = {};
 					for (const result of batchResults) {
 						if (result._tag === 'Right') {
@@ -153,12 +153,21 @@ const channelSyncService = Effect.gen(function* () {
 						}
 					}
 
+					const shortsMapResult = yield* yt
+						.checkIfVideosAreShorts({ ytVideoIds: videoIds, ytChannelId })
+						.pipe(Effect.either);
+					const shortsMap =
+						shortsMapResult._tag === 'Right' ? shortsMapResult.right : new Map<string, boolean>();
+
 					yield* Effect.forEach(rssVideos, (rssVideo) =>
 						Effect.gen(function* () {
 							const details = detailsMap[rssVideo.ytVideoId];
-							const result = yield* syncRSSVideo({ ...rssVideo, ...details } as Video).pipe(
-								Effect.either
-							);
+							const isShort = shortsMap.get(rssVideo.ytVideoId) ?? false;
+							const result = yield* syncRSSVideo({
+								...rssVideo,
+								...details,
+								isShort
+							} as Video).pipe(Effect.either);
 
 							if (result._tag === 'Right') {
 								if (result.right?.wasSkipped) {
