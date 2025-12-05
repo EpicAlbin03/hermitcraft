@@ -13,10 +13,16 @@
 		MessageCircle,
 		Calendar,
 		CalendarArrowDown,
-		CalendarArrowUp
+		CalendarArrowUp,
+		Clock
 	} from '@lucide/svelte';
 	import type { ChannelVideos, ChannelDetails } from '$lib/remote/channels.remote';
-	import { formatCompactNumber, formatDate, formatVideoDuration } from '$lib/utils';
+	import {
+		formatCompactNumber,
+		formatDate,
+		formatRelativeTime,
+		formatVideoDuration
+	} from '$lib/utils';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import type { VideoFilter, VideoSort } from '$lib/services/db';
 	import * as Select from '$lib/components/ui/select';
@@ -367,10 +373,16 @@
 												{formatCompactNumber(video.commentCount)}
 											</span>
 										</div>
-										<span class="flex items-center gap-1">
-											<Calendar class="h-3 w-3" />
-											{formatDate(video.publishedAt)}
-										</span>
+										<div class="flex items-center gap-3">
+											<span class="flex items-center gap-1">
+												<Clock class="h-3 w-3" />
+												{formatRelativeTime(video.publishedAt)}
+											</span>
+											<span class="flex items-center gap-1">
+												<Calendar class="h-3 w-3" />
+												{formatDate(video.publishedAt)}
+											</span>
+										</div>
 									</div>
 								</a>
 							</div>

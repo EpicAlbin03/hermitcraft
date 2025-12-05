@@ -55,18 +55,12 @@ export function formatRelativeTime(date: Date | string) {
 	const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
 
 	if (seconds < 60) return 'just now';
-	if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-	if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-	if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+	if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+	if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+	if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
+	if (seconds < 2592000) return `${Math.floor(seconds / 604800)} weeks ago`;
+	if (seconds < 31536000) return `${Math.floor(seconds / 2592000)} months ago`;
+	if (seconds < 315360000) return `${Math.floor(seconds / 31536000)} years ago`;
 
 	return formatDate(d);
-}
-
-// Format days ago (e.g., "Today", "1 day ago", "5 days ago")
-export function formatDaysAgo(date: Date | string) {
-	const d = new Date(date);
-	const days = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
-	if (days === 0) return 'Today';
-	if (days === 1) return '1 day ago';
-	return `${days} days ago`;
 }
