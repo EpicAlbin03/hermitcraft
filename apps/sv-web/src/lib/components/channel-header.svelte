@@ -45,7 +45,9 @@
 
 	const bannerRatio = $derived(BANNER_RATIOS[isTailwindBreakpoint] ?? BANNER_RATIOS.xs);
 	const bannerSrc = $derived(
-		`${channel.bannerUrl}=w${BANNER_WIDTHS[isTailwindBreakpoint] ?? BANNER_WIDTHS.xs}`
+		channel.bannerUrl
+			? `${channel.bannerUrl}=w${BANNER_WIDTHS[isTailwindBreakpoint] ?? BANNER_WIDTHS.xs}`
+			: null
 	);
 	const bannerSizes = $derived(
 		[
@@ -60,21 +62,23 @@
 </script>
 
 <div class="w-full rounded-xl bg-card pb-4 shadow-sm md:pb-6">
-	<div class="w-full overflow-hidden rounded-t-xl">
-		<AspectRatio ratio={bannerRatio} class="bg-muted">
-			<Image
-				src={bannerSrc}
-				layout="fullWidth"
-				width={bannerWidth}
-				height={bannerHeight}
-				breakpoints={BANNER_SRCSET_WIDTHS}
-				sizes={bannerSizes}
-				priority
-				alt={`${channel.name} channel banner`}
-				class="h-full w-full object-cover"
-			/>
-		</AspectRatio>
-	</div>
+	{#if bannerSrc}
+		<div class="w-full overflow-hidden rounded-t-xl">
+			<AspectRatio ratio={bannerRatio} class="bg-muted">
+				<Image
+					src={bannerSrc}
+					layout="fullWidth"
+					width={bannerWidth}
+					height={bannerHeight}
+					breakpoints={BANNER_SRCSET_WIDTHS}
+					sizes={bannerSizes}
+					priority
+					alt={`${channel.name} channel banner`}
+					class="h-full w-full object-cover"
+				/>
+			</AspectRatio>
+		</div>
+	{/if}
 
 	<div class="relative flex flex-col items-start gap-2 px-4 md:flex-row md:gap-6 md:px-6">
 		<div class="relative z-10 -mt-12 shrink-0 md:mt-6">
