@@ -1,13 +1,22 @@
 <script lang="ts">
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import type { ComponentProps, Component } from 'svelte';
-	import { ChevronRightIcon, LinkIcon, MapIcon, UsersIcon, VideoIcon } from '@lucide/svelte';
+	import {
+		ChevronRightIcon,
+		LinkIcon,
+		MapIcon,
+		UsersIcon,
+		VideoIcon,
+		EllipsisIcon
+	} from '@lucide/svelte';
 	import { links } from '$lib/assets/data/links';
 	import { maps } from '$lib/assets/data/maps';
 	import { cn } from '$lib/utils';
 	import type { SidebarChannel } from '$lib/remote/channels.remote';
 	import { page } from '$app/state';
+	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
 
 	type Props = ComponentProps<typeof Sidebar.Root> & {
 		channels: SidebarChannel[];
@@ -19,6 +28,8 @@
 		channels,
 		...restProps
 	}: Props = $props();
+
+	const sidebar = useSidebar();
 
 	type DropdownItem = {
 		title: string;
@@ -41,6 +52,10 @@
 		iconClass?: string;
 		isActive?: boolean;
 		targetBlank?: boolean;
+		items?: {
+			title: string;
+			url: string;
+		}[];
 	};
 
 	const items = $derived<Item[]>([
@@ -83,11 +98,20 @@
 			icon: MapIcon,
 			isOpen: false,
 			items: maps
-				.map((map) => ({
-					title: map.title,
-					url: map.url,
-					icon: '/favicon-32x32.png'
-				}))
+				.map((map) => {
+					const items = [];
+					if ('javaLink' in map && map.javaLink) items.push({ title: 'Java', url: map.javaLink });
+					if ('bedrockLink' in map && map.bedrockLink)
+						items.push({ title: 'Bedrock', url: map.bedrockLink });
+					if ('mcwLink' in map && map.mcwLink) items.push({ title: 'Mcworld', url: map.mcwLink });
+
+					return {
+						title: map.title,
+						url: map.url,
+						icon: '/favicon-32x32.png',
+						items: items.length > 0 ? items : undefined
+					};
+				})
 				.reverse()
 		}
 	]);
@@ -134,28 +158,67 @@
 									<Sidebar.MenuSub>
 										{#each item.items ?? [] as subItem (subItem.title)}
 											<Sidebar.MenuSubItem>
-												<Sidebar.MenuSubButton isActive={subItem.isActive}>
-													{#snippet child({ props })}
-														<a
-															href={subItem.url}
-															target={subItem.targetBlank ? '_blank' : undefined}
-															{...props}
+												{#if subItem.items?.length}
+													<DropdownMenu.Root>
+														<DropdownMenu.Trigger>
+															{#snippet child({ props })}
+																<Sidebar.MenuSubButton {...props} isActive={subItem.isActive}>
+																	{#if subItem.icon}
+																		{#if typeof subItem.icon === 'string'}
+																			<img
+																				src={subItem.icon}
+																				alt={subItem.title}
+																				class={cn('h-4 w-4', subItem.iconClass)}
+																			/>
+																		{:else}
+																			<subItem.icon />
+																		{/if}
+																	{/if}
+																	<span>{subItem.title}</span>
+																	<EllipsisIcon class="ml-auto h-4 w-4" />
+																</Sidebar.MenuSubButton>
+															{/snippet}
+														</DropdownMenu.Trigger>
+														<DropdownMenu.Content
+															side={sidebar.isMobile ? 'bottom' : 'right'}
+															align={sidebar.isMobile ? 'end' : 'start'}
+															class="min-w-48"
 														>
-															{#if subItem.icon}
-																{#if typeof subItem.icon === 'string'}
-																	<img
-																		src={subItem.icon}
-																		alt={subItem.title}
-																		class={cn('h-4 w-4', subItem.iconClass)}
-																	/>
-																{:else}
-																	<subItem.icon />
+															{#each subItem.items as childItem}
+																<DropdownMenu.Item>
+																	{#snippet child({ props })}
+																		<a href={childItem.url} {...props}>
+																			{childItem.title}
+																		</a>
+																	{/snippet}
+																</DropdownMenu.Item>
+															{/each}
+														</DropdownMenu.Content>
+													</DropdownMenu.Root>
+												{:else}
+													<Sidebar.MenuSubButton isActive={subItem.isActive}>
+														{#snippet child({ props })}
+															<a
+																href={subItem.url}
+																target={subItem.targetBlank ? '_blank' : undefined}
+																{...props}
+															>
+																{#if subItem.icon}
+																	{#if typeof subItem.icon === 'string'}
+																		<img
+																			src={subItem.icon}
+																			alt={subItem.title}
+																			class={cn('h-4 w-4', subItem.iconClass)}
+																		/>
+																	{:else}
+																		<subItem.icon />
+																	{/if}
 																{/if}
-															{/if}
-															<span>{subItem.title}</span>
-														</a>
-													{/snippet}
-												</Sidebar.MenuSubButton>
+																<span>{subItem.title}</span>
+															</a>
+														{/snippet}
+													</Sidebar.MenuSubButton>
+												{/if}
 											</Sidebar.MenuSubItem>
 										{/each}
 									</Sidebar.MenuSub>
