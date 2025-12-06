@@ -21,7 +21,8 @@ const paginationSchema = z.object({
 	limit: z.number().min(1).max(100),
 	offset: z.number().min(0),
 	filter: videoFilterSchema.default('videos'),
-	sort: videoSortSchema.default('latest')
+	sort: videoSortSchema.default('latest'),
+	onlyHermitCraft: z.boolean().default(false)
 });
 
 export const remoteGetChannelVideos = query(
@@ -29,9 +30,9 @@ export const remoteGetChannelVideos = query(
 		ytChannelId: z.string(),
 		...paginationSchema.shape
 	}),
-	async ({ ytChannelId, limit, offset, filter, sort }) => {
+	async ({ ytChannelId, limit, offset, filter, sort, onlyHermitCraft }) => {
 		return DbRemoteRunner(({ db }) =>
-			db.getChannelVideos(ytChannelId, limit, offset, filter, sort)
+			db.getChannelVideos(ytChannelId, limit, offset, filter, sort, onlyHermitCraft)
 		);
 	}
 );
@@ -40,7 +41,9 @@ export type ChannelVideos = Awaited<ReturnType<typeof remoteGetChannelVideos>>;
 
 export const remoteGetAllVideos = query(
 	paginationSchema,
-	async ({ limit, offset, filter, sort }) => {
-		return DbRemoteRunner(({ db }) => db.getAllVideos(limit, offset, filter, sort));
+	async ({ limit, offset, filter, sort, onlyHermitCraft }) => {
+		return DbRemoteRunner(({ db }) =>
+			db.getAllVideos(limit, offset, filter, sort, onlyHermitCraft)
+		);
 	}
 );

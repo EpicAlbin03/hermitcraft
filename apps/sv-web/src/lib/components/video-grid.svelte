@@ -43,6 +43,7 @@
 			offset: number;
 			filter: VideoFilter;
 			sort: VideoSort;
+			onlyHermitCraft: boolean;
 		}) => Promise<VideoWithChannel[]>;
 		key: string;
 		channel?: ChannelDetails;
@@ -128,9 +129,9 @@
 		goto(url.toString(), { replaceState: true, noScroll: true, keepFocus: true });
 	}
 
-	// Reset state when key, filter, or sort changes
+	// Reset state when key, filter, sort, or onlyHermitCraft changes
 	watch(
-		() => [key, activeFilter, activeSort] as const,
+		() => [key, activeFilter, activeSort, userConfig.current.onlyHermitCraft] as const,
 		() => {
 			videos = [];
 			hasMore = true;
@@ -220,7 +221,8 @@
 				limit: batchSize,
 				offset: videos.length,
 				filter: activeFilter,
-				sort: activeSort
+				sort: activeSort,
+				onlyHermitCraft: userConfig.current.onlyHermitCraft
 			});
 			if (newVideos.length < batchSize) {
 				hasMore = false;

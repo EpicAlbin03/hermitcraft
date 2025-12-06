@@ -4,7 +4,7 @@
 </script>
 
 <VideoGrid
-	fetchVideos={({ limit, offset, filter, sort }) =>
-		remoteGetAllVideos({ limit, offset, filter, sort })}
+	fetchVideos={({ limit, offset, filter, sort, onlyHermitCraft }) =>
+		remoteGetAllVideos({ limit, offset, filter, sort, onlyHermitCraft })}
 	key="all-videos"
 />

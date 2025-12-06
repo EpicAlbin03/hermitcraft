@@ -1,4 +1,4 @@
-import { DB_SCHEMA, getDrizzleInstance, eq, desc, asc, and } from '@hc/db';
+import { DB_SCHEMA, getDrizzleInstance, eq, desc, asc, and, like } from '@hc/db';
 import { Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { env } from '$env/dynamic/private';
@@ -96,7 +96,8 @@ const dbService = Effect.gen(function* () {
 		limit: number,
 		offset: number,
 		filter: VideoFilter,
-		sort: VideoSort = 'latest'
+		sort: VideoSort = 'latest',
+		onlyHermitCraft: boolean = false
 	) =>
 		Effect.gen(function* () {
 			const videos = yield* Effect.tryPromise({
@@ -116,21 +117,28 @@ const dbService = Effect.gen(function* () {
 						})
 						.from(DB_SCHEMA.videos)
 						.where(() => {
+							const hermitCraftCondition = onlyHermitCraft
+								? like(DB_SCHEMA.videos.title, '%hermitcraft%')
+								: undefined;
+
 							if (filter === 'livestreams') {
 								return and(
 									eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
-									eq(DB_SCHEMA.videos.isLiveStream, true)
+									eq(DB_SCHEMA.videos.isLiveStream, true),
+									hermitCraftCondition
 								);
 							} else if (filter === 'shorts') {
 								return and(
 									eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
-									eq(DB_SCHEMA.videos.isShort, true)
+									eq(DB_SCHEMA.videos.isShort, true),
+									hermitCraftCondition
 								);
 							} else {
 								return and(
 									eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
 									eq(DB_SCHEMA.videos.isLiveStream, false),
-									eq(DB_SCHEMA.videos.isShort, false)
+									eq(DB_SCHEMA.videos.isShort, false),
+									hermitCraftCondition
 								);
 							}
 						})
@@ -161,7 +169,8 @@ const dbService = Effect.gen(function* () {
 		limit: number,
 		offset: number,
 		filter: VideoFilter,
-		sort: VideoSort = 'latest'
+		sort: VideoSort = 'latest',
+		onlyHermitCraft: boolean = false
 	) =>
 		Effect.gen(function* () {
 			const videos = yield* Effect.tryPromise({
@@ -188,14 +197,19 @@ const dbService = Effect.gen(function* () {
 							eq(DB_SCHEMA.videos.ytChannelId, DB_SCHEMA.channels.ytChannelId)
 						)
 						.where(() => {
+							const hermitCraftCondition = onlyHermitCraft
+								? like(DB_SCHEMA.videos.title, '%hermitcraft%')
+								: undefined;
+
 							if (filter === 'livestreams') {
-								return eq(DB_SCHEMA.videos.isLiveStream, true);
+								return and(eq(DB_SCHEMA.videos.isLiveStream, true), hermitCraftCondition);
 							} else if (filter === 'shorts') {
-								return eq(DB_SCHEMA.videos.isShort, true);
+								return and(eq(DB_SCHEMA.videos.isShort, true), hermitCraftCondition);
 							} else {
 								return and(
 									eq(DB_SCHEMA.videos.isLiveStream, false),
-									eq(DB_SCHEMA.videos.isShort, false)
+									eq(DB_SCHEMA.videos.isShort, false),
+									hermitCraftCondition
 								);
 							}
 						})
