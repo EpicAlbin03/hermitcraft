@@ -7,6 +7,7 @@
 	import { maps } from '$lib/assets/data/maps';
 	import { cn } from '$lib/utils';
 	import type { SidebarChannel } from '$lib/remote/channels.remote';
+	import { page } from '$app/state';
 
 	type Props = ComponentProps<typeof Sidebar.Root> & {
 		channels: SidebarChannel[];
@@ -30,6 +31,7 @@
 		title: string;
 		icon: Component;
 		url: string;
+		isActive?: boolean;
 	};
 
 	type SubItem = {
@@ -37,17 +39,19 @@
 		url: string;
 		icon?: string | Component;
 		iconClass?: string;
+		isActive?: boolean;
 	};
 
-	const items: Item[] = [
+	const items = $derived<Item[]>([
 		{
 			title: 'Videos',
 			icon: VideoIcon,
-			url: '/videos'
+			url: '/videos',
+			isActive: page.url.pathname.startsWith('/videos')
 		}
-	];
+	]);
 
-	const dropdownItems: DropdownItem[] = $derived([
+	const dropdownItems = $derived<DropdownItem[]>([
 		{
 			title: 'Members',
 			icon: UsersIcon,
@@ -57,7 +61,8 @@
 					title: channel.name,
 					url: `/${channel.handle}`,
 					icon: channel.thumbnailUrl,
-					iconClass: 'rounded-full h-5 w-5'
+					iconClass: 'rounded-full h-5 w-5',
+					isActive: page.url.pathname.startsWith(`/${channel.handle}`)
 				}))
 				.sort((a, b) => a.title.localeCompare(b.title))
 		},
@@ -92,7 +97,7 @@
 			<Sidebar.Menu>
 				{#each items as item (item.title)}
 					<Sidebar.MenuItem>
-						<Sidebar.MenuButton>
+						<Sidebar.MenuButton isActive={item.isActive}>
 							{#snippet child({ props })}
 								<a {...props} href={item.url}>
 									<item.icon />
@@ -123,7 +128,7 @@
 									<Sidebar.MenuSub>
 										{#each item.items ?? [] as subItem (subItem.title)}
 											<Sidebar.MenuSubItem>
-												<Sidebar.MenuSubButton>
+												<Sidebar.MenuSubButton isActive={subItem.isActive}>
 													{#snippet child({ props })}
 														<a href={subItem.url} {...props}>
 															{#if subItem.icon}
@@ -154,7 +159,10 @@
 		<Sidebar.Group class="mt-auto">
 			<Sidebar.Menu>
 				<Sidebar.MenuItem>
-					<Sidebar.MenuButton tooltipContent="Privacy Policy">
+					<Sidebar.MenuButton
+						tooltipContent="Privacy Policy"
+						isActive={page.url.pathname.startsWith('/privacy')}
+					>
 						{#snippet child({ props })}
 							<a href="/privacy" {...props}>
 								<span>Privacy Policy</span>

@@ -25,7 +25,7 @@
 		>
 			<div class="flex items-center gap-2 px-4">
 				<Sidebar.Trigger class="-ml-1" />
-				<Separator orientation="vertical" class="mr-2 data-[orientation=vertical]:h-4" />
+				<!-- <Separator orientation="vertical" class="mr-2 data-[orientation=vertical]:h-4" /> -->
 			</div>
 			<div class="flex items-center gap-2 px-4">
 				<ToggleMode />
