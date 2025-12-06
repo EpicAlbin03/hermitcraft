@@ -40,6 +40,7 @@
 		icon?: string | Component;
 		iconClass?: string;
 		isActive?: boolean;
+		targetBlank?: boolean;
 	};
 
 	const items = $derived<Item[]>([
@@ -73,7 +74,8 @@
 			items: links.map((link) => ({
 				title: link.title,
 				url: link.url,
-				icon: link.icon
+				icon: link.icon,
+				targetBlank: true
 			}))
 		},
 		{
@@ -113,7 +115,11 @@
 							<Sidebar.MenuItem {...props}>
 								<Collapsible.Trigger>
 									{#snippet child({ props })}
-										<Sidebar.MenuButton {...props} tooltipContent={item.title}>
+										<Sidebar.MenuButton
+											{...props}
+											tooltipContent={item.title}
+											isActive={item.items.some((subItem) => subItem.isActive)}
+										>
 											{#if item.icon}
 												<item.icon />
 											{/if}
@@ -130,7 +136,11 @@
 											<Sidebar.MenuSubItem>
 												<Sidebar.MenuSubButton isActive={subItem.isActive}>
 													{#snippet child({ props })}
-														<a href={subItem.url} {...props}>
+														<a
+															href={subItem.url}
+															target={subItem.targetBlank ? '_blank' : undefined}
+															{...props}
+														>
 															{#if subItem.icon}
 																{#if typeof subItem.icon === 'string'}
 																	<img
