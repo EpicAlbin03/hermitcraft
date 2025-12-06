@@ -2,18 +2,23 @@ import { RedditSVG, TwitchSVG, TwitterSVG } from '$lib/assets/svg';
 
 export const links = [
 	{
-		title: 'HermitCraft Twitch',
+		title: 'Twitch',
 		url: 'https://twitch.tv/hermitcraft_',
 		icon: TwitchSVG
 	},
 	{
-		title: 'HermitCraft Twitter',
+		title: 'Twitter',
 		url: 'https://x.com/hermitcraft_',
 		icon: TwitterSVG
 	},
 	{
-		title: 'HermitCraft Reddit',
+		title: 'Reddit',
 		url: 'https://reddit.com/r/HermitCraft',
 		icon: RedditSVG
+	},
+	{
+		title: 'Modsauce 2',
+		url: 'https://atlauncher.com/pack/HermitcraftModsauce2',
+		icon: '/favicon-32x32.png'
 	}
 ];

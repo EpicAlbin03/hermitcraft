@@ -182,7 +182,6 @@
 														<DropdownMenu.Content
 															side={sidebar.isMobile ? 'bottom' : 'right'}
 															align={sidebar.isMobile ? 'end' : 'start'}
-															class="min-w-48"
 														>
 															{#each subItem.items as childItem}
 																<DropdownMenu.Item>
