@@ -151,6 +151,28 @@
 				{/each}
 			</Sidebar.Menu>
 		</Sidebar.Group>
+		<Sidebar.Group class="mt-auto">
+			<Sidebar.Menu>
+				<Sidebar.MenuItem>
+					<Sidebar.MenuButton tooltipContent="Privacy Policy">
+						{#snippet child({ props })}
+							<a href="/privacy" {...props}>
+								<span>Privacy Policy</span>
+							</a>
+						{/snippet}
+					</Sidebar.MenuButton>
+				</Sidebar.MenuItem>
+				<Sidebar.MenuItem>
+					<Sidebar.MenuButton tooltipContent="Built by @EpicAlbin03">
+						{#snippet child({ props })}
+							<a href="https://x.com/EpicAlbin03" target="_blank" {...props}>
+								<span>Built by @EpicAlbin03</span>
+							</a>
+						{/snippet}
+					</Sidebar.MenuButton>
+				</Sidebar.MenuItem>
+			</Sidebar.Menu>
+		</Sidebar.Group>
 	</Sidebar.Content>
 	<Sidebar.Rail />
 </Sidebar.Root>
