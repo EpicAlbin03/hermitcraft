@@ -27,7 +27,9 @@
 	import type { VideoFilter, VideoSort } from '$lib/services/db';
 	import * as Select from '$lib/components/ui/select';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Button } from '$lib/components/ui/button';
+	import { Switch } from '$lib/components/ui/switch/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import { UserConfigContext } from '$lib/config/user-config.svelte';
 
 	type VideoWithChannel = ChannelVideos[number] & {
 		channelName?: string;
@@ -47,6 +49,8 @@
 	};
 
 	const { fetchVideos, key, channel }: Props = $props();
+
+	const userConfig = UserConfigContext.get();
 
 	const VIDEO_CARD_MIN_WIDTH = 260;
 	const VIDEO_CARD_MAX_WIDTH = 420;
@@ -256,29 +260,40 @@
 				<Tabs.Trigger value="livestreams">{tabLabels.livestreams}</Tabs.Trigger>
 			</Tabs.List>
 
-			<Select.Root
-				type="single"
-				value={activeSort}
-				onValueChange={(value) => handleSortChange(value as VideoSort)}
-			>
-				<Select.Trigger class="w-[120px]">
-					<span class="flex items-center gap-2">
-						<selectedSortOption.icon />
-						{selectedSortOption.label}
-					</span>
-				</Select.Trigger>
-				<Select.Content>
-					<Select.Group>
-						<Select.Label>Sort by</Select.Label>
-						{#each sortOptions as option (option.value)}
-							<Select.Item value={option.value} label={option.label}>
-								<option.icon />
-								{option.label}
-							</Select.Item>
-						{/each}
-					</Select.Group>
-				</Select.Content>
-			</Select.Root>
+			<div class="flex items-center gap-4">
+				<div class="flex items-center space-x-2">
+					<Switch
+						id="only-hermitcraft"
+						bind:checked={userConfig.current.onlyHermitCraft}
+						onCheckedChange={(checked) => userConfig.setConfig({ onlyHermitCraft: checked })}
+					/>
+					<Label for="only-hermitcraft">Only Hermitcraft</Label>
+				</div>
+
+				<Select.Root
+					type="single"
+					value={activeSort}
+					onValueChange={(value) => handleSortChange(value as VideoSort)}
+				>
+					<Select.Trigger class="w-[120px]">
+						<span class="flex items-center gap-2">
+							<selectedSortOption.icon />
+							{selectedSortOption.label}
+						</span>
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Group>
+							<Select.Label>Sort by</Select.Label>
+							{#each sortOptions as option (option.value)}
+								<Select.Item value={option.value} label={option.label}>
+									<option.icon />
+									{option.label}
+								</Select.Item>
+							{/each}
+						</Select.Group>
+					</Select.Content>
+				</Select.Root>
+			</div>
 		</div>
 
 		<div

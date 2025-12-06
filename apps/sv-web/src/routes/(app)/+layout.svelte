@@ -4,13 +4,20 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import ToggleMode from '$lib/components/toggle-mode.svelte';
 	import { remoteGetSidebarChannels, type SidebarChannel } from '$lib/remote/channels.remote';
+	import { UserConfigContext } from '$lib/config/user-config.svelte';
 
 	let { children } = $props();
 
 	const channels = $derived<SidebarChannel[]>(await remoteGetSidebarChannels());
+	const userConfig = UserConfigContext.get();
 </script>
 
-<Sidebar.Provider>
+<Sidebar.Provider
+	open={userConfig.current.sidebarOpen}
+	onOpenChange={(open) => {
+		userConfig.setConfig({ sidebarOpen: open });
+	}}
+>
 	<AppSidebar {channels} />
 	<Sidebar.Inset>
 		<header
