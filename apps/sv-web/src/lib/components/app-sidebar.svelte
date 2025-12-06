@@ -118,6 +118,23 @@
 </script>
 
 <Sidebar.Root {collapsible} {...restProps}>
+	<Sidebar.Header>
+		<Sidebar.Menu>
+			<Sidebar.MenuItem>
+				<Sidebar.MenuButton size="lg" class="p-0 hover:bg-transparent active:bg-transparent">
+					{#snippet child({ props })}
+						<a href="/videos" {...props}>
+							<img
+								src="/hermitcraft-banner.png"
+								alt="Hermitcraft"
+								class="mx-auto w-48 rounded-md object-cover"
+							/>
+						</a>
+					{/snippet}
+				</Sidebar.MenuButton>
+			</Sidebar.MenuItem>
+		</Sidebar.Menu>
+	</Sidebar.Header>
 	<Sidebar.Content class="no-scrollbar">
 		<Sidebar.Group>
 			<Sidebar.Menu>
