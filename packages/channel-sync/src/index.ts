@@ -18,7 +18,12 @@ const channelSyncService = Effect.gen(function* () {
 	const yt = yield* YoutubeService;
 	const twitch = yield* TwitchService;
 
-	const syncChannel = (args: { ytChannelId: string; twitchUserId: string; isLive?: boolean }) =>
+	const syncChannel = (args: {
+		ytChannelId: string;
+		twitchUserId: string;
+		twitchUsername: string;
+		isLive?: boolean;
+	}) =>
 		Effect.gen(function* () {
 			const channelDetails = yield* yt.getChannelDetails(args);
 			const isLive = args.isLive ?? (yield* twitch.isChannelLive(args.twitchUserId));
@@ -35,6 +40,7 @@ const channelSyncService = Effect.gen(function* () {
 				subscriberCount: channelDetails.subscriberCount,
 				videoCount: channelDetails.videoCount,
 				joinedAt: channelDetails.joinedAt,
+				twitchUsername: args.twitchUsername,
 				isLive: isLive
 			});
 		}).pipe(
@@ -86,15 +92,12 @@ const channelSyncService = Effect.gen(function* () {
 			)
 		);
 
-	const syncChannels = (channels?: { ytChannelId: string; twitchUserId: string }[]) =>
+	const syncChannels = (
+		channels?: { ytChannelId: string; twitchUserId: string; twitchUsername: string }[]
+	) =>
 		Effect.gen(function* () {
 			const start = performance.now();
-			const channelsList =
-				channels ??
-				(yield* db.getAllChannels()).map((c) => ({
-					ytChannelId: c.ytChannelId,
-					twitchUserId: c.twitchUserId
-				}));
+			const channelsList = channels ?? (yield* db.getAllChannels());
 
 			const isLiveMap = yield* twitch.areChannelsLive(
 				channelsList.map((c) => c.twitchUserId).filter((id) => id !== '')
@@ -109,6 +112,7 @@ const channelSyncService = Effect.gen(function* () {
 					const result = yield* syncChannel({
 						ytChannelId: channel.ytChannelId,
 						twitchUserId: channel.twitchUserId,
+						twitchUsername: channel.twitchUsername,
 						isLive: isLiveMap.get(channel.twitchUserId) ?? false
 					}).pipe(Effect.either);
 

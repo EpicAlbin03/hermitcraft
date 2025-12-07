@@ -13,6 +13,7 @@ export const channels = table('channels', {
 	subscriberCount: t.int('subscriber_count').notNull(),
 	videoCount: t.int('video_count').notNull(),
 	joinedAt: t.datetime('joined_at').notNull(),
+	twitchUsername: t.text('twitch_username').notNull(),
 	isLive: t.boolean('is_live').notNull().default(false),
 	createdAt: t.timestamp('created_at').notNull().defaultNow()
 });

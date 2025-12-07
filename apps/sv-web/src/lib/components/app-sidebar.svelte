@@ -9,7 +9,8 @@
 		MapIcon,
 		UsersIcon,
 		VideoIcon,
-		EllipsisIcon
+		EllipsisIcon,
+		CircleIcon
 	} from '@lucide/svelte';
 	import { links } from '$lib/assets/data/links';
 	import { maps } from '$lib/assets/data/maps';
@@ -51,7 +52,10 @@
 		icon?: string | Component;
 		iconClass?: string;
 		isActive?: boolean;
+		twitchUsername?: string;
+		isLive?: boolean;
 		targetBlank?: boolean;
+		truncate?: boolean;
 		items?: {
 			title: string;
 			url: string;
@@ -78,7 +82,10 @@
 					url: `/${channel.handle}`,
 					icon: channel.thumbnailUrl,
 					iconClass: 'rounded-full h-5 w-5',
-					isActive: page.url.pathname.startsWith(`/${channel.handle}`)
+					isActive: page.url.pathname.startsWith(`/${channel.handle}`),
+					twitchUsername: channel.twitchUsername,
+					isLive: channel.isLive,
+					truncate: true
 				}))
 				.sort((a, b) => a.title.localeCompare(b.title))
 		},
@@ -156,11 +163,7 @@
 							<Sidebar.MenuItem {...props}>
 								<Collapsible.Trigger>
 									{#snippet child({ props })}
-										<Sidebar.MenuButton
-											{...props}
-											tooltipContent={item.title}
-											isActive={item.items.some((subItem) => subItem.isActive)}
-										>
+										<Sidebar.MenuButton {...props} tooltipContent={item.title}>
 											{#if item.icon}
 												<item.icon />
 											{/if}
@@ -172,7 +175,7 @@
 									{/snippet}
 								</Collapsible.Trigger>
 								<Collapsible.Content>
-									<Sidebar.MenuSub>
+									<Sidebar.MenuSub class="mr-0 pr-0">
 										{#each item.items ?? [] as subItem (subItem.title)}
 											<Sidebar.MenuSubItem>
 												{#if subItem.items?.length}
@@ -230,10 +233,24 @@
 																		<subItem.icon />
 																	{/if}
 																{/if}
-																<span>{subItem.title}</span>
+																<span class:max-w-40={subItem.truncate}>{subItem.title}</span>
 															</a>
 														{/snippet}
 													</Sidebar.MenuSubButton>
+													{#if subItem.isLive}
+														<Sidebar.MenuAction class="top-1">
+															{#snippet child({ props })}
+																<a
+																	{...props}
+																	href={`https://www.twitch.tv/${subItem.twitchUsername}`}
+																	target="_blank"
+																>
+																	<CircleIcon class="size-2.5! fill-destructive text-destructive" />
+																	<span class="sr-only">Live</span>
+																</a>
+															{/snippet}
+														</Sidebar.MenuAction>
+													{/if}
 												{/if}
 											</Sidebar.MenuSubItem>
 										{/each}

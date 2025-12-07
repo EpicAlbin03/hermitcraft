@@ -121,6 +121,7 @@ const dbService = Effect.gen(function* () {
 							subscriberCount: data.subscriberCount,
 							videoCount: data.videoCount,
 							joinedAt: data.joinedAt,
+							twitchUsername: data.twitchUsername,
 							isLive: data.isLive
 						}),
 					catch: (err) =>

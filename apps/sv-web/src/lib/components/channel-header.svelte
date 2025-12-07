@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Eye, Users, Video, ChevronDown, ChevronUp } from '@lucide/svelte';
+	import { Eye, Users, Video, ChevronDown, ChevronUp, CircleIcon } from '@lucide/svelte';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import { AspectRatio } from '$lib/components/ui/aspect-ratio';
 	import { Button } from '$lib/components/ui/button';
@@ -94,14 +94,27 @@
 
 		<div class="mt-2 flex flex-1 flex-col gap-2 md:mt-4">
 			<div>
-				<Button
-					variant="link"
-					class="p-0 text-2xl font-bold md:text-3xl"
-					href={`https://www.youtube.com/${handle}`}
-					target="_blank"
-				>
-					{channel.name}
-				</Button>
+				<div class="flex items-center gap-4">
+					<Button
+						variant="link"
+						class="p-0 text-2xl font-bold md:text-3xl"
+						href={`https://www.youtube.com/${handle}`}
+						target="_blank"
+					>
+						{channel.name}
+					</Button>
+					{#if channel.isLive}
+						<Button
+							variant="ghost"
+							size="sm"
+							href={`https://www.twitch.tv/${channel.twitchUsername}`}
+							target="_blank"
+						>
+							<CircleIcon class="fill-destructive text-destructive" />
+							<span>Live</span>
+						</Button>
+					{/if}
+				</div>
 				<p class="text-muted-foreground">{handle}</p>
 			</div>
 

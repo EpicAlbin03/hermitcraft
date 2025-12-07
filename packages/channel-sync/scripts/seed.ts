@@ -17,7 +17,8 @@ const main = Effect.gen(function* () {
 					if (!channel) return Effect.die(`Channel ${id} not found in channels list`);
 					return channelSync.syncChannel({
 						ytChannelId: channel.ytChannelId,
-						twitchUserId: channel.twitchUserId
+						twitchUserId: channel.twitchUserId,
+						twitchUsername: channel.twitchUsername
 					});
 				},
 				video: () => channelSync.syncVideo({ ytVideoId: id })
@@ -47,7 +48,11 @@ const main = Effect.gen(function* () {
 			operations: {
 				channels: () =>
 					channelSync.syncChannels(
-						channels.map((c) => ({ ytChannelId: c.ytChannelId, twitchUserId: c.twitchUserId }))
+						channels.map((c) => ({
+							ytChannelId: c.ytChannelId,
+							twitchUserId: c.twitchUserId,
+							twitchUsername: c.twitchUsername
+						}))
 					),
 				videos: () => channelSync.syncVideos({ ytChannelIds })
 			},

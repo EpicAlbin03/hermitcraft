@@ -43,7 +43,9 @@ const dbService = Effect.gen(function* () {
 						.select({
 							name: DB_SCHEMA.channels.name,
 							handle: DB_SCHEMA.channels.handle,
-							thumbnailUrl: DB_SCHEMA.channels.thumbnailUrl
+							thumbnailUrl: DB_SCHEMA.channels.thumbnailUrl,
+							twitchUsername: DB_SCHEMA.channels.twitchUsername,
+							isLive: DB_SCHEMA.channels.isLive
 						})
 						.from(DB_SCHEMA.channels)
 						.orderBy(DB_SCHEMA.channels.name),
@@ -69,7 +71,9 @@ const dbService = Effect.gen(function* () {
 							description: DB_SCHEMA.channels.description,
 							viewCount: DB_SCHEMA.channels.viewCount,
 							subscriberCount: DB_SCHEMA.channels.subscriberCount,
-							videoCount: DB_SCHEMA.channels.videoCount
+							videoCount: DB_SCHEMA.channels.videoCount,
+							twitchUsername: DB_SCHEMA.channels.twitchUsername,
+							isLive: DB_SCHEMA.channels.isLive
 						})
 						.from(DB_SCHEMA.channels)
 						.where(eq(DB_SCHEMA.channels.handle, handle))

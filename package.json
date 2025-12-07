@@ -10,7 +10,7 @@
     "db:destroy": "docker compose down -v",
     "db:setup": "docker compose up -d && bun run scripts/wait-for-db.ts && bun run --filter @hc/db db:push",
     "db:connect": "docker compose exec mysql mysql -uroot -proot hc",
-    "db:push": "dotenv -- bun run --filter @hc/db db:push",
+    "db:push": "dotenv -- bun run --cwd packages/db db:push",
     "db:seed": "dotenv -- bun run --cwd packages/channel-sync seed",
     "db:wipe": "dotenv -- bun run --cwd packages/channel-sync wipe",
     "db:backfill": "dotenv -- bun run --cwd packages/channel-sync backfill",
