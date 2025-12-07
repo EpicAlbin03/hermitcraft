@@ -18,9 +18,10 @@ const channelSyncService = Effect.gen(function* () {
 	const yt = yield* YoutubeService;
 	const twitch = yield* TwitchService;
 
-	const syncChannel = (args: { ytChannelId: string; twitchUserId: string; isLive: boolean }) =>
+	const syncChannel = (args: { ytChannelId: string; twitchUserId: string; isLive?: boolean }) =>
 		Effect.gen(function* () {
 			const channelDetails = yield* yt.getChannelDetails(args);
+			const isLive = args.isLive ?? (yield* twitch.isChannelLive(args.twitchUserId));
 
 			yield* db.upsertChannel({
 				ytChannelId: args.ytChannelId,
@@ -34,7 +35,7 @@ const channelSyncService = Effect.gen(function* () {
 				subscriberCount: channelDetails.subscriberCount,
 				videoCount: channelDetails.videoCount,
 				joinedAt: channelDetails.joinedAt,
-				isLive: args.isLive
+				isLive: isLive
 			});
 		}).pipe(
 			Effect.catchTag(

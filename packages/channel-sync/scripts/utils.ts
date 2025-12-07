@@ -1,4 +1,20 @@
 import { Effect } from 'effect';
+import { parseArgs } from 'util';
+
+export const parseIdArgs = () => {
+	const { values } = parseArgs({
+		args: Bun.argv,
+		options: {
+			id: {
+				type: 'string',
+				short: 'i'
+			}
+		},
+		strict: true,
+		allowPositionals: true
+	});
+	return values.id;
+};
 
 export const askQuestion = (prompt: string) =>
 	Effect.promise<string>(

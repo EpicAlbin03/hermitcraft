@@ -25,6 +25,18 @@ const twitchService = Effect.gen(function* () {
 	const authProvider = new AppTokenAuthProvider(clientId, clientSecret);
 	const twitch = new ApiClient({ authProvider });
 
+	const isChannelLive = (userId: string) =>
+		Effect.gen(function* () {
+			const response = yield* Effect.tryPromise({
+				try: () => twitch.streams.getStreamByUserId(userId),
+				catch: (err) =>
+					new TwitchError(`Failed to get stream for user ${userId}`, {
+						cause: err
+					})
+			});
+			return response ? true : false;
+		});
+
 	const areChannelsLive = (user_ids: string[]) =>
 		Effect.gen(function* () {
 			const response = yield* Effect.tryPromise({
@@ -44,7 +56,8 @@ const twitchService = Effect.gen(function* () {
 		});
 
 	return {
-		areChannelsLive
+		areChannelsLive,
+		isChannelLive
 	};
 });
 

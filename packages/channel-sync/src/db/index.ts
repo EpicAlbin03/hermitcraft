@@ -95,7 +95,8 @@ const dbService = Effect.gen(function* () {
 								bannerUrl: data.bannerUrl,
 								viewCount: data.viewCount,
 								subscriberCount: data.subscriberCount,
-								videoCount: data.videoCount
+								videoCount: data.videoCount,
+								isLive: data.isLive
 							})
 							.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId)),
 					catch: (err) =>
@@ -119,7 +120,8 @@ const dbService = Effect.gen(function* () {
 							viewCount: data.viewCount,
 							subscriberCount: data.subscriberCount,
 							videoCount: data.videoCount,
-							joinedAt: data.joinedAt
+							joinedAt: data.joinedAt,
+							isLive: data.isLive
 						}),
 					catch: (err) =>
 						new DbError('Failed to insert channel', {
@@ -190,6 +192,25 @@ const dbService = Effect.gen(function* () {
 			}
 		});
 
+	const deleteVideo = (ytVideoId: string) =>
+		Effect.tryPromise({
+			try: () => drizzle.delete(DB_SCHEMA.videos).where(eq(DB_SCHEMA.videos.ytVideoId, ytVideoId)),
+			catch: (err) =>
+				new DbError('Failed to delete video', {
+					cause: err
+				})
+		});
+
+	const deleteChannel = (ytChannelId: string) =>
+		Effect.tryPromise({
+			try: () =>
+				drizzle.delete(DB_SCHEMA.channels).where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId)),
+			catch: (err) =>
+				new DbError('Failed to delete channel', {
+					cause: err
+				})
+		});
+
 	const deleteAllVideos = () =>
 		Effect.tryPromise({
 			try: () => drizzle.delete(DB_SCHEMA.videos),
@@ -214,6 +235,8 @@ const dbService = Effect.gen(function* () {
 		getVideo,
 		upsertChannel,
 		upsertVideo,
+		deleteVideo,
+		deleteChannel,
 		deleteAllVideos,
 		deleteAllChannels
 	};

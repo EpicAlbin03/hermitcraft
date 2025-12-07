@@ -2,46 +2,78 @@
 
 import { Effect, Layer } from 'effect';
 import { ChannelSyncService, DbService } from '../src';
-import { askQuestion, selectOperations } from './utils';
-import { channelIds, twitchUserIds } from '../src/youtube/utils';
+import { askQuestion, parseIdArgs, selectOperations } from './utils';
+import { channels } from '../src/channels';
 
 const main = Effect.gen(function* () {
 	const channelSync = yield* ChannelSyncService;
+	const id = parseIdArgs();
 
-	const ytChannelIds = channelIds.map((c) => c.id);
-	const twitchUserIdsList = twitchUserIds.map((c) => c.id);
-	const channels = ytChannelIds.map((ytChannelId, index) => ({
-		ytChannelId,
-		twitchUserId: twitchUserIdsList[index] ?? ''
-	}));
+	if (id) {
+		const { selected, names } = yield* selectOperations({
+			operations: {
+				channel: () => {
+					const channel = channels.find((c) => c.ytChannelId === id);
+					if (!channel) return Effect.die(`Channel ${id} not found in channels list`);
+					return channelSync.syncChannel({
+						ytChannelId: channel.ytChannelId,
+						twitchUserId: channel.twitchUserId
+					});
+				},
+				video: () => channelSync.syncVideo({ ytVideoId: id })
+			},
+			prompt: 'Select what to seed (channel or video)'
+		});
 
-	const { selected, names } = yield* selectOperations({
-		operations: {
-			channels: () => channelSync.syncChannels(channels),
-			videos: () => channelSync.syncVideos({ ytChannelIds })
-		},
-		prompt: 'Select tables to seed'
-	});
+		if (selected.length === 0) {
+			console.log('No valid selection. Aborting.');
+			return;
+		}
 
-	if (selected.length === 0) {
-		console.log('No valid tables selected. Aborting.');
-		return;
-	}
+		const confirmation = yield* askQuestion(`Sync ${names} with id "${id}"? Type "yes": `);
+		if (confirmation.trim() !== 'yes') {
+			console.log('Aborted.');
+			return;
+		}
 
-	const confirmation = yield* askQuestion(
-		`This will sync the following tables: ${names}. Type "yes" to continue: `
-	);
+		for (const [name, sync] of selected) {
+			yield* sync();
+			console.log(`Synced ${name}: ${id}`);
+		}
+	} else {
+		const ytChannelIds = channels.map((c) => c.ytChannelId);
 
-	if (confirmation.trim() !== 'yes') {
-		console.log('Aborted.');
-		return;
-	}
+		const { selected, names } = yield* selectOperations({
+			operations: {
+				channels: () =>
+					channelSync.syncChannels(
+						channels.map((c) => ({ ytChannelId: c.ytChannelId, twitchUserId: c.twitchUserId }))
+					),
+				videos: () => channelSync.syncVideos({ ytChannelIds })
+			},
+			prompt: 'Select tables to seed'
+		});
 
-	console.log(`Seeding: ${names}...`);
+		if (selected.length === 0) {
+			console.log('No valid tables selected. Aborting.');
+			return;
+		}
 
-	for (const [name, sync] of selected) {
-		yield* sync();
-		console.log(`Synced ${name}`);
+		const confirmation = yield* askQuestion(
+			`This will sync the following tables: ${names}. Type "yes" to continue: `
+		);
+
+		if (confirmation.trim() !== 'yes') {
+			console.log('Aborted.');
+			return;
+		}
+
+		console.log(`Seeding: ${names}...`);
+
+		for (const [name, sync] of selected) {
+			yield* sync();
+			console.log(`Synced ${name}`);
+		}
 	}
 }).pipe(
 	Effect.provide(ChannelSyncService.Default.pipe(Layer.provide(DbService.Default))),
