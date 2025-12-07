@@ -8,7 +8,7 @@
 		type ActiveTailwindBreakpoint
 	} from '$lib/hooks/is-tailwind-breakpoint.svelte';
 	import { useSidebarSpace } from '$lib/hooks/use-sidebar-space.svelte';
-	import { formatCompactNumber } from '$lib/utils';
+	import { formatCompactNumber, parseChannelDescription } from '$lib/format';
 	import { cn } from '$lib/utils';
 	import type { ChannelDetails } from '$lib/remote/channels.remote';
 	import { Image } from '@unpic/svelte';
@@ -140,7 +140,15 @@
 						!isDescriptionExpanded && 'line-clamp-1 lg:line-clamp-2'
 					)}
 				>
-					{@html channel.description}
+					{#each parseChannelDescription(channel.description) as part}
+						{#if part.type === 'link'}
+							<Button class="p-0" variant="link" size="sm" href={part.content} target="_blank">
+								{part.content}
+							</Button>
+						{:else}
+							{@html part.content}
+						{/if}
+					{/each}
 				</p>
 				{#if channel.description.length > 150}
 					<Button

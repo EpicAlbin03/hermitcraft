@@ -22,7 +22,7 @@
 		formatDate,
 		formatRelativeTime,
 		formatVideoDuration
-	} from '$lib/utils';
+	} from '$lib/format';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import type { VideoFilter, VideoSort } from '$lib/services/db';
 	import * as Select from '$lib/components/ui/select';
