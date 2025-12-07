@@ -27,6 +27,34 @@ export const channelIds = [
 	{ name: 'ZombieCleo', id: 'UCjI5qxhtyv3srhWr60HemRw' }
 ];
 
+export const twitchUserIds = [
+	{ name: 'bdoubleo', id: '24950469' },
+	{ name: 'cubfan135', id: '51948385' },
+	{ name: 'docm77live', id: '26773349' },
+	{ name: 'ethotv', id: '' },
+	{ name: 'FalseSymmetry', id: '23432410' },
+	{ name: 'geminitay', id: '49334169' },
+	{ name: 'grian', id: '48571756' },
+	{ name: 'hypnotizd', id: '24680103' },
+	{ name: 'impulsesv', id: '41176642' },
+	{ name: 'ijevin', id: '27189299' },
+	{ name: 'joehills', id: '8912484' },
+	{ name: 'keralis', id: '29285265' },
+	{ name: 'thatmumbojumbo', id: '29954462' },
+	{ name: 'PearlescentMoon', id: '75366734' },
+	{ name: 'rendogtv', id: '30600786' },
+	{ name: 'goodtimeswithscar', id: '23558127' },
+	{ name: 'skizzleman', id: '52236161' },
+	{ name: 'smallishbeans', id: '64959672' },
+	{ name: 'tangotek', id: '41157071' },
+	{ name: 'VintageBeef', id: '23485487' },
+	{ name: 'welsknight', id: '74488250' },
+	{ name: 'xbcrafted', id: '41574048' },
+	{ name: 'xisuma', id: '27273690' },
+	{ name: 'ZedaphPlays', id: '43288910' },
+	{ name: 'zombiecleo', id: '25492878' }
+];
+
 export function parseIsoDurationToSeconds(duration: string): number | null {
 	const ISO_DURATION_PATTERN = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/;
 	const match = ISO_DURATION_PATTERN.exec(duration);

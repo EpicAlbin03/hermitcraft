@@ -3,6 +3,7 @@ import { DbService } from './db';
 import { YoutubeService } from './youtube';
 import { TaggedError } from 'effect/Data';
 import type { Video } from '@hc/db';
+import { TwitchService } from './twitch';
 
 class SyncVideoError extends TaggedError('SyncVideoError') {
 	constructor(message: string, options?: { cause?: unknown }) {
@@ -15,13 +16,15 @@ class SyncVideoError extends TaggedError('SyncVideoError') {
 const channelSyncService = Effect.gen(function* () {
 	const db = yield* DbService;
 	const yt = yield* YoutubeService;
+	const twitch = yield* TwitchService;
 
-	const syncChannel = (args: { ytChannelId: string }) =>
+	const syncChannel = (args: { ytChannelId: string; twitchUserId: string; isLive: boolean }) =>
 		Effect.gen(function* () {
 			const channelDetails = yield* yt.getChannelDetails(args);
 
 			yield* db.upsertChannel({
 				ytChannelId: args.ytChannelId,
+				twitchUserId: args.twitchUserId,
 				name: channelDetails.name,
 				description: channelDetails.description,
 				thumbnailUrl: channelDetails.thumbnailUrl,
@@ -30,7 +33,8 @@ const channelSyncService = Effect.gen(function* () {
 				viewCount: channelDetails.viewCount,
 				subscriberCount: channelDetails.subscriberCount,
 				videoCount: channelDetails.videoCount,
-				joinedAt: channelDetails.joinedAt
+				joinedAt: channelDetails.joinedAt,
+				isLive: args.isLive
 			});
 		}).pipe(
 			Effect.catchTag(
@@ -81,23 +85,35 @@ const channelSyncService = Effect.gen(function* () {
 			)
 		);
 
-	const syncChannels = (args?: { ytChannelIds?: string[] }) =>
+	const syncChannels = (channels?: { ytChannelId: string; twitchUserId: string }[]) =>
 		Effect.gen(function* () {
 			const start = performance.now();
-			const channelIds =
-				args?.ytChannelIds ?? (yield* db.getAllChannels()).map((c) => c.ytChannelId);
+			const channelsList =
+				channels ??
+				(yield* db.getAllChannels()).map((c) => ({
+					ytChannelId: c.ytChannelId,
+					twitchUserId: c.twitchUserId
+				}));
+
+			const isLiveMap = yield* twitch.areChannelsLive(
+				channelsList.map((c) => c.twitchUserId).filter((id) => id !== '')
+			);
 
 			let successCount = 0;
 			let errorCount = 0;
 
-			yield* Effect.forEach(channelIds, (ytChannelId) =>
+			yield* Effect.forEach(channelsList, (channel) =>
 				Effect.gen(function* () {
-					console.log(`Syncing channel ${ytChannelId}`);
-					const result = yield* syncChannel({ ytChannelId }).pipe(Effect.either);
+					console.log(`Syncing channel ${channel.ytChannelId}`);
+					const result = yield* syncChannel({
+						ytChannelId: channel.ytChannelId,
+						twitchUserId: channel.twitchUserId,
+						isLive: isLiveMap.get(channel.twitchUserId) ?? false
+					}).pipe(Effect.either);
 
 					if (result._tag === 'Right') {
 						successCount++;
-						console.log(`Synced channel ${ytChannelId}`);
+						console.log(`Synced channel ${channel.ytChannelId}`);
 					} else {
 						errorCount++;
 						console.error('LIVE CRAWLER: Failed to sync channel', result.left);
@@ -246,9 +262,10 @@ const channelSyncService = Effect.gen(function* () {
 });
 
 export class ChannelSyncService extends Effect.Service<ChannelSyncService>()('ChannelSyncService', {
-	dependencies: [YoutubeService.Default],
+	dependencies: [YoutubeService.Default, TwitchService.Default],
 	effect: channelSyncService
 }) {}
 
 export * from './db';
 export * from './youtube';
+export * from './twitch';

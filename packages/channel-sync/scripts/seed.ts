@@ -3,16 +3,21 @@
 import { Effect, Layer } from 'effect';
 import { ChannelSyncService, DbService } from '../src';
 import { askQuestion, selectOperations } from './utils';
-import { channelIds } from '../src/youtube/utils';
+import { channelIds, twitchUserIds } from '../src/youtube/utils';
 
 const main = Effect.gen(function* () {
 	const channelSync = yield* ChannelSyncService;
 
 	const ytChannelIds = channelIds.map((c) => c.id);
+	const twitchUserIdsList = twitchUserIds.map((c) => c.id);
+	const channels = ytChannelIds.map((ytChannelId, index) => ({
+		ytChannelId,
+		twitchUserId: twitchUserIdsList[index] ?? ''
+	}));
 
 	const { selected, names } = yield* selectOperations({
 		operations: {
-			channels: () => channelSync.syncChannels({ ytChannelIds }),
+			channels: () => channelSync.syncChannels(channels),
 			videos: () => channelSync.syncVideos({ ytChannelIds })
 		},
 		prompt: 'Select tables to seed'

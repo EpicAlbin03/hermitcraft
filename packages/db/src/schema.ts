@@ -3,6 +3,7 @@ import * as t from 'drizzle-orm/mysql-core';
 
 export const channels = table('channels', {
 	ytChannelId: t.varchar('yt_channel_id', { length: 55 }).primaryKey(),
+	twitchUserId: t.varchar('twitch_user_id', { length: 10 }).notNull(),
 	name: t.text('name').notNull(),
 	description: t.text('description').notNull(),
 	thumbnailUrl: t.text('thumbnail_url').notNull(),
@@ -12,6 +13,7 @@ export const channels = table('channels', {
 	subscriberCount: t.int('subscriber_count').notNull(),
 	videoCount: t.int('video_count').notNull(),
 	joinedAt: t.datetime('joined_at').notNull(),
+	isLive: t.boolean('is_live').notNull().default(false),
 	createdAt: t.timestamp('created_at').notNull().defaultNow()
 });
 

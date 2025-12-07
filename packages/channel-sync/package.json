@@ -21,6 +21,8 @@
 		"@hc/db": "*"
 	},
 	"dependencies": {
+		"@twurple/api": "^8.0.2",
+		"@twurple/auth": "^8.0.2",
 		"effect": "^3.19.5",
 		"googleapis": "^164.1.0",
 		"zod": "^4.1.12"

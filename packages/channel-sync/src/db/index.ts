@@ -13,7 +13,6 @@ class DbError extends TaggedError('DbError') {
 
 const dbService = Effect.gen(function* () {
 	const dbUrl = yield* Effect.sync(() => Bun.env.MYSQL_URL);
-
 	if (!dbUrl) {
 		return yield* Effect.die('MYSQL_URL is not set...');
 	}
@@ -111,6 +110,7 @@ const dbService = Effect.gen(function* () {
 					try: () =>
 						drizzle.insert(DB_SCHEMA.channels).values({
 							ytChannelId: data.ytChannelId,
+							twitchUserId: data.twitchUserId,
 							name: data.name,
 							description: data.description,
 							thumbnailUrl: data.thumbnailUrl,
