@@ -94,7 +94,7 @@
 
 		<div class="mt-2 flex flex-1 flex-col gap-2 md:mt-4">
 			<div>
-				<div class="flex items-center gap-4">
+				<div class="flex items-center gap-2">
 					<Button
 						variant="link"
 						class="p-0 text-2xl font-bold md:text-3xl"
@@ -109,9 +109,10 @@
 							size="sm"
 							href={`https://www.twitch.tv/${channel.twitchUsername}`}
 							target="_blank"
+							class="text-base font-semibold"
 						>
 							<CircleIcon class="fill-destructive text-destructive" />
-							<span>Live</span>
+							Live
 						</Button>
 					{/if}
 				</div>

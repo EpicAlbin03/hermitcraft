@@ -41,13 +41,23 @@ export function formatRelativeTime(date: Date | string) {
 	const d = new Date(date);
 	const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
 
-	if (seconds < 60) return 'just now';
-	if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
-	if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
-	if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
-	if (seconds < 2592000) return `${Math.floor(seconds / 604800)} weeks ago`;
-	if (seconds < 31536000) return `${Math.floor(seconds / 2592000)} months ago`;
-	if (seconds < 315360000) return `${Math.floor(seconds / 31536000)} years ago`;
+	const timeInSeconds = {
+		minute: 60,
+		hour: 3600,
+		day: 86400,
+		week: 604800,
+		month: 2629746,
+		year: 31556952
+	};
+
+	if (seconds < timeInSeconds.minute) return 'just now';
+	if (seconds < timeInSeconds.hour)
+		return `${Math.floor(seconds / timeInSeconds.minute)} minutes ago`;
+	if (seconds < timeInSeconds.day) return `${Math.floor(seconds / timeInSeconds.hour)} hours ago`;
+	if (seconds < timeInSeconds.week) return `${Math.floor(seconds / timeInSeconds.day)} days ago`;
+	if (seconds < timeInSeconds.month) return `${Math.floor(seconds / timeInSeconds.week)} weeks ago`;
+	if (seconds < timeInSeconds.year)
+		return `${Math.floor(seconds / timeInSeconds.month)} months ago`;
 
 	return formatDate(d);
 }
