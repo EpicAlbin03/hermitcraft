@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { Effect, Layer } from 'effect';
+import { Console, Effect, Layer } from 'effect';
 import { ChannelSyncService, DbService } from '../src';
 import { askQuestion, parseIdArgs, selectOperations } from './utils';
 import { channels } from '../src/channels';
@@ -14,33 +14,36 @@ const main = Effect.gen(function* () {
 			operations: {
 				channel: () => {
 					const channel = channels.find((c) => c.ytChannelId === id);
-					if (!channel) return Effect.die(`Channel ${id} not found in channels list`);
-					return channelSync.syncChannel({
-						ytChannelId: channel.ytChannelId,
-						twitchUserId: channel.twitchUserId,
-						twitchUsername: channel.twitchUsername
+					if (!channel || !channel.ytChannelId) {
+						return Effect.die(`Channel ${id} not found in channels list`);
+					}
+					return channelSync.syncChannel(channel.ytChannelId, {
+						twitchUserId: channel.twitchUserId ?? undefined,
+						twitchUserLogin: channel.twitchUserLogin ?? undefined
 					});
 				},
-				video: () => channelSync.syncVideo({ ytVideoId: id })
+				video: () => channelSync.syncVideo(id)
 			},
 			prompt: 'Select what to seed (channel or video)'
 		});
 
 		if (selected.length === 0) {
-			console.log('No valid selection. Aborting.');
+			yield* Console.log('No valid selection. Aborting.');
 			return;
 		}
 
 		const confirmation = yield* askQuestion(`Sync ${names} with id "${id}"? Type "yes": `);
 		if (confirmation.trim() !== 'yes') {
-			console.log('Aborted.');
+			yield* Console.log('Aborted.');
 			return;
 		}
 
-		for (const [name, sync] of selected) {
-			yield* sync();
-			console.log(`Synced ${name}: ${id}`);
-		}
+		yield* Effect.forEach(selected, ([name, sync]) =>
+			Effect.gen(function* () {
+				yield* sync();
+				yield* Console.log(`Synced ${name}: ${id}`);
+			})
+		);
 	} else {
 		const ytChannelIds = channels.map((c) => c.ytChannelId);
 
@@ -50,17 +53,18 @@ const main = Effect.gen(function* () {
 					channelSync.syncChannels(
 						channels.map((c) => ({
 							ytChannelId: c.ytChannelId,
-							twitchUserId: c.twitchUserId,
-							twitchUsername: c.twitchUsername
+							twitchUserId: c.twitchUserId ?? undefined,
+							twitchUserLogin: c.twitchUserLogin ?? undefined,
+							links: c.links ?? []
 						}))
 					),
-				videos: () => channelSync.syncVideos({ ytChannelIds })
+				videos: () => channelSync.syncVideos(ytChannelIds)
 			},
 			prompt: 'Select tables to seed'
 		});
 
 		if (selected.length === 0) {
-			console.log('No valid tables selected. Aborting.');
+			yield* Console.log('No valid tables selected. Aborting.');
 			return;
 		}
 
@@ -69,16 +73,18 @@ const main = Effect.gen(function* () {
 		);
 
 		if (confirmation.trim() !== 'yes') {
-			console.log('Aborted.');
+			yield* Console.log('Aborted.');
 			return;
 		}
 
-		console.log(`Seeding: ${names}...`);
+		yield* Console.log(`Seeding: ${names}...`);
 
-		for (const [name, sync] of selected) {
-			yield* sync();
-			console.log(`Synced ${name}`);
-		}
+		yield* Effect.forEach(selected, ([name, sync]) =>
+			Effect.gen(function* () {
+				yield* sync();
+				yield* Console.log(`Synced ${name}`);
+			})
+		);
 	}
 }).pipe(
 	Effect.provide(ChannelSyncService.Default.pipe(Layer.provide(DbService.Default))),

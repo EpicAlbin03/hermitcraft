@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { Effect } from 'effect';
+import { Console, Effect } from 'effect';
 import { DbService } from '../src';
 import { askQuestion, parseIdArgs, selectOperations } from './utils';
 
@@ -18,20 +18,22 @@ const main = Effect.gen(function* () {
 		});
 
 		if (selected.length === 0) {
-			console.log('No valid selection. Aborting.');
+			yield* Console.log('No valid selection. Aborting.');
 			return;
 		}
 
 		const confirmation = yield* askQuestion(`Delete ${names} with id "${id}"? Type "yes": `);
 		if (confirmation.trim() !== 'yes') {
-			console.log('Aborted.');
+			yield* Console.log('Aborted.');
 			return;
 		}
 
-		for (const [name, wipe] of selected) {
-			yield* wipe();
-			console.log(`Deleted ${name}: ${id}`);
-		}
+		yield* Effect.forEach(selected, ([name, wipe]) =>
+			Effect.gen(function* () {
+				yield* wipe();
+				yield* Console.log(`Deleted ${name}: ${id}`);
+			})
+		);
 	} else {
 		const { selected, names } = yield* selectOperations({
 			operations: {
@@ -42,7 +44,7 @@ const main = Effect.gen(function* () {
 		});
 
 		if (selected.length === 0) {
-			console.log('No valid tables selected. Aborting.');
+			yield* Console.log('No valid tables selected. Aborting.');
 			return;
 		}
 
@@ -51,16 +53,18 @@ const main = Effect.gen(function* () {
 		);
 
 		if (confirmation.trim() !== 'yes') {
-			console.log('Aborted.');
+			yield* Console.log('Aborted.');
 			return;
 		}
 
-		console.log(`Wiping DB tables: ${names}...`);
+		yield* Console.log(`Wiping DB tables: ${names}...`);
 
-		for (const [name, wipe] of selected) {
-			yield* wipe();
-			console.log(`Wiped ${name}`);
-		}
+		yield* Effect.forEach(selected, ([name, wipe]) =>
+			Effect.gen(function* () {
+				yield* wipe();
+				yield* Console.log(`Wiped ${name}`);
+			})
+		);
 	}
 }).pipe(
 	Effect.provide(DbService.Default),

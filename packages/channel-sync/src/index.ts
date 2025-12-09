@@ -2,7 +2,7 @@ import { Effect, Console } from 'effect';
 import { DbService } from './db';
 import { YoutubeService } from './youtube';
 import { TaggedError } from 'effect/Data';
-import type { Video } from '@hc/db';
+import type { Channel, ChannelLink, Video } from '@hc/db';
 import { TwitchService } from './twitch';
 
 class SyncVideoError extends TaggedError('SyncVideoError') {
@@ -18,31 +18,40 @@ const channelSyncService = Effect.gen(function* () {
 	const yt = yield* YoutubeService;
 	const twitch = yield* TwitchService;
 
-	const syncChannel = (args: {
-		ytChannelId: string;
-		twitchUserId: string;
-		twitchUsername: string;
-		isLive?: boolean;
-	}) =>
+	const syncChannel = (
+		ytChannelId: string,
+		details: {
+			twitchUserId?: string;
+			twitchUserLogin?: string;
+			isTwitchLive?: boolean;
+			isYtLive?: boolean;
+			links?: ChannelLink[];
+		}
+	) =>
 		Effect.gen(function* () {
-			const channelDetails = yield* yt.getChannelDetails(args);
-			const isLive = args.isLive ?? (yield* twitch.isChannelLive(args.twitchUserId));
+			const channelDetails = yield* yt.getChannelDetails(ytChannelId);
+			const isTwitchLive =
+				details.isTwitchLive ??
+				(details.twitchUserId ? yield* twitch.isChannelLive(details.twitchUserId) : false);
+			const isYtLive = details.isYtLive ?? false; // TODO: isYoutubeLive()
+			const links = details.links ?? [];
 
 			yield* db.upsertChannel({
-				ytChannelId: args.ytChannelId,
-				twitchUserId: args.twitchUserId,
-				name: channelDetails.name,
-				description: channelDetails.description,
-				thumbnailUrl: channelDetails.thumbnailUrl,
-				bannerUrl: channelDetails.bannerUrl,
-				handle: channelDetails.handle,
-				viewCount: channelDetails.viewCount,
-				subscriberCount: channelDetails.subscriberCount,
-				videoCount: channelDetails.videoCount,
-				joinedAt: channelDetails.joinedAt,
-				twitchUsername: args.twitchUsername,
-				isLive: isLive
-			});
+				ytChannelId: ytChannelId,
+				ytName: channelDetails.ytName,
+				ytHandle: channelDetails.ytHandle,
+				ytDescription: channelDetails.ytDescription,
+				ytAvatarUrl: channelDetails.ytAvatarUrl,
+				ytBannerUrl: channelDetails.ytBannerUrl,
+				ytViewCount: channelDetails.ytViewCount,
+				ytSubscriberCount: channelDetails.ytSubscriberCount,
+				ytVideoCount: channelDetails.ytVideoCount,
+				ytJoinedAt: channelDetails.ytJoinedAt,
+				twitchUserLogin: details.twitchUserLogin,
+				isTwitchLive: isTwitchLive,
+				isYtLive: isYtLive,
+				links: links
+			} as Channel);
 		}).pipe(
 			Effect.catchTag(
 				'DbError',
@@ -54,12 +63,13 @@ const channelSyncService = Effect.gen(function* () {
 			)
 		);
 
-	const syncVideo = (args: { ytVideoId: string }) =>
+	const syncVideo = (ytVideoId: string) =>
 		Effect.gen(function* () {
-			const videoDetails = yield* yt.getVideoDetails(args);
+			const videoDetails = yield* yt.getVideoDetails(ytVideoId);
+			const videoIsShort = yield* yt.isVideoShort(ytVideoId, videoDetails.ytChannelId);
 
 			yield* db.upsertVideo({
-				ytVideoId: args.ytVideoId,
+				ytVideoId: ytVideoId,
 				ytChannelId: videoDetails.ytChannelId,
 				title: videoDetails.title,
 				thumbnailUrl: videoDetails.thumbnailUrl,
@@ -68,8 +78,11 @@ const channelSyncService = Effect.gen(function* () {
 				likeCount: videoDetails.likeCount,
 				commentCount: videoDetails.commentCount,
 				duration: videoDetails.duration,
-				isLiveStream: videoDetails.isLiveStream,
-				isShort: videoDetails.isShort
+				isShort: videoIsShort,
+				livestreamType: videoDetails.livestreamType,
+				livestreamScheduledStartTime: videoDetails.livestreamScheduledStartTime,
+				livestreamActualStartTime: videoDetails.livestreamActualStartTime,
+				livestreamConcurrentViewers: videoDetails.livestreamConcurrentViewers
 			});
 		}).pipe(
 			Effect.catchTag(
@@ -82,129 +95,98 @@ const channelSyncService = Effect.gen(function* () {
 			)
 		);
 
-	const syncRSSVideo = (video: Video) =>
-		Effect.gen(function* () {
-			return yield* db.upsertVideo(video);
-		}).pipe(
-			Effect.catchTag(
-				'DbError',
-				(err) => new SyncVideoError(`DB ERROR: ${err.message}`, { cause: err.cause })
-			)
-		);
-
 	const syncChannels = (
-		channels?: { ytChannelId: string; twitchUserId: string; twitchUsername: string }[]
+		channels: {
+			ytChannelId: string;
+			twitchUserId?: string;
+			twitchUserLogin?: string;
+			isTwitchLive?: boolean;
+			isYtLive?: boolean;
+			links?: ChannelLink[];
+		}[],
+		taskName?: string
 	) =>
 		Effect.gen(function* () {
 			const start = performance.now();
-			const channelsList = channels ?? (yield* db.getAllChannels());
 
-			const isLiveMap = yield* twitch.areChannelsLive(
-				channelsList.map((c) => c.twitchUserId).filter((id) => id !== '')
+			const isTwitchLiveMap = yield* twitch.areChannelsLive(
+				channels.map((c) => c.twitchUserId).filter((id) => id !== null && id !== undefined)
 			);
 
 			let successCount = 0;
 			let errorCount = 0;
+			const fullTaskName = taskName ? `${taskName}: ` : '';
 
-			yield* Effect.forEach(channelsList, (channel) =>
-				Effect.gen(function* () {
-					console.log(`Syncing channel ${channel.ytChannelId}`);
-					const result = yield* syncChannel({
-						ytChannelId: channel.ytChannelId,
-						twitchUserId: channel.twitchUserId,
-						twitchUsername: channel.twitchUsername,
-						isLive: isLiveMap.get(channel.twitchUserId) ?? false
-					}).pipe(Effect.either);
+			yield* Effect.forEach(
+				channels,
+				(channel) =>
+					Effect.gen(function* () {
+						yield* Console.log(`${fullTaskName}Syncing channel ${channel.ytChannelId}`);
+						const result = yield* syncChannel(channel.ytChannelId, {
+							twitchUserId: channel.twitchUserId ?? undefined,
+							twitchUserLogin: channel.twitchUserLogin ?? undefined,
+							isTwitchLive: channel.twitchUserId
+								? (isTwitchLiveMap.get(channel.twitchUserId) ?? false)
+								: undefined,
+							isYtLive: channel.isYtLive ?? false, // TODO: isYoutubeLive()
+							links: channel.links ?? []
+						}).pipe(Effect.either);
 
-					if (result._tag === 'Right') {
-						successCount++;
-						console.log(`Synced channel ${channel.ytChannelId}`);
-					} else {
-						errorCount++;
-						console.error('LIVE CRAWLER: Failed to sync channel', result.left);
-					}
-				})
+						if (result._tag === 'Right') {
+							successCount++;
+							yield* Console.log(`${fullTaskName}Synced channel ${channel.ytChannelId}`);
+						} else {
+							errorCount++;
+							yield* Console.error(`${fullTaskName}Failed to sync channel`, result.left);
+						}
+					}),
+				{ concurrency: 5 }
 			);
 
 			yield* Console.log(
 				`CHANNEL SYNC COMPLETED: ${successCount} channels synced, ${errorCount} channels failed`
 			);
-			yield* Console.log(`LIVE CRAWLER TOOK ${performance.now() - start}ms`);
+			yield* Console.log(`CHANNEL SYNC TOOK ${performance.now() - start}ms`);
 		});
 
-	const syncVideos = (args?: { ytChannelIds?: string[] }) =>
+	const syncVideos = (ytChannelIds: string[], taskName?: string) =>
 		Effect.gen(function* () {
 			const start = performance.now();
-			const channelIds =
-				args?.ytChannelIds ?? (yield* db.getAllChannels()).map((c) => c.ytChannelId);
 
 			let successCount = 0;
 			let errorCount = 0;
 			let skipCount = 0;
-			const BATCH_SIZE = 50;
+			const fullTaskName = taskName ? `${taskName}: ` : '';
 
-			yield* Effect.forEach(channelIds, (ytChannelId) =>
-				Effect.gen(function* () {
-					const rssVideosResult = yield* yt.getRSSVideos({ ytChannelId }).pipe(Effect.either);
-					if (rssVideosResult._tag === 'Left') {
-						console.error('LIVE CRAWLER: Failed to get recent videos', rssVideosResult.left);
-						return;
-					}
+			const videoDetails = yield* yt.getBatchVideoDetails(ytChannelIds);
 
-					const rssVideos = rssVideosResult.right;
-					const videoIds = rssVideos.map((v) => v.ytVideoId);
-					const batches: string[][] = [];
-					for (let i = 0; i < videoIds.length; i += BATCH_SIZE) {
-						batches.push(videoIds.slice(i, i + BATCH_SIZE));
-					}
+			yield* Effect.forEach(
+				videoDetails.entries(),
+				([ytVideoId, videoDetails]) =>
+					Effect.gen(function* () {
+						const videoIsShort = yield* yt.isVideoShort(ytVideoId, videoDetails.ytChannelId);
+						yield* Console.log(`${fullTaskName}Syncing video ${ytVideoId}`);
+						const result = yield* db
+							.upsertVideo({
+								...videoDetails,
+								isShort: videoIsShort
+							})
+							.pipe(Effect.either);
 
-					const batchResults = yield* Effect.forEach(batches, (batch) =>
-						yt.getBatchRSSVideoDetails({ ytVideoIds: batch }).pipe(Effect.either)
-					);
-
-					const detailsMap: Record<
-						string,
-						Pick<Video, 'commentCount' | 'duration' | 'isLiveStream'>
-					> = {};
-					for (const result of batchResults) {
 						if (result._tag === 'Right') {
-							Object.assign(detailsMap, result.right);
-						} else {
-							console.error('LIVE CRAWLER: Failed to fetch video details', result.left);
-						}
-					}
-
-					const shortsMapResult = yield* yt
-						.checkIfVideosAreShorts({ ytVideoIds: videoIds, ytChannelId })
-						.pipe(Effect.either);
-					const shortsMap =
-						shortsMapResult._tag === 'Right' ? shortsMapResult.right : new Map<string, boolean>();
-
-					yield* Effect.forEach(rssVideos, (rssVideo) =>
-						Effect.gen(function* () {
-							const details = detailsMap[rssVideo.ytVideoId];
-							const isShort = shortsMap.get(rssVideo.ytVideoId) ?? false;
-							const result = yield* syncRSSVideo({
-								...rssVideo,
-								...details,
-								isShort
-							} as Video).pipe(Effect.either);
-
-							if (result._tag === 'Right') {
-								if (result.right?.wasSkipped) {
-									skipCount++;
-									console.log(`Skipped video ${rssVideo.ytVideoId} - ${rssVideo.title}`);
-								} else {
-									successCount++;
-									console.log(`Synced video ${rssVideo.ytVideoId} - ${rssVideo.title}`);
-								}
+							if (result.right?.wasSkipped) {
+								skipCount++;
+								yield* Console.warn(`\x1b[33m${fullTaskName}Skipped video ${ytVideoId}\x1b[0m`);
 							} else {
-								errorCount++;
-								console.error('LIVE CRAWLER: Failed to sync video', result.left);
+								successCount++;
+								yield* Console.log(`${fullTaskName}Synced video ${ytVideoId}`);
 							}
-						})
-					);
-				})
+						} else {
+							errorCount++;
+							yield* Console.error(`${fullTaskName}Failed to sync video ${ytVideoId}`, result.left);
+						}
+					}),
+				{ concurrency: 5 }
 			);
 
 			yield* Console.log(
@@ -213,56 +195,41 @@ const channelSyncService = Effect.gen(function* () {
 			yield* Console.log(`VIDEO SYNC TOOK ${performance.now() - start}ms`);
 		});
 
-	const backfillChannel = (args: { ytChannelId: string }) =>
+	const backfillVideos = (ytChannelId: string) =>
 		Effect.gen(function* () {
 			const start = performance.now();
-			yield* Console.log(`BACKFILL: Starting backfill for channel ${args.ytChannelId}`);
+			yield* Console.log(`BACKFILL: Starting backfill for channel ${ytChannelId}`);
 
-			const channel = yield* db.getChannel(args.ytChannelId);
+			const channel = yield* db.getChannel(ytChannelId);
 			if (!channel) {
-				return yield* Effect.fail(new SyncVideoError('Channel not found'));
+				return yield* Effect.fail(new SyncVideoError(`BACKFILL: Channel not found ${ytChannelId}`));
 			}
 
-			const videoIds = yield* yt.getVideosFromUploadsPlaylist({
-				ytChannelId: args.ytChannelId
-			});
+			const videoIds = yield* yt.getVideoIdsFromUploadsPlaylist(ytChannelId);
 
-			yield* Console.log(`BACKFILL: Found ${videoIds.length} videos to backfill`);
-
-			let successCount = 0;
-			let errorCount = 0;
-
-			yield* Effect.forEach(
-				videoIds,
-				(videoId) =>
-					Effect.gen(function* () {
-						console.log(`BACKFILL: Syncing video ${videoId}`);
-						const result = yield* syncVideo({ ytVideoId: videoId }).pipe(Effect.either);
-
-						if (result._tag === 'Right') {
-							successCount++;
-							console.log(`BACKFILL: Successfully synced video ${videoId}`);
-						} else {
-							errorCount++;
-							console.error(`BACKFILL: Failed to sync video ${videoId}`, result.left);
-						}
-					}),
-				{ concurrency: 5 }
-			);
-
+			const batches = videoIds.reduce((acc, videoId, index) => {
+				const batchIndex = Math.floor(index / 50);
+				if (!acc[batchIndex]) {
+					acc[batchIndex] = [];
+				}
+				acc[batchIndex].push(videoId);
+				return acc;
+			}, [] as string[][]);
 			yield* Console.log(
-				`BACKFILL COMPLETED: ${successCount} videos synced, ${errorCount} videos failed`
+				`BACKFILL: Found ${videoIds.length} videos (${batches.length} batches) to backfill`
 			);
-			yield* Console.log(`BACKFILL TOOK ${performance.now() - start}ms`);
+
+			yield* Effect.forEach(batches, (batch) => syncVideos(batch, 'BACKFILL'), { concurrency: 5 });
+
+			yield* Console.log(`BACKFILL: Backfill completed in ${performance.now() - start}ms`);
 		});
 
 	return {
 		syncChannel,
 		syncVideo,
-		syncRSSVideo,
 		syncChannels,
 		syncVideos,
-		backfillChannel
+		backfillVideos
 	};
 });
 

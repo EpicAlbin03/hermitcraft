@@ -56,8 +56,8 @@ const twitchService = Effect.gen(function* () {
 		});
 
 	return {
-		areChannelsLive,
-		isChannelLive
+		isChannelLive,
+		areChannelsLive
 	};
 });
 

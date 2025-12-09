@@ -1,10 +1,8 @@
-import { google } from 'googleapis';
-import { Effect } from 'effect';
+import { google, youtube_v3 } from 'googleapis';
+import { Console, Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
-import { DbService } from '../db';
-import { getShortsPlaylistId } from './utils';
+import { getShortsPlaylistId, getVideoLivestreamType } from './utils';
 import type { Video } from '@hc/db';
-import { parseYouTubeRSS } from './rss';
 
 class YoutubeError extends TaggedError('YoutubeError') {
 	constructor(message: string, options?: { cause?: unknown }) {
@@ -26,25 +24,92 @@ const youtubeService = Effect.gen(function* () {
 		auth: youtubeApiKey
 	});
 
-	const db = yield* DbService;
+	const getShortsVideoIds = (ytChannelId: string) =>
+		Effect.gen(function* () {
+			const shortsPlaylistId = getShortsPlaylistId(ytChannelId);
+			if (!shortsPlaylistId) return new Set<string>();
 
-	const getChannelDetails = (data: { ytChannelId: string }) =>
+			const shortsSet = new Set<string>();
+			let nextPageToken: string | undefined;
+
+			do {
+				const playlistResponse = yield* Effect.tryPromise({
+					try: () =>
+						youtube.playlistItems.list({
+							part: ['contentDetails'],
+							playlistId: shortsPlaylistId,
+							maxResults: 50,
+							...(nextPageToken !== undefined && { pageToken: nextPageToken })
+						}),
+					catch: (err) =>
+						new YoutubeError(`Failed to fetch shorts playlist for ${ytChannelId}`, {
+							cause: err
+						})
+				});
+
+				for (const item of playlistResponse.data.items || []) {
+					if (item.contentDetails?.videoId) {
+						shortsSet.add(item.contentDetails.videoId);
+					}
+				}
+				nextPageToken = playlistResponse.data.nextPageToken || undefined;
+			} while (nextPageToken);
+
+			return shortsSet;
+		});
+
+	const isVideoShort = (ytVideoId: string, ytChannelId: string) =>
+		Effect.gen(function* () {
+			const shortsPlaylistId = getShortsPlaylistId(ytChannelId);
+			if (!shortsPlaylistId) return false;
+
+			const response = yield* Effect.tryPromise({
+				try: () =>
+					youtube.playlistItems.list({
+						part: ['id'],
+						playlistId: shortsPlaylistId,
+						videoId: ytVideoId,
+						maxResults: 1
+					}),
+				catch: (err) =>
+					new YoutubeError(`Failed to check if video ${ytVideoId} is a short`, {
+						cause: err
+					})
+			});
+
+			return (response.data.items?.length ?? 0) > 0;
+		});
+
+	const areVideosShorts = (ytVideoIds: string[], ytChannelId: string) =>
+		Effect.gen(function* () {
+			const shortsSet = yield* getShortsVideoIds(ytChannelId).pipe(
+				Effect.catchAll(() => Effect.succeed(new Set<string>()))
+			);
+
+			const result = new Map<string, boolean>();
+			for (const videoId of ytVideoIds) {
+				result.set(videoId, shortsSet.has(videoId));
+			}
+			return result;
+		});
+
+	const getChannelDetails = (ytChannelId: string) =>
 		Effect.gen(function* () {
 			const response = yield* Effect.tryPromise({
 				try: () =>
 					youtube.channels.list({
 						part: ['id', 'snippet', 'statistics', 'brandingSettings'],
-						id: [data.ytChannelId]
+						id: [ytChannelId]
 					}),
 				catch: (err) =>
-					new YoutubeError(`Failed to get details for channel ${data.ytChannelId}`, {
+					new YoutubeError(`Failed to get details for channel ${ytChannelId}`, {
 						cause: err
 					})
 			});
 
 			const item = response.data.items?.[0];
 			if (!item || !item.id || !item.snippet) {
-				return yield* Effect.fail(new YoutubeError(`Channel ${data.ytChannelId} not found`));
+				return yield* Effect.fail(new YoutubeError(`Channel ${ytChannelId} not found`));
 			}
 
 			const thumbnail =
@@ -56,55 +121,22 @@ const youtubeService = Effect.gen(function* () {
 
 			return {
 				ytChannelId: item.id,
-				name: item.snippet.title || '',
-				description: item.snippet.description || '',
-				thumbnailUrl: thumbnail?.url || '',
-				bannerUrl: item.brandingSettings?.image?.bannerExternalUrl || '',
-				handle: item.snippet.customUrl || '',
-				viewCount: parseInt(item.statistics?.viewCount || '0', 10),
-				subscriberCount: parseInt(item.statistics?.subscriberCount || '0', 10),
-				videoCount: parseInt(item.statistics?.videoCount || '0', 10),
-				joinedAt: new Date(item.snippet.publishedAt || 0)
+				ytName: item.snippet.title || '',
+				ytHandle: item.snippet.customUrl || '',
+				ytDescription: item.snippet.description || '',
+				ytAvatarUrl: thumbnail?.url || '',
+				ytBannerUrl: item.brandingSettings?.image?.bannerExternalUrl || '',
+				ytViewCount: parseInt(item.statistics?.viewCount || '0', 10),
+				ytSubscriberCount: parseInt(item.statistics?.subscriberCount || '0', 10),
+				ytVideoCount: parseInt(item.statistics?.videoCount || '0', 10),
+				ytJoinedAt: new Date(item.snippet.publishedAt || 0)
 			};
 		});
 
-	const checkIfVideoIsShort = (args: { ytVideoId: string; ytChannelId: string }) =>
+	const setVideoDetails = (item: youtube_v3.Schema$Video | undefined, ytVideoId: string) =>
 		Effect.gen(function* () {
-			const shortsPlaylistId = getShortsPlaylistId(args.ytChannelId);
-			if (!shortsPlaylistId) return false;
-
-			const response = yield* Effect.tryPromise({
-				try: () =>
-					youtube.playlistItems.list({
-						part: ['id'],
-						playlistId: shortsPlaylistId,
-						videoId: args.ytVideoId,
-						maxResults: 1
-					}),
-				catch: (err) =>
-					new YoutubeError(`Failed to check if video ${args.ytVideoId} is a short`, {
-						cause: err
-					})
-			});
-
-			return (response.data.items?.length ?? 0) > 0;
-		});
-
-	const getVideoDetails = (data: { ytVideoId: string }) =>
-		Effect.gen(function* () {
-			const response = yield* Effect.tryPromise({
-				try: () =>
-					youtube.videos.list({
-						part: ['snippet', 'statistics', 'contentDetails', 'liveStreamingDetails'],
-						id: [data.ytVideoId]
-					}),
-				catch: (err) =>
-					new YoutubeError(`Failed to get details for video ${data.ytVideoId}`, { cause: err })
-			});
-
-			const item = response.data.items?.[0];
 			if (!item || !item.id || !item.snippet || !item.snippet.channelId) {
-				return yield* Effect.fail(new YoutubeError(`Video ${data.ytVideoId} not found`));
+				return yield* Effect.fail(new YoutubeError(`Video ${ytVideoId} not found`));
 			}
 
 			const thumbnail =
@@ -114,100 +146,99 @@ const youtubeService = Effect.gen(function* () {
 				item.snippet.thumbnails?.medium ||
 				item.snippet.thumbnails?.default;
 
-			const videoIsShort = yield* checkIfVideoIsShort({
-				ytVideoId: data.ytVideoId,
-				ytChannelId: item.snippet.channelId
-			}).pipe(Effect.catchAll(() => Effect.succeed(false)));
+			const hasBeenLivestream = item.liveStreamingDetails ? true : false;
+			const liveBroadcastContent =
+				(item.snippet.liveBroadcastContent as Exclude<Video['livestreamType'], 'completed'>) ||
+				'none';
 
 			return {
 				ytVideoId: item.id,
 				ytChannelId: item.snippet.channelId,
 				title: item.snippet.title || '',
-				description: item.snippet.description || '',
 				thumbnailUrl: thumbnail?.url || '',
 				publishedAt: new Date(item.snippet.publishedAt || 0),
 				viewCount: parseInt(item.statistics?.viewCount || '0', 10),
 				likeCount: parseInt(item.statistics?.likeCount || '0', 10),
 				commentCount: parseInt(item.statistics?.commentCount || '0', 10),
 				duration: item.contentDetails?.duration || '',
-				isLiveStream: item.liveStreamingDetails ? true : false,
-				isShort: videoIsShort
+				livestreamType: getVideoLivestreamType(liveBroadcastContent, hasBeenLivestream),
+				livestreamScheduledStartTime: item.liveStreamingDetails?.scheduledStartTime
+					? new Date(item.liveStreamingDetails.scheduledStartTime)
+					: null,
+				livestreamActualStartTime: item.liveStreamingDetails?.actualStartTime
+					? new Date(item.liveStreamingDetails.actualStartTime)
+					: null,
+				livestreamConcurrentViewers: parseInt(
+					item.liveStreamingDetails?.concurrentViewers || '0',
+					10
+				)
 			};
 		});
 
-	const getBatchRSSVideoDetails = (data: { ytVideoIds: string[] }) =>
+	const getVideoDetails = (ytVideoId: string) =>
 		Effect.gen(function* () {
 			const response = yield* Effect.tryPromise({
 				try: () =>
 					youtube.videos.list({
-						part: ['statistics', 'contentDetails', 'liveStreamingDetails'],
-						id: data.ytVideoIds
+						part: ['snippet', 'statistics', 'contentDetails', 'liveStreamingDetails'],
+						id: [ytVideoId]
 					}),
 				catch: (err) =>
-					new YoutubeError(`Failed to get batch video details for ${data.ytVideoIds}`, {
+					new YoutubeError(`Failed to get details for video ${ytVideoId}`, { cause: err })
+			});
+
+			const item = response.data.items?.[0];
+			const videoDetails = yield* setVideoDetails(item, ytVideoId);
+			return videoDetails;
+		});
+
+	const getBatchVideoDetails = (ytVideoIds: string[]) =>
+		Effect.gen(function* () {
+			if (ytVideoIds.length > 50) {
+				return yield* Effect.fail(new YoutubeError('Maximum of 50 videos can be fetched at once'));
+			}
+
+			const response = yield* Effect.tryPromise({
+				try: () =>
+					youtube.videos.list({
+						part: ['snippet', 'statistics', 'contentDetails', 'liveStreamingDetails'],
+						id: ytVideoIds
+					}),
+				catch: (err) =>
+					new YoutubeError(`Failed to get batch video details for ${ytVideoIds}`, {
 						cause: err
 					})
 			});
 
-			const items = response.data.items || [];
-			type Details = Pick<Video, 'commentCount' | 'duration' | 'isLiveStream'>;
-			const detailsMap: Record<string, Details> = {};
+			const videoDetailsMap = new Map<string, Omit<Video, 'isShort'>>();
+			const items = response.data.items ?? [];
 
-			for (const item of items) {
-				if (item.id) {
-					detailsMap[item.id] = {
-						commentCount: parseInt(item.statistics?.commentCount || '0', 10),
-						duration: item.contentDetails?.duration || '',
-						isLiveStream: item.liveStreamingDetails ? true : false
-					};
-				}
-			}
+			yield* Effect.forEach(
+				items,
+				(item) =>
+					Effect.gen(function* () {
+						if (!item || !item.id) {
+							return yield* Effect.fail(new YoutubeError(`Video ${item.id} not found`));
+						}
+						const videoDetails = yield* setVideoDetails(item, item.id);
+						videoDetailsMap.set(item.id, videoDetails);
+					}),
+				{ concurrency: 'unbounded' }
+			);
 
-			return detailsMap;
+			return videoDetailsMap;
 		});
 
-	const getRSSVideos = (args: { ytChannelId: string }) =>
-		Effect.gen(function* () {
-			const channel = yield* db.getChannel(args.ytChannelId);
-			if (!channel) {
-				return yield* Effect.fail(
-					new YoutubeError(`Channel ${args.ytChannelId} not found`, {
-						cause: new Error('Channel not found')
-					})
-				);
-			}
-
-			const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${args.ytChannelId}`;
-
-			const response = yield* Effect.tryPromise({
-				try: () => fetch(rssUrl),
-				catch: (err) => new YoutubeError(`Failed to fetch RSS for channel`, { cause: err })
-			});
-
-			if (!response.ok) {
-				return yield* Effect.fail(
-					new YoutubeError(`Failed to fetch RSS for channel ${args.ytChannelId}`)
-				);
-			}
-
-			const xml = yield* Effect.tryPromise({
-				try: () => response.text(),
-				catch: (err) => new YoutubeError(`Failed to read RSS text`, { cause: err })
-			});
-
-			return parseYouTubeRSS(xml).map((v) => ({ ...v, ytChannelId: args.ytChannelId }));
-		});
-
-	const getVideosFromUploadsPlaylist = (args: { ytChannelId: string; maxResults?: number }) =>
+	const getVideoIdsFromUploadsPlaylist = (ytChannelId: string, maxResults?: number) =>
 		Effect.gen(function* () {
 			const playlists = yield* Effect.tryPromise({
 				try: () =>
 					youtube.channels.list({
 						part: ['contentDetails'],
-						id: [args.ytChannelId]
+						id: [ytChannelId]
 					}),
 				catch: (err) =>
-					new YoutubeError(`Failed to get playlists for channel ${args.ytChannelId}`, {
+					new YoutubeError(`Failed to get playlists for channel ${ytChannelId}`, {
 						cause: err
 					})
 			});
@@ -217,7 +248,7 @@ const youtubeService = Effect.gen(function* () {
 
 			if (!uploadsPlaylistId) {
 				return yield* Effect.fail(
-					new YoutubeError(`Could not find uploads playlist for channel ${args.ytChannelId}`)
+					new YoutubeError(`Could not find uploads playlist for channel ${ytChannelId}`)
 				);
 			}
 
@@ -248,70 +279,19 @@ const youtubeService = Effect.gen(function* () {
 					}
 				}
 				nextPageToken = playlistResponse.data.nextPageToken || undefined;
-			} while (
-				nextPageToken &&
-				(args.maxResults === undefined || videoIds.length < args.maxResults)
-			);
+			} while (nextPageToken && (maxResults === undefined || videoIds.length < maxResults));
 
 			return videoIds;
 		});
 
-	const getShortsVideoIds = (args: { ytChannelId: string }) =>
-		Effect.gen(function* () {
-			const shortsPlaylistId = getShortsPlaylistId(args.ytChannelId);
-			if (!shortsPlaylistId) return new Set<string>();
-
-			const shortsSet = new Set<string>();
-			let nextPageToken: string | undefined;
-
-			do {
-				const response = yield* Effect.tryPromise({
-					try: () =>
-						youtube.playlistItems.list({
-							part: ['contentDetails'],
-							playlistId: shortsPlaylistId,
-							maxResults: 50,
-							...(nextPageToken !== undefined && { pageToken: nextPageToken })
-						}),
-					catch: (err) =>
-						new YoutubeError(`Failed to fetch shorts playlist for ${args.ytChannelId}`, {
-							cause: err
-						})
-				});
-
-				for (const item of response.data.items || []) {
-					if (item.contentDetails?.videoId) {
-						shortsSet.add(item.contentDetails.videoId);
-					}
-				}
-				nextPageToken = response.data.nextPageToken || undefined;
-			} while (nextPageToken);
-
-			return shortsSet;
-		});
-
-	const checkIfVideosAreShorts = (args: { ytVideoIds: string[]; ytChannelId: string }) =>
-		Effect.gen(function* () {
-			const shortsSet = yield* getShortsVideoIds({ ytChannelId: args.ytChannelId }).pipe(
-				Effect.catchAll(() => Effect.succeed(new Set<string>()))
-			);
-
-			const result = new Map<string, boolean>();
-			for (const videoId of args.ytVideoIds) {
-				result.set(videoId, shortsSet.has(videoId));
-			}
-			return result;
-		});
-
 	return {
+		isVideoShort,
+		areVideosShorts,
+		getShortsVideoIds,
 		getChannelDetails,
 		getVideoDetails,
-		getBatchRSSVideoDetails,
-		getRSSVideos,
-		getVideosFromUploadsPlaylist,
-		checkIfVideoIsShort,
-		checkIfVideosAreShorts,
-		getShortsVideoIds
+		getBatchVideoDetails,
+		getVideoIdsFromUploadsPlaylist
 	};
 });
 

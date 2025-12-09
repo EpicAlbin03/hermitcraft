@@ -1,5 +1,5 @@
 import { DB_SCHEMA, getDrizzleInstance, eq, type Video, type Channel } from '@hc/db';
-import { Effect } from 'effect';
+import { Console, Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { parseIsoDurationToSeconds } from '../youtube/utils';
 
@@ -80,7 +80,7 @@ const dbService = Effect.gen(function* () {
 			return videos[0] || null;
 		});
 
-	const upsertChannel = (data: Omit<Channel, 'createdAt'>) =>
+	const upsertChannel = (data: Channel) =>
 		Effect.gen(function* () {
 			const existing = yield* getChannel(data.ytChannelId);
 
@@ -90,13 +90,18 @@ const dbService = Effect.gen(function* () {
 						drizzle
 							.update(DB_SCHEMA.channels)
 							.set({
-								description: data.description,
-								thumbnailUrl: data.thumbnailUrl,
-								bannerUrl: data.bannerUrl,
-								viewCount: data.viewCount,
-								subscriberCount: data.subscriberCount,
-								videoCount: data.videoCount,
-								isLive: data.isLive
+								ytName: data.ytName,
+								ytHandle: data.ytHandle,
+								ytDescription: data.ytDescription,
+								ytAvatarUrl: data.ytAvatarUrl,
+								ytBannerUrl: data.ytBannerUrl,
+								ytViewCount: data.ytViewCount,
+								ytSubscriberCount: data.ytSubscriberCount,
+								ytVideoCount: data.ytVideoCount,
+								twitchUserLogin: data.twitchUserLogin,
+								isTwitchLive: data.isTwitchLive,
+								isYtLive: data.isYtLive,
+								links: data.links
 							})
 							.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId)),
 					catch: (err) =>
@@ -111,18 +116,20 @@ const dbService = Effect.gen(function* () {
 					try: () =>
 						drizzle.insert(DB_SCHEMA.channels).values({
 							ytChannelId: data.ytChannelId,
+							ytName: data.ytName,
+							ytHandle: data.ytHandle,
+							ytDescription: data.ytDescription,
+							ytAvatarUrl: data.ytAvatarUrl,
+							ytBannerUrl: data.ytBannerUrl,
+							ytViewCount: data.ytViewCount,
+							ytSubscriberCount: data.ytSubscriberCount,
+							ytVideoCount: data.ytVideoCount,
+							ytJoinedAt: data.ytJoinedAt,
 							twitchUserId: data.twitchUserId,
-							name: data.name,
-							description: data.description,
-							thumbnailUrl: data.thumbnailUrl,
-							bannerUrl: data.bannerUrl,
-							handle: data.handle,
-							viewCount: data.viewCount,
-							subscriberCount: data.subscriberCount,
-							videoCount: data.videoCount,
-							joinedAt: data.joinedAt,
-							twitchUsername: data.twitchUsername,
-							isLive: data.isLive
+							twitchUserLogin: data.twitchUserLogin,
+							isTwitchLive: data.isTwitchLive,
+							isYtLive: data.isYtLive,
+							links: data.links
 						}),
 					catch: (err) =>
 						new DbError('Failed to insert channel', {
@@ -134,11 +141,11 @@ const dbService = Effect.gen(function* () {
 			}
 		});
 
-	const upsertVideo = (data: Omit<Video, 'createdAt'>) =>
+	const upsertVideo = (data: Video) =>
 		Effect.gen(function* () {
 			const durationSeconds = parseIsoDurationToSeconds(data.duration);
 			if (durationSeconds === null || durationSeconds === 0) {
-				console.warn(
+				yield* Console.warn(
 					`\x1b[33mDuration is 0 or invalid for video ${data.ytVideoId}, skipping\x1b[0m`
 				);
 				return { ytVideoId: data.ytVideoId, wasInserted: false, wasSkipped: true };
@@ -157,7 +164,12 @@ const dbService = Effect.gen(function* () {
 								viewCount: data.viewCount,
 								likeCount: data.likeCount,
 								commentCount: data.commentCount,
-								duration: data.duration
+								duration: data.duration,
+								isShort: data.isShort,
+								livestreamType: data.livestreamType,
+								livestreamScheduledStartTime: data.livestreamScheduledStartTime,
+								livestreamActualStartTime: data.livestreamActualStartTime,
+								livestreamConcurrentViewers: data.livestreamConcurrentViewers
 							})
 							.where(eq(DB_SCHEMA.videos.ytVideoId, data.ytVideoId)),
 					catch: (err) =>
@@ -180,8 +192,11 @@ const dbService = Effect.gen(function* () {
 							likeCount: data.likeCount,
 							commentCount: data.commentCount,
 							duration: data.duration,
-							isLiveStream: data.isLiveStream,
-							isShort: data.isShort
+							isShort: data.isShort,
+							livestreamType: data.livestreamType,
+							livestreamScheduledStartTime: data.livestreamScheduledStartTime,
+							livestreamActualStartTime: data.livestreamActualStartTime,
+							livestreamConcurrentViewers: data.livestreamConcurrentViewers
 						}),
 					catch: (err) =>
 						new DbError('Failed to insert video', {
