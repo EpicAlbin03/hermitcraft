@@ -14,6 +14,14 @@ export const channels: Pick<
 			{
 				title: 'Twitter',
 				url: 'https://x.com/BdoubleO100'
+			},
+			{
+				title: 'Instagram',
+				url: 'https://www.instagram.com/bdoubleoinsta/'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/bdoubleo100'
 			}
 		]
 	},
@@ -24,6 +32,10 @@ export const channels: Pick<
 		twitchUserId: '51948385',
 		twitchUserLogin: 'cubfan135',
 		links: [
+			{
+				title: 'Cub Two',
+				url: 'https://www.youtube.com/channel/UCQgX4qy49zw9-DoHj4aZ6_g'
+			},
 			{
 				title: 'Twitter',
 				url: 'https://x.com/cubfan135'
@@ -44,6 +56,10 @@ export const channels: Pick<
 			{
 				title: 'Twitter',
 				url: 'https://x.com/docm77'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/docm77'
 			}
 		]
 	},
@@ -68,12 +84,24 @@ export const channels: Pick<
 		twitchUserLogin: 'FalseSymmetry',
 		links: [
 			{
+				title: 'FalseLive',
+				url: 'https://www.youtube.com/channel/UCpArlUtSgiPGBklMDzwrr2g'
+			},
+			{
 				title: 'Twitter',
 				url: 'https://x.com/falsesymmetry'
 			},
 			{
 				title: 'Bluesky',
 				url: 'https://bsky.app/profile/falsesymmetry.bsky.social'
+			},
+			{
+				title: 'Instagram',
+				url: 'https://www.instagram.com/falsesymmetry/'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/falsesymmetry'
 			}
 		]
 	},
@@ -87,6 +115,18 @@ export const channels: Pick<
 			{
 				title: 'Twitter',
 				url: 'https://x.com/GeminiTayMC'
+			},
+			{
+				title: 'Bluesky',
+				url: 'https://bsky.app/profile/geminitaymc.bsky.social'
+			},
+			{
+				title: 'Instagram',
+				url: 'https://www.instagram.com/geminitay/'
+			},
+			{
+				title: 'Discord',
+				url: 'https://discord.com/invite/geminitay'
 			}
 		]
 	},
@@ -98,8 +138,40 @@ export const channels: Pick<
 		twitchUserLogin: 'goodtimeswithscar',
 		links: [
 			{
+				title: 'GoodVodsWithScar',
+				url: 'https://www.youtube.com/@goodvodswithscar'
+			},
+			{
+				title: 'GoodClipsWithScar',
+				url: 'https://www.youtube.com/@goodclipswithscar160'
+			},
+			{
 				title: 'Twitter',
 				url: 'https://x.com/GTWScar'
+			},
+			{
+				title: 'Instagram',
+				url: 'https://www.instagram.com/goodtimeswithscar'
+			},
+			{
+				title: 'Threads',
+				url: 'https://www.threads.com/@goodtimeswithscar'
+			},
+			{
+				title: 'Facebook',
+				url: 'https://www.facebook.com/GoodTimesWithScar'
+			},
+			{
+				title: 'TikTok',
+				url: 'https://www.tiktok.com/@goodtokswithscar'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/u21298347'
+			},
+			{
+				title: 'Merch',
+				url: 'https://goodtimeswithscar-shop.fourthwall.com'
 			}
 		]
 	},
@@ -113,6 +185,10 @@ export const channels: Pick<
 			{
 				title: 'Twitter',
 				url: 'https://x.com/GrianMC'
+			},
+			{
+				title: 'Instagram',
+				url: 'https://www.instagram.com/grianmc/'
 			}
 		]
 	},
@@ -123,6 +199,10 @@ export const channels: Pick<
 		twitchUserId: '24680103',
 		twitchUserLogin: 'hypnotizd',
 		links: [
+			{
+				title: 'HypnotizdLIVE',
+				url: 'https://www.youtube.com/hypnotizdLIVE'
+			},
 			{
 				title: 'Twitter',
 				url: 'https://x.com/hypnotizd_'
@@ -137,12 +217,20 @@ export const channels: Pick<
 		twitchUserLogin: 'ijevin',
 		links: [
 			{
+				title: 'iJevinTV',
+				url: 'https://www.youtube.com/channel/UCQoRCmqWLNoQXRJPiWgIyIw'
+			},
+			{
 				title: 'Twitter',
 				url: 'https://x.com/ijevin'
 			},
 			{
 				title: 'Bluesky',
 				url: 'https://bsky.app/profile/ijevin.bsky.social'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/ijevin'
 			}
 		]
 	},
@@ -154,8 +242,28 @@ export const channels: Pick<
 		twitchUserLogin: 'impulsesv',
 		links: [
 			{
+				title: 'impulseSV2',
+				url: 'https://www.youtube.com/impulsesv2'
+			},
+			{
+				title: 'Imp And Skizz',
+				url: 'https://www.youtube.com/@ImpAndSkizz'
+			},
+			{
+				title: 'Imp And Skizz Podcast',
+				url: 'https://www.youtube.com/@impandskizzpodcast'
+			},
+			{
 				title: 'Twitter',
 				url: 'https://x.com/impulseSV'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/impulseSV'
+			},
+			{
+				title: 'impulsesv.com',
+				url: 'https://www.impulsesv.com'
 			}
 		]
 	},
@@ -173,6 +281,14 @@ export const channels: Pick<
 			{
 				title: 'Bluesky',
 				url: 'https://bsky.app/profile/joehills.net'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/joehills'
+			},
+			{
+				title: 'joehills.net',
+				url: 'https://joehills.net'
 			}
 		]
 	},
@@ -186,6 +302,14 @@ export const channels: Pick<
 			{
 				title: 'Twitter',
 				url: 'https://x.com/worldofkeralis'
+			},
+			{
+				title: 'Instagram',
+				url: 'https://www.instagram.com/iamkeralis/'
+			},
+			{
+				title: 'Facebook',
+				url: 'https://www.facebook.com/iamkeralis/'
 			}
 		]
 	},
@@ -197,8 +321,24 @@ export const channels: Pick<
 		twitchUserLogin: 'skizzleman',
 		links: [
 			{
+				title: 'SkizzlemanLive',
+				url: 'https://www.youtube.com/channel/UC6gsPC4t87a-hIpoDXVaSGA'
+			},
+			{
+				title: 'Imp And Skizz',
+				url: 'https://www.youtube.com/@ImpAndSkizz'
+			},
+			{
+				title: 'Imp And Skizz Podcast',
+				url: 'https://www.youtube.com/@impandskizzpodcast'
+			},
+			{
 				title: 'Twitter',
 				url: 'https://x.com/theskizzleman'
+			},
+			{
+				title: 'Merch',
+				url: 'https://skizzleman.creator-spring.com'
 			}
 		]
 	},
@@ -210,8 +350,20 @@ export const channels: Pick<
 		twitchUserLogin: 'mumbojumbo',
 		links: [
 			{
+				title: 'Mumbo',
+				url: 'https://www.youtube.com/user/ThatMumboJumbo2'
+			},
+			{
 				title: 'Twitter',
 				url: 'https://x.com/ThatMumboJumbo'
+			},
+			{
+				title: 'Instagram',
+				url: 'https://www.instagram.com/officialmumbo/'
+			},
+			{
+				title: 'obrotherhood.com',
+				url: 'https://www.obrotherhood.com'
 			}
 		]
 	},
@@ -223,8 +375,24 @@ export const channels: Pick<
 		twitchUserLogin: 'pearlescentmoon',
 		links: [
 			{
+				title: 'PearlescentMoo',
+				url: 'https://www.youtube.com/@PearlescentMoo'
+			},
+			{
+				title: 'PearlescentMoonies',
+				url: 'https://www.youtube.com/@PearlescentMoonies'
+			},
+			{
 				title: 'Twitter',
 				url: 'https://x.com/PearlescentMoon'
+			},
+			{
+				title: 'Instagram',
+				url: 'https://www.instagram.com/pearlescentmoo/'
+			},
+			{
+				title: 'Discord',
+				url: 'https://discord.com/invite/pearlescentmoon'
 			}
 		]
 	},
@@ -236,8 +404,28 @@ export const channels: Pick<
 		twitchUserLogin: 'rendog',
 		links: [
 			{
+				title: 'rendogtv',
+				url: 'https://www.youtube.com/@rendogtv'
+			},
+			{
 				title: 'Twitter',
 				url: 'https://x.com/renthedog'
+			},
+			{
+				title: 'Facebook',
+				url: 'https://www.facebook.com/Renthedog'
+			},
+			{
+				title: 'Discord',
+				url: 'https://discord.com/invite/rendog'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/rendog'
+			},
+			{
+				title: 'dogcraft.net',
+				url: 'https://dogcraft.net'
 			}
 		]
 	},
@@ -251,6 +439,18 @@ export const channels: Pick<
 			{
 				title: 'Twitter',
 				url: 'https://x.com/Smallishbeans'
+			},
+			{
+				title: 'Instagram',
+				url: 'https://www.instagram.com/joelbeans'
+			},
+			{
+				title: 'Threads',
+				url: 'https://www.threads.com/@joelbeans?xmt=AQF0Qqqdt47IRc0ys10SsPkJGeIgWq44McT46yw5_bakDtU'
+			},
+			{
+				title: 'Reddit',
+				url: 'https://www.reddit.com/r/SmallishBeans/'
 			}
 		]
 	},
@@ -262,8 +462,20 @@ export const channels: Pick<
 		twitchUserLogin: 'tangotek',
 		links: [
 			{
+				title: 'Tango Tek2',
+				url: 'https://www.youtube.com/@TangoTek2'
+			},
+			{
 				title: 'Twitter',
 				url: 'https://x.com/TangoTekLP'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/tangotek'
+			},
+			{
+				title: 'Merch',
+				url: 'https://streamlabs.com/TangoTek/merch'
 			}
 		]
 	},
@@ -277,6 +489,14 @@ export const channels: Pick<
 			{
 				title: 'Twitter',
 				url: 'https://x.com/vintagebeeflp'
+			},
+			{
+				title: 'Instagram',
+				url: 'https://www.instagram.com/vintagebeefyt/'
+			},
+			{
+				title: 'Facebook',
+				url: 'https://www.facebook.com/VintageBeef'
 			}
 		]
 	},
@@ -294,6 +514,14 @@ export const channels: Pick<
 			{
 				title: 'Bluesky',
 				url: 'https://bsky.app/profile/welsknight.bsky.social'
+			},
+			{
+				title: 'Facebook',
+				url: 'https://www.facebook.com/welsknightgaming'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/welsknightgaming'
 			}
 		]
 	},
@@ -311,6 +539,26 @@ export const channels: Pick<
 			{
 				title: 'Bluesky',
 				url: 'https://bsky.app/profile/xbcrafted.com'
+			},
+			{
+				title: 'Instagram',
+				url: 'https://www.instagram.com/xbcrafted/'
+			},
+			{
+				title: 'Threads',
+				url: 'https://www.threads.com/@xbcrafted'
+			},
+			{
+				title: 'TikTok',
+				url: 'https://www.tiktok.com/@xbtoks'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/xBCrafted'
+			},
+			{
+				title: 'Merch',
+				url: 'https://xbcrafted-shop.fourthwall.com'
 			}
 		]
 	},
@@ -322,8 +570,40 @@ export const channels: Pick<
 		twitchUserLogin: 'xisuma',
 		links: [
 			{
+				title: 'xisumatwo',
+				url: 'https://www.youtube.com/xisumatwo'
+			},
+			{
+				title: 'xisumasays',
+				url: 'https://www.youtube.com/c/xisumasays'
+			},
+			{
+				title: 'SoulsideEclipse',
+				url: 'https://www.youtube.com/@SoulsideEclipse'
+			},
+			{
 				title: 'Twitter',
 				url: 'https://x.com/xisumavoid'
+			},
+			{
+				title: 'TikTok',
+				url: 'https://www.tiktok.com/@xisumatt'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/xisuma'
+			},
+			{
+				title: 'Merch',
+				url: 'https://xisumavoid.com/merchandise'
+			},
+			{
+				title: 'xisumavoid.com',
+				url: 'https://www.xisumavoid.com'
+			},
+			{
+				title: 'Music Blog',
+				url: 'https://xisuma.blogspot.com'
 			}
 		]
 	},
@@ -335,12 +615,32 @@ export const channels: Pick<
 		twitchUserLogin: 'zedaphplays',
 		links: [
 			{
+				title: 'ZedaphPlays2',
+				url: 'https://www.youtube.com/ZedaphPlays2'
+			},
+			{
+				title: 'Kris and Jack',
+				url: 'https://www.youtube.com/KrisandJack'
+			},
+			{
 				title: 'Twitter',
 				url: 'https://x.com/ZedaphPlays'
 			},
 			{
 				title: 'Bluesky',
 				url: 'https://bsky.app/profile/zedaph.com'
+			},
+			{
+				title: 'Discord',
+				url: 'https://discord.com/invite/Zedaph'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/ZedaphPlays'
+			},
+			{
+				title: 'Merch',
+				url: 'https://store.zedaph.com'
 			}
 		]
 	},
@@ -352,12 +652,20 @@ export const channels: Pick<
 		twitchUserLogin: 'zombiecleo',
 		links: [
 			{
+				title: 'ZombieCleo Streams',
+				url: 'https://www.youtube.com/channel/UCprJ_QiIJuPpBgST6cmIIVw'
+			},
+			{
 				title: 'Twitter',
 				url: 'https://x.com/ZombieCleo'
 			},
 			{
 				title: 'Bluesky',
 				url: 'https://bsky.app/profile/zombiecleo.bsky.social'
+			},
+			{
+				title: 'Patreon',
+				url: 'https://www.patreon.com/zombiecleo'
 			}
 		]
 	}
