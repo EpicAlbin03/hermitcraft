@@ -24,17 +24,15 @@ const channelSyncService = Effect.gen(function* () {
 			twitchUserId?: string;
 			twitchUserLogin?: string;
 			isTwitchLive?: boolean;
-			isYtLive?: boolean;
+			ytLiveVideoId?: string;
 			links?: ChannelLink[];
 		}
 	) =>
 		Effect.gen(function* () {
 			const channelDetails = yield* yt.getChannelDetails(ytChannelId);
 			const isTwitchLive =
-				details.isTwitchLive ??
+				details.isTwitchLive ||
 				(details.twitchUserId ? yield* twitch.isChannelLive(details.twitchUserId) : false);
-			const isYtLive = details.isYtLive ?? false; // TODO: isYoutubeLive()
-			const links = details.links ?? [];
 
 			yield* db.upsertChannel({
 				ytChannelId: ytChannelId,
@@ -47,11 +45,12 @@ const channelSyncService = Effect.gen(function* () {
 				ytSubscriberCount: channelDetails.ytSubscriberCount,
 				ytVideoCount: channelDetails.ytVideoCount,
 				ytJoinedAt: channelDetails.ytJoinedAt,
-				twitchUserLogin: details.twitchUserLogin,
+				twitchUserId: details.twitchUserId || null,
+				twitchUserLogin: details.twitchUserLogin || null,
 				isTwitchLive: isTwitchLive,
-				isYtLive: isYtLive,
-				links: links
-			} as Channel);
+				ytLiveVideoId: details.ytLiveVideoId || null,
+				links: details.links || []
+			});
 		}).pipe(
 			Effect.catchTag(
 				'DbError',
@@ -101,7 +100,7 @@ const channelSyncService = Effect.gen(function* () {
 			twitchUserId?: string;
 			twitchUserLogin?: string;
 			isTwitchLive?: boolean;
-			isYtLive?: boolean;
+			ytLiveVideoId?: string;
 			links?: ChannelLink[];
 		}[],
 		taskName?: string
@@ -123,13 +122,13 @@ const channelSyncService = Effect.gen(function* () {
 					Effect.gen(function* () {
 						yield* Console.log(`${fullTaskName}Syncing channel ${channel.ytChannelId}`);
 						const result = yield* syncChannel(channel.ytChannelId, {
-							twitchUserId: channel.twitchUserId ?? undefined,
-							twitchUserLogin: channel.twitchUserLogin ?? undefined,
+							twitchUserId: channel.twitchUserId || undefined,
+							twitchUserLogin: channel.twitchUserLogin || undefined,
 							isTwitchLive: channel.twitchUserId
-								? (isTwitchLiveMap.get(channel.twitchUserId) ?? false)
+								? isTwitchLiveMap.get(channel.twitchUserId) || false
 								: undefined,
-							isYtLive: channel.isYtLive ?? false, // TODO: isYoutubeLive()
-							links: channel.links ?? []
+							ytLiveVideoId: channel.ytLiveVideoId || undefined,
+							links: channel.links || []
 						}).pipe(Effect.either);
 
 						if (result._tag === 'Right') {

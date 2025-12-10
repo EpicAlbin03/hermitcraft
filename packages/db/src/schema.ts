@@ -17,7 +17,7 @@ export const channels = table('channels', {
 	twitchUserLogin: t.varchar('twitch_user_login', { length: 25 }),
 	// twitchUsername: t.varchar('twitch_username', { length: 50 }), // Max 25, but can include non-latin characters
 	isTwitchLive: t.boolean('is_twitch_live').notNull(),
-	isYtLive: t.boolean('is_yt_live').notNull(),
+	ytLiveVideoId: t.varchar('yt_live_video_id', { length: 11 }).references(() => videos.ytVideoId),
 	links: t.json('links').$type<ChannelLink[]>().notNull(),
 	createdAt: t.timestamp('created_at').notNull().defaultNow(),
 	modifiedAt: t.timestamp('modified_at').notNull().defaultNow()

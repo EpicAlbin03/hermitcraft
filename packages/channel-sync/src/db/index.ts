@@ -1,4 +1,4 @@
-import { DB_SCHEMA, getDrizzleInstance, eq, type Video, type Channel } from '@hc/db';
+import { DB_SCHEMA, getDrizzleInstance, eq, and, type Video, type Channel } from '@hc/db';
 import { Console, Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { parseIsoDurationToSeconds } from '../youtube/utils';
@@ -100,7 +100,7 @@ const dbService = Effect.gen(function* () {
 								ytVideoCount: data.ytVideoCount,
 								twitchUserLogin: data.twitchUserLogin,
 								isTwitchLive: data.isTwitchLive,
-								isYtLive: data.isYtLive,
+								ytLiveVideoId: data.ytLiveVideoId,
 								links: data.links
 							})
 							.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId)),
@@ -128,7 +128,7 @@ const dbService = Effect.gen(function* () {
 							twitchUserId: data.twitchUserId,
 							twitchUserLogin: data.twitchUserLogin,
 							isTwitchLive: data.isTwitchLive,
-							isYtLive: data.isYtLive,
+							ytLiveVideoId: data.ytLiveVideoId,
 							links: data.links
 						}),
 					catch: (err) =>
@@ -152,42 +152,74 @@ const dbService = Effect.gen(function* () {
 			}
 
 			const existing = yield* getVideo(data.ytVideoId);
+			const livestreamTypeChanged = existing && existing.livestreamType !== data.livestreamType;
+			const shouldUpdateChannel = !existing || livestreamTypeChanged;
 
-			if (existing) {
+			if (shouldUpdateChannel) {
+				// Use transaction to update both video and channel atomically
 				yield* Effect.tryPromise({
 					try: () =>
-						drizzle
-							.update(DB_SCHEMA.videos)
-							.set({
-								title: data.title,
-								thumbnailUrl: data.thumbnailUrl,
-								viewCount: data.viewCount,
-								likeCount: data.likeCount,
-								commentCount: data.commentCount,
-								duration: data.duration,
-								isShort: data.isShort,
-								livestreamType: data.livestreamType,
-								livestreamScheduledStartTime: data.livestreamScheduledStartTime,
-								livestreamActualStartTime: data.livestreamActualStartTime,
-								livestreamConcurrentViewers: data.livestreamConcurrentViewers
-							})
-							.where(eq(DB_SCHEMA.videos.ytVideoId, data.ytVideoId)),
+						drizzle.transaction(async (tx) => {
+							if (existing) {
+								await tx
+									.update(DB_SCHEMA.videos)
+									.set({
+										title: data.title,
+										thumbnailUrl: data.thumbnailUrl,
+										viewCount: data.viewCount,
+										likeCount: data.likeCount,
+										commentCount: data.commentCount,
+										duration: data.duration,
+										isShort: data.isShort,
+										livestreamType: data.livestreamType,
+										livestreamScheduledStartTime: data.livestreamScheduledStartTime,
+										livestreamActualStartTime: data.livestreamActualStartTime,
+										livestreamConcurrentViewers: data.livestreamConcurrentViewers
+									})
+									.where(eq(DB_SCHEMA.videos.ytVideoId, data.ytVideoId));
+							} else {
+								await tx.insert(DB_SCHEMA.videos).values({
+									ytVideoId: data.ytVideoId,
+									ytChannelId: data.ytChannelId,
+									title: data.title,
+									thumbnailUrl: data.thumbnailUrl,
+									publishedAt: data.publishedAt,
+									viewCount: data.viewCount,
+									likeCount: data.likeCount,
+									commentCount: data.commentCount,
+									duration: data.duration,
+									isShort: data.isShort,
+									livestreamType: data.livestreamType,
+									livestreamScheduledStartTime: data.livestreamScheduledStartTime,
+									livestreamActualStartTime: data.livestreamActualStartTime,
+									livestreamConcurrentViewers: data.livestreamConcurrentViewers
+								});
+							}
+
+							const ytLiveVideoId = data.livestreamType === 'live' ? data.ytVideoId : null;
+
+							await tx
+								.update(DB_SCHEMA.channels)
+								.set({ ytLiveVideoId: ytLiveVideoId })
+								.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId));
+						}),
 					catch: (err) =>
-						new DbError('Failed to update video', {
+						new DbError('Failed to upsert video with channel update', {
 							cause: err
 						})
 				});
 
-				return { ytVideoId: data.ytVideoId, wasInserted: false, wasSkipped: false };
-			} else {
-				yield* Effect.tryPromise({
-					try: () =>
-						drizzle.insert(DB_SCHEMA.videos).values({
-							ytVideoId: data.ytVideoId,
-							ytChannelId: data.ytChannelId,
+				return { ytVideoId: data.ytVideoId, wasInserted: !existing, wasSkipped: false };
+			}
+
+			// No livestreamType change, just update video normally
+			yield* Effect.tryPromise({
+				try: () =>
+					drizzle
+						.update(DB_SCHEMA.videos)
+						.set({
 							title: data.title,
 							thumbnailUrl: data.thumbnailUrl,
-							publishedAt: data.publishedAt,
 							viewCount: data.viewCount,
 							likeCount: data.likeCount,
 							commentCount: data.commentCount,
@@ -197,15 +229,15 @@ const dbService = Effect.gen(function* () {
 							livestreamScheduledStartTime: data.livestreamScheduledStartTime,
 							livestreamActualStartTime: data.livestreamActualStartTime,
 							livestreamConcurrentViewers: data.livestreamConcurrentViewers
-						}),
-					catch: (err) =>
-						new DbError('Failed to insert video', {
-							cause: err
 						})
-				});
+						.where(eq(DB_SCHEMA.videos.ytVideoId, data.ytVideoId)),
+				catch: (err) =>
+					new DbError('Failed to update video', {
+						cause: err
+					})
+			});
 
-				return { ytVideoId: data.ytVideoId, wasInserted: true, wasSkipped: false };
-			}
+			return { ytVideoId: data.ytVideoId, wasInserted: false, wasSkipped: false };
 		});
 
 	const deleteVideo = (ytVideoId: string) =>

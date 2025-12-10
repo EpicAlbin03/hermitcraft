@@ -24,75 +24,6 @@ const youtubeService = Effect.gen(function* () {
 		auth: youtubeApiKey
 	});
 
-	const getShortsVideoIds = (ytChannelId: string) =>
-		Effect.gen(function* () {
-			const shortsPlaylistId = getShortsPlaylistId(ytChannelId);
-			if (!shortsPlaylistId) return new Set<string>();
-
-			const shortsSet = new Set<string>();
-			let nextPageToken: string | undefined;
-
-			do {
-				const playlistResponse = yield* Effect.tryPromise({
-					try: () =>
-						youtube.playlistItems.list({
-							part: ['contentDetails'],
-							playlistId: shortsPlaylistId,
-							maxResults: 50,
-							...(nextPageToken !== undefined && { pageToken: nextPageToken })
-						}),
-					catch: (err) =>
-						new YoutubeError(`Failed to fetch shorts playlist for ${ytChannelId}`, {
-							cause: err
-						})
-				});
-
-				for (const item of playlistResponse.data.items || []) {
-					if (item.contentDetails?.videoId) {
-						shortsSet.add(item.contentDetails.videoId);
-					}
-				}
-				nextPageToken = playlistResponse.data.nextPageToken || undefined;
-			} while (nextPageToken);
-
-			return shortsSet;
-		});
-
-	const isVideoShort = (ytVideoId: string, ytChannelId: string) =>
-		Effect.gen(function* () {
-			const shortsPlaylistId = getShortsPlaylistId(ytChannelId);
-			if (!shortsPlaylistId) return false;
-
-			const response = yield* Effect.tryPromise({
-				try: () =>
-					youtube.playlistItems.list({
-						part: ['id'],
-						playlistId: shortsPlaylistId,
-						videoId: ytVideoId,
-						maxResults: 1
-					}),
-				catch: (err) =>
-					new YoutubeError(`Failed to check if video ${ytVideoId} is a short`, {
-						cause: err
-					})
-			});
-
-			return (response.data.items?.length ?? 0) > 0;
-		});
-
-	const areVideosShorts = (ytVideoIds: string[], ytChannelId: string) =>
-		Effect.gen(function* () {
-			const shortsSet = yield* getShortsVideoIds(ytChannelId).pipe(
-				Effect.catchAll(() => Effect.succeed(new Set<string>()))
-			);
-
-			const result = new Map<string, boolean>();
-			for (const videoId of ytVideoIds) {
-				result.set(videoId, shortsSet.has(videoId));
-			}
-			return result;
-		});
-
 	const getChannelDetails = (ytChannelId: string) =>
 		Effect.gen(function* () {
 			const response = yield* Effect.tryPromise({
@@ -284,14 +215,83 @@ const youtubeService = Effect.gen(function* () {
 			return videoIds;
 		});
 
+	const getShortsVideoIds = (ytChannelId: string) =>
+		Effect.gen(function* () {
+			const shortsPlaylistId = getShortsPlaylistId(ytChannelId);
+			if (!shortsPlaylistId) return new Set<string>();
+
+			const shortsSet = new Set<string>();
+			let nextPageToken: string | undefined;
+
+			do {
+				const playlistResponse = yield* Effect.tryPromise({
+					try: () =>
+						youtube.playlistItems.list({
+							part: ['contentDetails'],
+							playlistId: shortsPlaylistId,
+							maxResults: 50,
+							...(nextPageToken !== undefined && { pageToken: nextPageToken })
+						}),
+					catch: (err) =>
+						new YoutubeError(`Failed to fetch shorts playlist for ${ytChannelId}`, {
+							cause: err
+						})
+				});
+
+				for (const item of playlistResponse.data.items || []) {
+					if (item.contentDetails?.videoId) {
+						shortsSet.add(item.contentDetails.videoId);
+					}
+				}
+				nextPageToken = playlistResponse.data.nextPageToken || undefined;
+			} while (nextPageToken);
+
+			return shortsSet;
+		});
+
+	const isVideoShort = (ytVideoId: string, ytChannelId: string) =>
+		Effect.gen(function* () {
+			const shortsPlaylistId = getShortsPlaylistId(ytChannelId);
+			if (!shortsPlaylistId) return false;
+
+			const response = yield* Effect.tryPromise({
+				try: () =>
+					youtube.playlistItems.list({
+						part: ['id'],
+						playlistId: shortsPlaylistId,
+						videoId: ytVideoId,
+						maxResults: 1
+					}),
+				catch: (err) =>
+					new YoutubeError(`Failed to check if video ${ytVideoId} is a short`, {
+						cause: err
+					})
+			});
+
+			return (response.data.items?.length ?? 0) > 0;
+		});
+
+	const areVideosShorts = (ytVideoIds: string[], ytChannelId: string) =>
+		Effect.gen(function* () {
+			const shortsSet = yield* getShortsVideoIds(ytChannelId).pipe(
+				Effect.catchAll(() => Effect.succeed(new Set<string>()))
+			);
+
+			const result = new Map<string, boolean>();
+			for (const videoId of ytVideoIds) {
+				result.set(videoId, shortsSet.has(videoId));
+			}
+			return result;
+		});
+
 	return {
-		isVideoShort,
-		areVideosShorts,
-		getShortsVideoIds,
 		getChannelDetails,
 		getVideoDetails,
 		getBatchVideoDetails,
-		getVideoIdsFromUploadsPlaylist
+		getVideoIdsFromUploadsPlaylist,
+		getShortsVideoIds,
+		isVideoShort,
+		areVideosShorts
 	};
 });
 
