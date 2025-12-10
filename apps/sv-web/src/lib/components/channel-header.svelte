@@ -12,6 +12,7 @@
 	import { cn } from '$lib/utils';
 	import type { ChannelDetails } from '$lib/remote/channels.remote';
 	import { Image } from '@unpic/svelte';
+	import { TwitchSVG, YoutubeSVG } from '$lib/assets/svg';
 
 	type Props = {
 		channel: ChannelDetails;
@@ -45,8 +46,8 @@
 
 	const bannerRatio = $derived(BANNER_RATIOS[isTailwindBreakpoint] ?? BANNER_RATIOS.xs);
 	const bannerSrc = $derived(
-		channel.bannerUrl
-			? `${channel.bannerUrl}=w${BANNER_WIDTHS[isTailwindBreakpoint] ?? BANNER_WIDTHS.xs}`
+		channel.ytBannerUrl
+			? `${channel.ytBannerUrl}=w${BANNER_WIDTHS[isTailwindBreakpoint] ?? BANNER_WIDTHS.xs}`
 			: null
 	);
 	const bannerSizes = $derived(
@@ -73,7 +74,7 @@
 					breakpoints={BANNER_SRCSET_WIDTHS}
 					sizes={bannerSizes}
 					priority
-					alt={`${channel.name} channel banner`}
+					alt={`${channel.ytName} channel banner`}
 					class="h-full w-full object-cover"
 				/>
 			</AspectRatio>
@@ -85,8 +86,8 @@
 			<Avatar.Root class="h-24 w-24 border-4 border-card text-3xl shadow-sm md:h-32 md:w-32">
 				{#snippet child({ props })}
 					<a {...props} href={`https://www.youtube.com/${handle}`} target="_blank">
-						<Avatar.Image src={channel.thumbnailUrl} alt={channel.name} />
-						<Avatar.Fallback>{channel.name.slice(0, 2).toUpperCase()}</Avatar.Fallback>
+						<Avatar.Image src={channel.ytAvatarUrl} alt={channel.ytName} />
+						<Avatar.Fallback>{channel.ytName.slice(0, 2).toUpperCase()}</Avatar.Fallback>
 					</a>
 				{/snippet}
 			</Avatar.Root>
@@ -101,20 +102,34 @@
 						href={`https://www.youtube.com/${handle}`}
 						target="_blank"
 					>
-						{channel.name}
+						{channel.ytName}
 					</Button>
-					{#if channel.isLive}
-						<Button
-							variant="ghost"
-							size="sm"
-							href={`https://www.twitch.tv/${channel.twitchUsername}`}
-							target="_blank"
-							class="text-base font-semibold"
-						>
-							<CircleIcon class="fill-destructive text-destructive" />
-							Live
-						</Button>
-					{/if}
+					<div class="flex items-center">
+						{#if channel.ytLiveVideoId}
+							<Button
+								variant="ghost"
+								size="sm"
+								href={`https://www.youtube.com/watch?v=${channel.ytLiveVideoId}`}
+								target="_blank"
+								class="text-sm font-semibold"
+							>
+								<YoutubeSVG class="h-4 w-4" />
+								Live
+							</Button>
+						{/if}
+						{#if channel.isTwitchLive}
+							<Button
+								variant="ghost"
+								size="sm"
+								href={`https://www.twitch.tv/${channel.twitchUserLogin}`}
+								target="_blank"
+								class="text-sm font-semibold"
+							>
+								<TwitchSVG class="h-4 w-4" />
+								Live
+							</Button>
+						{/if}
+					</div>
 				</div>
 				<p class="text-muted-foreground">{handle}</p>
 			</div>
@@ -122,15 +137,15 @@
 			<div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
 				<span class="flex items-center gap-1">
 					<Users class="h-4 w-4" />
-					{formatCompactNumber(channel.subscriberCount)} subscribers
+					{formatCompactNumber(channel.ytSubscriberCount)} subscribers
 				</span>
 				<span class="flex items-center gap-1">
 					<Video class="h-4 w-4" />
-					{formatCompactNumber(channel.videoCount)} videos
+					{formatCompactNumber(channel.ytVideoCount)} videos
 				</span>
 				<span class="flex items-center gap-1">
 					<Eye class="h-4 w-4" />
-					{formatCompactNumber(channel.viewCount)} views
+					{formatCompactNumber(channel.ytViewCount)} views
 				</span>
 			</div>
 
@@ -141,7 +156,7 @@
 						!isDescriptionExpanded && 'line-clamp-1 lg:line-clamp-2'
 					)}
 				>
-					{#each parseChannelDescription(channel.description) as part}
+					{#each parseChannelDescription(channel.ytDescription) as part}
 						{#if part.type === 'link'}
 							<Button class="p-0" variant="link" size="sm" href={part.content} target="_blank">
 								{part.content}
@@ -151,7 +166,7 @@
 						{/if}
 					{/each}
 				</p>
-				{#if channel.description.length > 150}
+				{#if channel.ytDescription.length > 150}
 					<Button
 						variant="ghost"
 						size="sm"

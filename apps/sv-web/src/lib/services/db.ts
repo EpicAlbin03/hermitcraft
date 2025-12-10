@@ -1,4 +1,4 @@
-import { DB_SCHEMA, getDrizzleInstance, eq, desc, asc, and, like } from '@hc/db';
+import { DB_SCHEMA, getDrizzleInstance, eq, desc, asc, and, like, inArray } from '@hc/db';
 import { Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { env } from '$env/dynamic/private';
@@ -41,14 +41,15 @@ const dbService = Effect.gen(function* () {
 				try: () =>
 					drizzle
 						.select({
-							name: DB_SCHEMA.channels.name,
-							handle: DB_SCHEMA.channels.handle,
-							thumbnailUrl: DB_SCHEMA.channels.thumbnailUrl,
-							twitchUsername: DB_SCHEMA.channels.twitchUsername,
-							isLive: DB_SCHEMA.channels.isLive
+							ytName: DB_SCHEMA.channels.ytName,
+							ytHandle: DB_SCHEMA.channels.ytHandle,
+							ytAvatarUrl: DB_SCHEMA.channels.ytAvatarUrl,
+							twitchUserLogin: DB_SCHEMA.channels.twitchUserLogin,
+							isTwitchLive: DB_SCHEMA.channels.isTwitchLive,
+							ytLiveVideoId: DB_SCHEMA.channels.ytLiveVideoId
 						})
 						.from(DB_SCHEMA.channels)
-						.orderBy(DB_SCHEMA.channels.name),
+						.orderBy(DB_SCHEMA.channels.ytName),
 				catch: (err) =>
 					new DbError('Failed to get sidebar channels', {
 						cause: err
@@ -64,19 +65,20 @@ const dbService = Effect.gen(function* () {
 					drizzle
 						.select({
 							ytChannelId: DB_SCHEMA.channels.ytChannelId,
-							name: DB_SCHEMA.channels.name,
-							handle: DB_SCHEMA.channels.handle,
-							thumbnailUrl: DB_SCHEMA.channels.thumbnailUrl,
-							bannerUrl: DB_SCHEMA.channels.bannerUrl,
-							description: DB_SCHEMA.channels.description,
-							viewCount: DB_SCHEMA.channels.viewCount,
-							subscriberCount: DB_SCHEMA.channels.subscriberCount,
-							videoCount: DB_SCHEMA.channels.videoCount,
-							twitchUsername: DB_SCHEMA.channels.twitchUsername,
-							isLive: DB_SCHEMA.channels.isLive
+							ytName: DB_SCHEMA.channels.ytName,
+							ytHandle: DB_SCHEMA.channels.ytHandle,
+							ytAvatarUrl: DB_SCHEMA.channels.ytAvatarUrl,
+							ytBannerUrl: DB_SCHEMA.channels.ytBannerUrl,
+							ytDescription: DB_SCHEMA.channels.ytDescription,
+							ytViewCount: DB_SCHEMA.channels.ytViewCount,
+							ytSubscriberCount: DB_SCHEMA.channels.ytSubscriberCount,
+							ytVideoCount: DB_SCHEMA.channels.ytVideoCount,
+							twitchUserLogin: DB_SCHEMA.channels.twitchUserLogin,
+							isTwitchLive: DB_SCHEMA.channels.isTwitchLive,
+							ytLiveVideoId: DB_SCHEMA.channels.ytLiveVideoId
 						})
 						.from(DB_SCHEMA.channels)
-						.where(eq(DB_SCHEMA.channels.handle, handle))
+						.where(eq(DB_SCHEMA.channels.ytHandle, handle))
 						.limit(1),
 				catch: (err) =>
 					new DbError('Failed to get channel by handle', {
@@ -116,8 +118,11 @@ const dbService = Effect.gen(function* () {
 							likeCount: DB_SCHEMA.videos.likeCount,
 							commentCount: DB_SCHEMA.videos.commentCount,
 							duration: DB_SCHEMA.videos.duration,
-							isLiveStream: DB_SCHEMA.videos.isLiveStream,
-							isShort: DB_SCHEMA.videos.isShort
+							isShort: DB_SCHEMA.videos.isShort,
+							livestreamType: DB_SCHEMA.videos.livestreamType,
+							livestreamScheduledStartTime: DB_SCHEMA.videos.livestreamScheduledStartTime,
+							livestreamActualStartTime: DB_SCHEMA.videos.livestreamActualStartTime,
+							livestreamConcurrentViewers: DB_SCHEMA.videos.livestreamConcurrentViewers
 						})
 						.from(DB_SCHEMA.videos)
 						.where(() => {
@@ -128,7 +133,7 @@ const dbService = Effect.gen(function* () {
 							if (filter === 'livestreams') {
 								return and(
 									eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
-									eq(DB_SCHEMA.videos.isLiveStream, true),
+									inArray(DB_SCHEMA.videos.livestreamType, ['live', 'upcoming', 'completed']),
 									hermitCraftCondition
 								);
 							} else if (filter === 'shorts') {
@@ -140,7 +145,7 @@ const dbService = Effect.gen(function* () {
 							} else {
 								return and(
 									eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
-									eq(DB_SCHEMA.videos.isLiveStream, false),
+									eq(DB_SCHEMA.videos.livestreamType, 'none'),
 									eq(DB_SCHEMA.videos.isShort, false),
 									hermitCraftCondition
 								);
@@ -189,11 +194,14 @@ const dbService = Effect.gen(function* () {
 							likeCount: DB_SCHEMA.videos.likeCount,
 							commentCount: DB_SCHEMA.videos.commentCount,
 							duration: DB_SCHEMA.videos.duration,
-							isLiveStream: DB_SCHEMA.videos.isLiveStream,
 							isShort: DB_SCHEMA.videos.isShort,
-							channelName: DB_SCHEMA.channels.name,
-							channelThumbnailUrl: DB_SCHEMA.channels.thumbnailUrl,
-							channelHandle: DB_SCHEMA.channels.handle
+							livestreamType: DB_SCHEMA.videos.livestreamType,
+							livestreamScheduledStartTime: DB_SCHEMA.videos.livestreamScheduledStartTime,
+							livestreamActualStartTime: DB_SCHEMA.videos.livestreamActualStartTime,
+							livestreamConcurrentViewers: DB_SCHEMA.videos.livestreamConcurrentViewers,
+							channelName: DB_SCHEMA.channels.ytName,
+							channelAvatarUrl: DB_SCHEMA.channels.ytAvatarUrl,
+							channelHandle: DB_SCHEMA.channels.ytHandle
 						})
 						.from(DB_SCHEMA.videos)
 						.innerJoin(
@@ -206,12 +214,15 @@ const dbService = Effect.gen(function* () {
 								: undefined;
 
 							if (filter === 'livestreams') {
-								return and(eq(DB_SCHEMA.videos.isLiveStream, true), hermitCraftCondition);
+								return and(
+									inArray(DB_SCHEMA.videos.livestreamType, ['live', 'upcoming', 'completed']),
+									hermitCraftCondition
+								);
 							} else if (filter === 'shorts') {
 								return and(eq(DB_SCHEMA.videos.isShort, true), hermitCraftCondition);
 							} else {
 								return and(
-									eq(DB_SCHEMA.videos.isLiveStream, false),
+									eq(DB_SCHEMA.videos.livestreamType, 'none'),
 									eq(DB_SCHEMA.videos.isShort, false),
 									hermitCraftCondition
 								);

@@ -33,7 +33,7 @@
 
 	type VideoWithChannel = ChannelVideos[number] & {
 		channelName?: string;
-		channelThumbnailUrl?: string;
+		channelAvatarUrl?: string;
 		channelHandle?: string;
 	};
 
@@ -305,9 +305,9 @@
 		>
 			{#each videos as video (video.ytVideoId)}
 				{@const formattedDuration = formatVideoDuration(video.duration)}
-				{@const channelName = channel?.name ?? video.channelName}
-				{@const channelThumbnail = channel?.thumbnailUrl ?? video.channelThumbnailUrl}
-				{@const channelHandle = channel?.handle ?? video.channelHandle}
+				{@const channelName = channel?.ytName ?? video.channelName}
+				{@const channelThumbnail = channel?.ytAvatarUrl ?? video.channelAvatarUrl}
+				{@const channelHandle = channel?.ytHandle ?? video.channelHandle}
 
 				<div class="group relative">
 					<Card.Root

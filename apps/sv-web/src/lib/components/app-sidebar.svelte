@@ -18,6 +18,7 @@
 	import type { SidebarChannel } from '$lib/remote/channels.remote';
 	import { page } from '$app/state';
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
+	import { TwitchSVG, YoutubeSVG } from '$lib/assets/svg';
 
 	type Props = ComponentProps<typeof Sidebar.Root> & {
 		channels: SidebarChannel[];
@@ -52,8 +53,9 @@
 		icon?: string | Component;
 		iconClass?: string;
 		isActive?: boolean;
-		twitchUsername?: string;
-		isLive?: boolean;
+		twitchUserLogin?: string | null;
+		isTwitchLive?: boolean;
+		ytLiveVideoId?: string | null;
 		targetBlank?: boolean;
 		truncate?: boolean;
 		items?: {
@@ -78,13 +80,14 @@
 			isOpen: true,
 			items: channels
 				.map((channel) => ({
-					title: channel.name,
-					url: `/${channel.handle}`,
-					icon: channel.thumbnailUrl,
+					title: channel.ytName,
+					url: `/${channel.ytHandle}`,
+					icon: channel.ytAvatarUrl,
 					iconClass: 'rounded-full h-5 w-5',
-					isActive: page.url.pathname.startsWith(`/${channel.handle}`),
-					twitchUsername: channel.twitchUsername,
-					isLive: channel.isLive,
+					isActive: page.url.pathname.startsWith(`/${channel.ytHandle}`),
+					twitchUserLogin: channel.twitchUserLogin ?? undefined,
+					isTwitchLive: channel.isTwitchLive,
+					ytLiveVideoId: channel.ytLiveVideoId ?? undefined,
 					truncate: true
 				}))
 				.sort((a, b) => a.title.localeCompare(b.title))
@@ -237,12 +240,77 @@
 															</a>
 														{/snippet}
 													</Sidebar.MenuSubButton>
-													{#if subItem.isLive}
+													<!-- TODO: Review this -->
+													{#if subItem.isTwitchLive && subItem.ytLiveVideoId}
+														<DropdownMenu.Root>
+															<DropdownMenu.Trigger>
+																{#snippet child({ props })}
+																	<Sidebar.MenuAction {...props} class="top-1">
+																		<CircleIcon
+																			class="size-2.5! fill-destructive text-destructive"
+																		/>
+																		<span class="sr-only">Live</span>
+																	</Sidebar.MenuAction>
+																{/snippet}
+															</DropdownMenu.Trigger>
+															<DropdownMenu.Content
+																side={sidebar.isMobile ? 'bottom' : 'right'}
+																align={sidebar.isMobile ? 'end' : 'start'}
+															>
+																<DropdownMenu.Label
+																	class="px-2 py-1.5 text-xs text-muted-foreground"
+																>
+																	Watch Live
+																</DropdownMenu.Label>
+																{#if subItem.ytLiveVideoId}
+																	<DropdownMenu.Item class="cursor-pointer">
+																		{#snippet child({ props })}
+																			<a
+																				{...props}
+																				href={`https://www.youtube.com/watch?v=${subItem.ytLiveVideoId}`}
+																				target="_blank"
+																			>
+																				<YoutubeSVG class="h-4 w-4" />
+																				YouTube
+																			</a>
+																		{/snippet}
+																	</DropdownMenu.Item>
+																{/if}
+																{#if subItem.isTwitchLive && subItem.twitchUserLogin}
+																	<DropdownMenu.Item class="cursor-pointer">
+																		{#snippet child({ props })}
+																			<a
+																				{...props}
+																				href={`https://www.twitch.tv/${subItem.twitchUserLogin}`}
+																				target="_blank"
+																			>
+																				<TwitchSVG class="h-4 w-4" />
+																				Twitch
+																			</a>
+																		{/snippet}
+																	</DropdownMenu.Item>
+																{/if}
+															</DropdownMenu.Content>
+														</DropdownMenu.Root>
+													{:else if subItem.isTwitchLive}
 														<Sidebar.MenuAction class="top-1">
 															{#snippet child({ props })}
 																<a
 																	{...props}
-																	href={`https://www.twitch.tv/${subItem.twitchUsername}`}
+																	href={`https://www.twitch.tv/${subItem.twitchUserLogin}`}
+																	target="_blank"
+																>
+																	<CircleIcon class="size-2.5! fill-destructive text-destructive" />
+																	<span class="sr-only">Live</span>
+																</a>
+															{/snippet}
+														</Sidebar.MenuAction>
+													{:else if subItem.ytLiveVideoId}
+														<Sidebar.MenuAction class="top-1">
+															{#snippet child({ props })}
+																<a
+																	{...props}
+																	href={`https://www.youtube.com/watch?v=${subItem.ytLiveVideoId}`}
 																	target="_blank"
 																>
 																	<CircleIcon class="size-2.5! fill-destructive text-destructive" />
