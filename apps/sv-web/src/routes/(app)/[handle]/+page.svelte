@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import { remoteGetChannelDetails, remoteGetChannelVideos } from '$lib/remote/channels.remote';
 	import ChannelHeader from '$lib/components/channel-header.svelte';
 	import VideoGrid from '$lib/components/video-grid.svelte';
+	import type { PageProps } from './$types';
 
-	const handle = $derived(page.params.handle as string);
+	const { data }: PageProps = $props();
+	const handle = $derived(data.handle);
 	const channel = $derived(await remoteGetChannelDetails(handle));
 </script>
 
