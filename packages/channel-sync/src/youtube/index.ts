@@ -1,9 +1,8 @@
 import { google, youtube_v3 } from 'googleapis';
 import { Console, Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
-import { getShortsPlaylistId, getVideoLivestreamType } from './utils';
+import { getYtPlaylistId, getVideoLivestreamType, parseYtRSS } from './utils';
 import type { Video } from '@hc/db';
-
 class YoutubeError extends TaggedError('YoutubeError') {
 	constructor(message: string, options?: { cause?: unknown }) {
 		super();
@@ -183,7 +182,7 @@ const youtubeService = Effect.gen(function* () {
 				);
 			}
 
-			yield* Effect.log(`Uploads playlist ID: ${uploadsPlaylistId}`);
+			yield* Console.log(`Uploads playlist ID: ${uploadsPlaylistId}`);
 
 			let videoIds: string[] = [];
 			let nextPageToken: string | undefined;
@@ -215,10 +214,54 @@ const youtubeService = Effect.gen(function* () {
 			return videoIds;
 		});
 
-	const getShortsVideoIds = (ytChannelId: string) =>
+	const getRSSVideoIds = (ytChannelId: string) =>
 		Effect.gen(function* () {
-			const shortsPlaylistId = getShortsPlaylistId(ytChannelId);
-			if (!shortsPlaylistId) return new Set<string>();
+			// Latest 15 videos
+			const response = yield* Effect.tryPromise({
+				try: () => fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${ytChannelId}`),
+				catch: (err) => new YoutubeError(`Failed to fetch RSS for channel`, { cause: err })
+			});
+
+			if (!response.ok) {
+				return yield* Effect.fail(
+					new YoutubeError(`Failed to fetch RSS for channel ${ytChannelId}`)
+				);
+			}
+
+			const xml = yield* Effect.tryPromise({
+				try: () => response.text(),
+				catch: (err) => new YoutubeError(`Failed to read RSS text`, { cause: err })
+			});
+
+			return parseYtRSS(xml);
+		});
+
+	const isVideoShort = (ytVideoId: string, ytChannelId: string) =>
+		Effect.gen(function* () {
+			const shortsPlaylistId = getYtPlaylistId(ytChannelId, 'shorts');
+			if (!shortsPlaylistId) return false;
+
+			const response = yield* Effect.tryPromise({
+				try: () =>
+					youtube.playlistItems.list({
+						part: ['id'],
+						playlistId: shortsPlaylistId,
+						videoId: ytVideoId,
+						maxResults: 1
+					}),
+				catch: (err) =>
+					new YoutubeError(`Failed to check if video ${ytVideoId} is a short`, {
+						cause: err
+					})
+			});
+
+			return (response.data.items?.length ?? 0) > 0;
+		});
+
+	const areVideosShorts = (ytVideoIds: string[], ytChannelId: string, maxResults?: number) =>
+		Effect.gen(function* () {
+			const shortsPlaylistId = getYtPlaylistId(ytChannelId, 'shorts');
+			if (!shortsPlaylistId) return new Map<string, boolean>();
 
 			const shortsSet = new Set<string>();
 			let nextPageToken: string | undefined;
@@ -244,38 +287,7 @@ const youtubeService = Effect.gen(function* () {
 					}
 				}
 				nextPageToken = playlistResponse.data.nextPageToken || undefined;
-			} while (nextPageToken);
-
-			return shortsSet;
-		});
-
-	const isVideoShort = (ytVideoId: string, ytChannelId: string) =>
-		Effect.gen(function* () {
-			const shortsPlaylistId = getShortsPlaylistId(ytChannelId);
-			if (!shortsPlaylistId) return false;
-
-			const response = yield* Effect.tryPromise({
-				try: () =>
-					youtube.playlistItems.list({
-						part: ['id'],
-						playlistId: shortsPlaylistId,
-						videoId: ytVideoId,
-						maxResults: 1
-					}),
-				catch: (err) =>
-					new YoutubeError(`Failed to check if video ${ytVideoId} is a short`, {
-						cause: err
-					})
-			});
-
-			return (response.data.items?.length ?? 0) > 0;
-		});
-
-	const areVideosShorts = (ytVideoIds: string[], ytChannelId: string) =>
-		Effect.gen(function* () {
-			const shortsSet = yield* getShortsVideoIds(ytChannelId).pipe(
-				Effect.catchAll(() => Effect.succeed(new Set<string>()))
-			);
+			} while (nextPageToken && (maxResults === undefined || shortsSet.size < maxResults));
 
 			const result = new Map<string, boolean>();
 			for (const videoId of ytVideoIds) {
@@ -289,7 +301,7 @@ const youtubeService = Effect.gen(function* () {
 		getVideoDetails,
 		getBatchVideoDetails,
 		getVideoIdsFromUploadsPlaylist,
-		getShortsVideoIds,
+		getRSSVideoIds,
 		isVideoShort,
 		areVideosShorts
 	};

@@ -11,7 +11,7 @@ const main = Effect.gen(function* () {
 
 	if (id) {
 		yield* Console.log(`Starting backfill for channel: ${id}`);
-		yield* channelSync.backfillVideos(id);
+		yield* channelSync.syncVideos([id], { backfill: true, taskName: 'BACKFILL', maxResults: 100 });
 	} else {
 		yield* Console.log('No channel ID specified, backfilling all channels...');
 		const channels = yield* db.getAllChannels();
@@ -20,12 +20,18 @@ const main = Effect.gen(function* () {
 		yield* Effect.forEach(channels, (channel) =>
 			Effect.gen(function* () {
 				yield* Console.log(`\nBackfilling channel: ${channel.ytName} (${channel.ytChannelId})`);
-				yield* channelSync.backfillVideos(channel.ytChannelId).pipe(
-					Effect.catchAll((err) => {
-						console.error(`Failed to backfill ${channel.ytName} (${channel.ytChannelId}):`, err);
-						return Effect.void;
+				yield* channelSync
+					.syncVideos([channel.ytChannelId], {
+						backfill: true,
+						taskName: 'BACKFILL',
+						maxResults: 100
 					})
-				);
+					.pipe(
+						Effect.catchAll((err) => {
+							console.error(`Failed to backfill ${channel.ytName} (${channel.ytChannelId}):`, err);
+							return Effect.void;
+						})
+					);
 			})
 		);
 	}

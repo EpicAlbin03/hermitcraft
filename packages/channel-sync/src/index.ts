@@ -148,44 +148,80 @@ const channelSyncService = Effect.gen(function* () {
 			yield* Console.log(`CHANNEL SYNC TOOK ${performance.now() - start}ms`);
 		});
 
-	const syncVideos = (ytChannelIds: string[], taskName?: string) =>
+	const syncVideos = (
+		ytChannelIds: string[],
+		args: {
+			taskName?: string;
+			backfill?: boolean;
+			maxResults?: number;
+		} = {
+			taskName: undefined,
+			backfill: false,
+			maxResults: 50
+		}
+	) =>
 		Effect.gen(function* () {
 			const start = performance.now();
 
 			let successCount = 0;
 			let errorCount = 0;
 			let skipCount = 0;
-			const fullTaskName = taskName ? `${taskName}: ` : '';
-
-			const videoDetails = yield* yt.getBatchVideoDetails(ytChannelIds);
+			const fullTaskName = args.taskName ? `${args.taskName}: ` : '';
 
 			yield* Effect.forEach(
-				videoDetails.entries(),
-				([ytVideoId, videoDetails]) =>
+				ytChannelIds,
+				(ytChannelId) =>
 					Effect.gen(function* () {
-						const videoIsShort = yield* yt.isVideoShort(ytVideoId, videoDetails.ytChannelId);
-						yield* Console.log(`${fullTaskName}Syncing video ${ytVideoId}`);
-						const result = yield* db
-							.upsertVideo({
-								...videoDetails,
-								isShort: videoIsShort
-							})
-							.pipe(Effect.either);
+						const videoIds = args.backfill
+							? yield* yt.getVideoIdsFromUploadsPlaylist(ytChannelId, args.maxResults)
+							: (yield* yt.getRSSVideoIds(ytChannelId)).slice(0, args.maxResults);
+						const batchVideoDetailsMap = yield* yt.getBatchVideoDetails(videoIds);
 
-						if (result._tag === 'Right') {
-							if (result.right?.wasSkipped) {
-								skipCount++;
-								yield* Console.warn(`\x1b[33m${fullTaskName}Skipped video ${ytVideoId}\x1b[0m`);
-							} else {
-								successCount++;
-								yield* Console.log(`${fullTaskName}Synced video ${ytVideoId}`);
-							}
-						} else {
-							errorCount++;
-							yield* Console.error(`${fullTaskName}Failed to sync video ${ytVideoId}`, result.left);
-						}
-					}),
-				{ concurrency: 5 }
+						const areVideosShorts = yield* yt
+							.areVideosShorts(videoIds, ytChannelId, args.maxResults)
+							.pipe(
+								Effect.catchTag('YoutubeError', (err) =>
+									Effect.gen(function* () {
+										yield* Console.warn(
+											`\x1b[33m${fullTaskName}${err.message}, marking all as non-shorts\x1b[0m`
+										);
+										return new Map<string, boolean>();
+									})
+								)
+							);
+
+						yield* Effect.forEach(
+							batchVideoDetailsMap.entries(),
+							([ytVideoId, videoDetails]) =>
+								Effect.gen(function* () {
+									const videoIsShort = areVideosShorts.get(ytVideoId) || false;
+									yield* Console.log(`${fullTaskName}Syncing video ${ytVideoId}`);
+									const result = yield* db
+										.upsertVideo({ ...videoDetails, isShort: videoIsShort })
+										.pipe(Effect.either);
+
+									if (result._tag === 'Right') {
+										if (result.right?.wasSkipped) {
+											skipCount++;
+											yield* Console.warn(
+												`\x1b[33m${fullTaskName}Skipped video ${ytVideoId}\x1b[0m`
+											);
+										} else {
+											successCount++;
+											yield* Console.log(`${fullTaskName}Synced video ${ytVideoId}`);
+										}
+									} else {
+										errorCount++;
+										yield* Console.error(
+											`${fullTaskName}Failed to sync video ${ytVideoId}`,
+											result.left
+										);
+									}
+								}),
+							{ concurrency: 5 }
+						);
+					})
+				// { concurrency: 5 }
 			);
 
 			yield* Console.log(
@@ -194,41 +230,11 @@ const channelSyncService = Effect.gen(function* () {
 			yield* Console.log(`VIDEO SYNC TOOK ${performance.now() - start}ms`);
 		});
 
-	const backfillVideos = (ytChannelId: string) =>
-		Effect.gen(function* () {
-			const start = performance.now();
-			yield* Console.log(`BACKFILL: Starting backfill for channel ${ytChannelId}`);
-
-			const channel = yield* db.getChannel(ytChannelId);
-			if (!channel) {
-				return yield* Effect.fail(new SyncVideoError(`BACKFILL: Channel not found ${ytChannelId}`));
-			}
-
-			const videoIds = yield* yt.getVideoIdsFromUploadsPlaylist(ytChannelId);
-
-			const batches = videoIds.reduce((acc, videoId, index) => {
-				const batchIndex = Math.floor(index / 50);
-				if (!acc[batchIndex]) {
-					acc[batchIndex] = [];
-				}
-				acc[batchIndex].push(videoId);
-				return acc;
-			}, [] as string[][]);
-			yield* Console.log(
-				`BACKFILL: Found ${videoIds.length} videos (${batches.length} batches) to backfill`
-			);
-
-			yield* Effect.forEach(batches, (batch) => syncVideos(batch, 'BACKFILL'), { concurrency: 5 });
-
-			yield* Console.log(`BACKFILL: Backfill completed in ${performance.now() - start}ms`);
-		});
-
 	return {
 		syncChannel,
 		syncVideo,
 		syncChannels,
-		syncVideos,
-		backfillVideos
+		syncVideos
 	};
 });
 

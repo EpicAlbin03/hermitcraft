@@ -14,11 +14,72 @@ export function parseIsoDurationToSeconds(duration: string): number | null {
 	return Number.isNaN(totalSeconds) ? null : totalSeconds;
 }
 
-export function getShortsPlaylistId(ytChannelId: string) {
+export const parseYtRSS = (xml: string) => {
+	const ytVideoIds: string[] = [];
+
+	const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
+	let match;
+
+	while ((match = entryRegex.exec(xml)) !== null) {
+		const entryXml = match[1];
+
+		if (!entryXml) continue;
+
+		const videoIdMatch = entryXml.match(/<yt:videoId>([^<]+)<\/yt:videoId>/);
+		// const titleMatch = entryXml.match(/<title>([^<]+)<\/title>/);
+		// const thumbnailMatch = entryXml.match(/<media:thumbnail[^>]+url="([^"]+)"/);
+		// const publishedMatch = entryXml.match(/<published>([^<]+)<\/published>/);
+		// const viewCountMatch = entryXml.match(/<media:statistics[^>]+views="([^"]+)"/);
+		// const likeCountMatch = entryXml.match(/<media:starRating[^>]+count="([^"]+)"/);
+
+		if (!videoIdMatch) continue;
+
+		ytVideoIds.push(videoIdMatch[1]!);
+	}
+
+	return ytVideoIds;
+};
+
+export function getYtPlaylistId(
+	ytChannelId: string,
+	type:
+		| 'videos'
+		| 'popularVideos'
+		| 'livestreams'
+		| 'membersOnlyVideos'
+		| 'membersOnlyContents'
+		| 'membersOnlyShorts'
+		| 'membersOnlyLivestreams'
+		| 'popularShorts'
+		| 'popularLivestreams'
+		| 'shorts'
+) {
 	if (!ytChannelId.startsWith('UC')) {
 		return null;
 	}
-	return 'UUSH' + ytChannelId.slice(2);
+
+	switch (type) {
+		case 'videos': // Doesn't include shorts and livestreams
+			return 'UULF' + ytChannelId.slice(2);
+		case 'popularVideos':
+			return 'UULP' + ytChannelId.slice(2);
+		case 'livestreams':
+			return 'UULV' + ytChannelId.slice(2);
+		case 'membersOnlyVideos':
+			return 'UUMF' + ytChannelId.slice(2);
+		case 'membersOnlyContents':
+			return 'UUMO' + ytChannelId.slice(2);
+		case 'membersOnlyShorts':
+			return 'UUMS' + ytChannelId.slice(2);
+		case 'membersOnlyLivestreams':
+			return 'UUMV' + ytChannelId.slice(2);
+		case 'popularShorts':
+			return 'UUPS' + ytChannelId.slice(2);
+		case 'popularLivestreams':
+			return 'UUPV' + ytChannelId.slice(2);
+		case 'shorts':
+			return 'UUSH' + ytChannelId.slice(2);
+	}
 }
 
 export function getVideoLivestreamType(

@@ -58,7 +58,7 @@ const main = Effect.gen(function* () {
 							links: c.links ?? []
 						}))
 					),
-				videos: () => channelSync.syncVideos(ytChannelIds)
+				videos: () => channelSync.syncVideos(ytChannelIds, { maxResults: 15 })
 			},
 			prompt: 'Select tables to seed'
 		});
