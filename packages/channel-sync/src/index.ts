@@ -2,7 +2,7 @@ import { Effect, Console } from 'effect';
 import { DbService } from './db';
 import { YoutubeService } from './youtube';
 import { TaggedError } from 'effect/Data';
-import type { Channel, ChannelLink, Video } from '@hc/db';
+import type { ChannelLink } from '@hc/db';
 import { TwitchService } from './twitch';
 
 class SyncVideoError extends TaggedError('SyncVideoError') {
@@ -239,7 +239,7 @@ const channelSyncService = Effect.gen(function* () {
 });
 
 export class ChannelSyncService extends Effect.Service<ChannelSyncService>()('ChannelSyncService', {
-	dependencies: [YoutubeService.Default, TwitchService.Default],
+	dependencies: [DbService.Default, YoutubeService.Default, TwitchService.Default],
 	effect: channelSyncService
 }) {}
 

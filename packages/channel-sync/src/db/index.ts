@@ -1,4 +1,4 @@
-import { DB_SCHEMA, getDrizzleInstance, eq, and, type Video, type Channel } from '@hc/db';
+import { DB_SCHEMA, getDrizzleInstance, eq, type Video, type Channel } from '@hc/db';
 import { Console, Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { parseIsoDurationToSeconds } from '../youtube/utils';
@@ -31,25 +31,49 @@ const dbService = Effect.gen(function* () {
 		})
 	);
 
-	const getAllChannels = () =>
+	type ChannelColumns = typeof DB_SCHEMA.channels;
+	type ChannelSelection = {
+		[K in keyof ChannelColumns]?: ChannelColumns[K];
+	};
+	type ChannelSelectResult<T extends Partial<ChannelSelection> | undefined> = T extends undefined
+		? Channel
+		: keyof T extends never
+			? Channel
+			: Pick<Channel, Extract<keyof T, keyof Channel>>;
+	type VideoColumns = typeof DB_SCHEMA.videos;
+	type VideoSelection = {
+		[K in keyof VideoColumns]?: VideoColumns[K];
+	};
+	type VideoSelectResult<T extends Partial<VideoSelection> | undefined> = T extends undefined
+		? Video
+		: keyof T extends never
+			? Video
+			: Pick<Video, Extract<keyof T, keyof Video>>;
+
+	const getAllChannels = <T extends Partial<ChannelSelection> | undefined = undefined>(
+		selection?: T
+	) =>
 		Effect.gen(function* () {
 			const channels = yield* Effect.tryPromise({
-				try: () => drizzle.select().from(DB_SCHEMA.channels),
+				try: () => drizzle.select(selection ?? {}).from(DB_SCHEMA.channels),
 				catch: (err) =>
 					new DbError('Failed to get all channels...', {
 						cause: err
 					})
 			});
 
-			return channels;
+			return channels as ChannelSelectResult<T>[];
 		});
 
-	const getChannel = (ytChannelId: string) =>
+	const getChannel = <T extends Partial<ChannelSelection> | undefined = undefined>(
+		ytChannelId: string,
+		selection?: T
+	) =>
 		Effect.gen(function* () {
 			const channels = yield* Effect.tryPromise({
 				try: () =>
 					drizzle
-						.select()
+						.select(selection ?? {})
 						.from(DB_SCHEMA.channels)
 						.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId))
 						.limit(1),
@@ -59,15 +83,18 @@ const dbService = Effect.gen(function* () {
 					})
 			});
 
-			return channels[0] || null;
+			return (channels[0] ?? null) as ChannelSelectResult<T> | null;
 		});
 
-	const getVideo = (ytVideoId: string) =>
+	const getVideo = <T extends Partial<VideoSelection> | undefined = undefined>(
+		ytVideoId: string,
+		selection?: T
+	) =>
 		Effect.gen(function* () {
 			const videos = yield* Effect.tryPromise({
 				try: () =>
 					drizzle
-						.select()
+						.select(selection ?? {})
 						.from(DB_SCHEMA.videos)
 						.where(eq(DB_SCHEMA.videos.ytVideoId, ytVideoId))
 						.limit(1),
@@ -77,12 +104,14 @@ const dbService = Effect.gen(function* () {
 					})
 			});
 
-			return videos[0] || null;
+			return (videos[0] ?? null) as VideoSelectResult<T> | null;
 		});
 
 	const upsertChannel = (data: Channel) =>
 		Effect.gen(function* () {
-			const existing = yield* getChannel(data.ytChannelId);
+			const existing = yield* getChannel(data.ytChannelId, {
+				ytChannelId: DB_SCHEMA.channels.ytChannelId
+			});
 
 			if (existing) {
 				yield* Effect.tryPromise({
@@ -151,7 +180,10 @@ const dbService = Effect.gen(function* () {
 				return { ytVideoId: data.ytVideoId, wasInserted: false, wasSkipped: true };
 			}
 
-			const existing = yield* getVideo(data.ytVideoId);
+			const existing = yield* getVideo(data.ytVideoId, {
+				ytVideoId: DB_SCHEMA.videos.ytVideoId,
+				livestreamType: DB_SCHEMA.videos.livestreamType
+			});
 			const livestreamTypeChanged = existing && existing.livestreamType !== data.livestreamType;
 			const shouldUpdateChannel = !existing || livestreamTypeChanged;
 
