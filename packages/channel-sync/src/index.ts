@@ -2,7 +2,7 @@ import { Effect, Console } from 'effect';
 import { DbService } from './db';
 import { YoutubeService } from './youtube';
 import { TaggedError } from 'effect/Data';
-import type { ChannelLink } from '@hc/db';
+import type { ChannelLink, Video } from '@hc/db';
 import { TwitchService } from './twitch';
 
 class SyncVideoError extends TaggedError('SyncVideoError') {
@@ -168,6 +168,10 @@ const channelSyncService = Effect.gen(function* () {
 			let skipCount = 0;
 			const fullTaskName = args.taskName ? `${args.taskName}: ` : '';
 
+			// Step 1: Collect all video IDs from all channels
+			const videosByChannel = new Map<string, string[]>();
+			const allVideoIds: string[] = [];
+
 			yield* Effect.forEach(
 				ytChannelIds,
 				(ytChannelId) =>
@@ -175,9 +179,32 @@ const channelSyncService = Effect.gen(function* () {
 						const videoIds = args.backfill
 							? yield* yt.getVideoIdsFromUploadsPlaylist(ytChannelId, args.maxResults)
 							: (yield* yt.getRSSVideoIds(ytChannelId)).slice(0, args.maxResults);
-						const batchVideoDetailsMap = yield* yt.getBatchVideoDetails(videoIds);
 
-						const areVideosShorts = yield* yt
+						videosByChannel.set(ytChannelId, videoIds);
+						allVideoIds.push(...videoIds);
+					}),
+				{ concurrency: 5 }
+			);
+
+			// Step 2: Batch video IDs into groups of 50 for getBatchVideoDetails
+			const allVideoDetailsMap = new Map<string, Omit<Video, 'isShort'>>();
+
+			for (let i = 0; i < allVideoIds.length; i += 50) {
+				const batch = allVideoIds.slice(i, i + 50);
+				const batchDetails = yield* yt.getBatchVideoDetails(batch);
+				for (const [id, details] of batchDetails.entries()) {
+					allVideoDetailsMap.set(id, details);
+				}
+			}
+
+			// Step 3: Get areVideosShorts per channel (can't batch across channels)
+			const allShortsMap = new Map<string, boolean>();
+			yield* Effect.forEach(
+				ytChannelIds,
+				(ytChannelId) =>
+					Effect.gen(function* () {
+						const videoIds = videosByChannel.get(ytChannelId) || [];
+						const shortsMap = yield* yt
 							.areVideosShorts(videoIds, ytChannelId, args.maxResults)
 							.pipe(
 								Effect.catchTag('YoutubeError', (err) =>
@@ -189,39 +216,38 @@ const channelSyncService = Effect.gen(function* () {
 									})
 								)
 							);
+						for (const [id, isShort] of shortsMap.entries()) {
+							allShortsMap.set(id, isShort);
+						}
+					}),
+				{ concurrency: 5 }
+			);
 
-						yield* Effect.forEach(
-							batchVideoDetailsMap.entries(),
-							([ytVideoId, videoDetails]) =>
-								Effect.gen(function* () {
-									const videoIsShort = areVideosShorts.get(ytVideoId) || false;
-									yield* Console.log(`${fullTaskName}Syncing video ${ytVideoId}`);
-									const result = yield* db
-										.upsertVideo({ ...videoDetails, isShort: videoIsShort })
-										.pipe(Effect.either);
+			// Step 4: Upsert all videos
+			yield* Effect.forEach(
+				allVideoDetailsMap.entries(),
+				([ytVideoId, videoDetails]) =>
+					Effect.gen(function* () {
+						const videoIsShort = allShortsMap.get(ytVideoId) || false;
+						yield* Console.log(`${fullTaskName}Syncing video ${ytVideoId}`);
+						const result = yield* db
+							.upsertVideo({ ...videoDetails, isShort: videoIsShort })
+							.pipe(Effect.either);
 
-									if (result._tag === 'Right') {
-										if (result.right?.wasSkipped) {
-											skipCount++;
-											yield* Console.warn(
-												`\x1b[33m${fullTaskName}Skipped video ${ytVideoId}\x1b[0m`
-											);
-										} else {
-											successCount++;
-											yield* Console.log(`${fullTaskName}Synced video ${ytVideoId}`);
-										}
-									} else {
-										errorCount++;
-										yield* Console.error(
-											`${fullTaskName}Failed to sync video ${ytVideoId}`,
-											result.left
-										);
-									}
-								}),
-							{ concurrency: 5 }
-						);
-					})
-				// { concurrency: 5 }
+						if (result._tag === 'Right') {
+							if (result.right?.wasSkipped) {
+								skipCount++;
+								yield* Console.warn(`\x1b[33m${fullTaskName}Skipped video ${ytVideoId}\x1b[0m`);
+							} else {
+								successCount++;
+								yield* Console.log(`${fullTaskName}Synced video ${ytVideoId}`);
+							}
+						} else {
+							errorCount++;
+							yield* Console.error(`${fullTaskName}Failed to sync video ${ytVideoId}`, result.left);
+						}
+					}),
+				{ concurrency: 5 }
 			);
 
 			yield* Console.log(
