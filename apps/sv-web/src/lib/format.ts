@@ -10,8 +10,18 @@ export function formatCompactNumber(num: number | null | undefined) {
 }
 
 // Format date to readable string (e.g., "Nov 24, 2025")
-export function formatDate(date: Date | string) {
+export function formatDate(date: Date | string, time = false) {
 	const d = new Date(date);
+
+	if (time) {
+		return d.toLocaleString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			hour: 'numeric',
+			minute: '2-digit'
+		});
+	}
+
 	return d.toLocaleDateString('en-US', {
 		year: 'numeric',
 		month: 'short',

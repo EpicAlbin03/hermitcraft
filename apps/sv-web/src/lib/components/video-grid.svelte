@@ -14,7 +14,8 @@
 		Calendar,
 		CalendarArrowDown,
 		CalendarArrowUp,
-		Clock
+		Clock,
+		CircleIcon
 	} from '@lucide/svelte';
 	import type { ChannelVideos, ChannelDetails } from '$lib/remote/channels.remote';
 	import {
@@ -330,13 +331,20 @@
 										decoding="async"
 										class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 									/>
-									{#if formattedDuration}
-										<span
-											class="absolute right-2 bottom-2 rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-semibold text-white"
-										>
+									<span
+										class="absolute right-2 bottom-2 rounded bg-black/80 px-1.5 py-0.5 text-[11px] font-semibold text-white"
+									>
+										{#if video.livestreamType === 'live'}
+											<div class="flex items-center gap-1">
+												<CircleIcon class="size-2.5! fill-destructive text-destructive" />
+												Live
+											</div>
+										{:else if video.livestreamType === 'upcoming'}
+											Upcoming
+										{:else if formattedDuration}
 											{formattedDuration}
-										</span>
-									{/if}
+										{/if}
+									</span>
 								</AspectRatio>
 							</div>
 
@@ -370,30 +378,64 @@
 
 								<div class="text-muted-foreground">
 									<div class="flex flex-col gap-2 text-xs">
-										<div class="flex items-center gap-3">
-											<span class="flex items-center gap-1">
-												<Eye class="h-3 w-3" />
-												{formatCompactNumber(video.viewCount)}
-											</span>
-											<span class="flex items-center gap-1">
-												<ThumbsUp class="h-3 w-3" />
-												{formatCompactNumber(video.likeCount)}
-											</span>
-											<span class="flex items-center gap-1">
-												<MessageCircle class="h-3 w-3" />
-												{formatCompactNumber(video.commentCount)}
-											</span>
-										</div>
-										<div class="flex items-center gap-3">
-											<span class="flex items-center gap-1">
-												<Clock class="h-3 w-3" />
-												{formatRelativeTime(video.publishedAt)}
-											</span>
-											<span class="flex items-center gap-1">
-												<Calendar class="h-3 w-3" />
-												{formatDate(video.publishedAt)}
-											</span>
-										</div>
+										{#if video.livestreamType === 'live'}
+											<div class="flex items-center gap-3">
+												{#if video.livestreamConcurrentViewers}
+													<span class="flex items-center gap-1">
+														<Eye class="h-3 w-3" />
+														{formatCompactNumber(video.livestreamConcurrentViewers)}
+													</span>
+												{/if}
+												<span class="flex items-center gap-1">
+													<ThumbsUp class="h-3 w-3" />
+													{formatCompactNumber(video.likeCount)}
+												</span>
+												{#if video.livestreamActualStartTime}
+													<span class="flex items-center gap-1">
+														<Clock class="h-3 w-3" />
+														{formatRelativeTime(video.livestreamActualStartTime)}
+													</span>
+												{/if}
+											</div>
+										{:else if video.livestreamType === 'upcoming'}
+											<div class="flex items-center gap-3">
+												<span class="flex items-center gap-1">
+													<ThumbsUp class="h-3 w-3" />
+													{formatCompactNumber(video.likeCount)}
+												</span>
+												{#if video.livestreamScheduledStartTime}
+													<span class="flex items-center gap-1">
+														<Calendar class="h-3 w-3" />
+														Starting {formatDate(video.livestreamScheduledStartTime, true)}
+													</span>
+												{/if}
+											</div>
+										{:else}
+											<div class="flex items-center gap-3">
+												<span class="flex items-center gap-1">
+													<Eye class="h-3 w-3" />
+													{formatCompactNumber(video.viewCount)}
+												</span>
+												<span class="flex items-center gap-1">
+													<ThumbsUp class="h-3 w-3" />
+													{formatCompactNumber(video.likeCount)}
+												</span>
+												<span class="flex items-center gap-1">
+													<MessageCircle class="h-3 w-3" />
+													{formatCompactNumber(video.commentCount)}
+												</span>
+											</div>
+											<div class="flex items-center gap-3">
+												<span class="flex items-center gap-1">
+													<Clock class="h-3 w-3" />
+													{formatRelativeTime(video.publishedAt)}
+												</span>
+												<span class="flex items-center gap-1">
+													<Calendar class="h-3 w-3" />
+													{formatDate(video.publishedAt)}
+												</span>
+											</div>
+										{/if}
 									</div>
 								</div>
 							</div>
