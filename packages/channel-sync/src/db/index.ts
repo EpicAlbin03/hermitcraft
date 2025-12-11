@@ -1,4 +1,4 @@
-import { DB_SCHEMA, getDrizzleInstance, eq, type Video, type Channel } from '@hc/db';
+import { DB_SCHEMA, getDrizzleInstance, eq, inArray, type Video, type Channel } from '@hc/db';
 import { Console, Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { parseIsoDurationToSeconds } from '../youtube/utils';
@@ -107,6 +107,40 @@ const dbService = Effect.gen(function* () {
 			return (videos[0] ?? null) as VideoSelectResult<T> | null;
 		});
 
+	const getVideos = <T extends Partial<VideoSelection> | undefined = undefined>(
+		ytVideoIds: string[],
+		selection?: T
+	) =>
+		Effect.gen(function* () {
+			if (ytVideoIds.length === 0) return [] as VideoSelectResult<T>[];
+
+			const videos = yield* Effect.tryPromise({
+				try: () =>
+					drizzle
+						.select(selection ?? {})
+						.from(DB_SCHEMA.videos)
+						.where(inArray(DB_SCHEMA.videos.ytVideoId, ytVideoIds)),
+				catch: (err) =>
+					new DbError('Failed to get videos', {
+						cause: err
+					})
+			});
+
+			return videos as VideoSelectResult<T>[];
+		});
+
+	const updateChannel = (ytChannelId: string, data: Partial<Channel>) =>
+		Effect.gen(function* () {
+			yield* Effect.tryPromise({
+				try: () =>
+					drizzle
+						.update(DB_SCHEMA.channels)
+						.set(data)
+						.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId)),
+				catch: (err) => new DbError('Failed to update channel', { cause: err })
+			});
+		});
+
 	const upsertChannel = (data: Channel) =>
 		Effect.gen(function* () {
 			const existing = yield* getChannel(data.ytChannelId, {
@@ -128,8 +162,8 @@ const dbService = Effect.gen(function* () {
 								ytSubscriberCount: data.ytSubscriberCount,
 								ytVideoCount: data.ytVideoCount,
 								twitchUserLogin: data.twitchUserLogin,
-								isTwitchLive: data.isTwitchLive,
-								ytLiveVideoId: data.ytLiveVideoId,
+								// isTwitchLive: handled by twitchSyncProgram
+								// ytLiveVideoId: handled by videoSyncProgram
 								links: data.links
 							})
 							.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId)),
@@ -313,6 +347,8 @@ const dbService = Effect.gen(function* () {
 		getAllChannels,
 		getChannel,
 		getVideo,
+		getVideos,
+		updateChannel,
 		upsertChannel,
 		upsertVideo,
 		deleteVideo,

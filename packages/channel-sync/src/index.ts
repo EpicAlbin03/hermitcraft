@@ -2,7 +2,7 @@ import { Effect, Console } from 'effect';
 import { DbService } from './db';
 import { YoutubeService } from './youtube';
 import { TaggedError } from 'effect/Data';
-import type { ChannelLink, Video } from '@hc/db';
+import { DB_SCHEMA, type ChannelLink, type Video } from '@hc/db';
 import { TwitchService } from './twitch';
 
 class SyncVideoError extends TaggedError('SyncVideoError') {
@@ -30,9 +30,9 @@ const channelSyncService = Effect.gen(function* () {
 	) =>
 		Effect.gen(function* () {
 			const channelDetails = yield* yt.getChannelDetails(ytChannelId);
-			const isTwitchLive =
-				details.isTwitchLive ||
-				(details.twitchUserId ? yield* twitch.isChannelLive(details.twitchUserId) : false);
+			// const isTwitchLive =
+			// 	details.isTwitchLive ||
+			// 	(details.twitchUserId ? yield* twitch.isChannelLive(details.twitchUserId) : false);
 
 			yield* db.upsertChannel({
 				ytChannelId: ytChannelId,
@@ -47,7 +47,7 @@ const channelSyncService = Effect.gen(function* () {
 				ytJoinedAt: channelDetails.ytJoinedAt,
 				twitchUserId: details.twitchUserId || null,
 				twitchUserLogin: details.twitchUserLogin || null,
-				isTwitchLive: isTwitchLive,
+				isTwitchLive: details.isTwitchLive || false,
 				ytLiveVideoId: details.ytLiveVideoId || null,
 				links: details.links || []
 			});
@@ -108,9 +108,9 @@ const channelSyncService = Effect.gen(function* () {
 		Effect.gen(function* () {
 			const start = performance.now();
 
-			const isTwitchLiveMap = yield* twitch.areChannelsLive(
-				channels.map((c) => c.twitchUserId).filter((id) => id !== null && id !== undefined)
-			);
+			// const isTwitchLiveMap = yield* twitch.areChannelsLive(
+			// 	channels.map((c) => c.twitchUserId).filter((id) => id !== null && id !== undefined)
+			// );
 
 			let successCount = 0;
 			let errorCount = 0;
@@ -124,9 +124,7 @@ const channelSyncService = Effect.gen(function* () {
 						const result = yield* syncChannel(channel.ytChannelId, {
 							twitchUserId: channel.twitchUserId || undefined,
 							twitchUserLogin: channel.twitchUserLogin || undefined,
-							isTwitchLive: channel.twitchUserId
-								? isTwitchLiveMap.get(channel.twitchUserId) || false
-								: undefined,
+							isTwitchLive: channel.isTwitchLive || false,
 							ytLiveVideoId: channel.ytLiveVideoId || undefined,
 							links: channel.links || []
 						}).pipe(Effect.either);
@@ -186,7 +184,15 @@ const channelSyncService = Effect.gen(function* () {
 				{ concurrency: 5 }
 			);
 
-			// Step 2: Batch video IDs into groups of 50 for getBatchVideoDetails
+			// Step 2: Check which videos already exist in DB and get their isShort values
+			const existingVideos = yield* db.getVideos(allVideoIds, {
+				ytVideoId: DB_SCHEMA.videos.ytVideoId,
+				isShort: DB_SCHEMA.videos.isShort
+			});
+			const existingVideoIds = new Set(existingVideos.map((v) => v.ytVideoId));
+			const existingShortsMap = new Map(existingVideos.map((v) => [v.ytVideoId, v.isShort]));
+
+			// Step 3: Batch video IDs into groups of 50 for getBatchVideoDetails
 			const allVideoDetailsMap = new Map<string, Omit<Video, 'isShort'>>();
 
 			for (let i = 0; i < allVideoIds.length; i += 50) {
@@ -197,15 +203,18 @@ const channelSyncService = Effect.gen(function* () {
 				}
 			}
 
-			// Step 3: Get areVideosShorts per channel (can't batch across channels)
-			const allShortsMap = new Map<string, boolean>();
+			// Step 4: Get areVideosShorts per channel ONLY for new videos (not in DB)
+			const allShortsMap = new Map<string, boolean>(existingShortsMap);
 			yield* Effect.forEach(
 				ytChannelIds,
 				(ytChannelId) =>
 					Effect.gen(function* () {
 						const videoIds = videosByChannel.get(ytChannelId) || [];
+						const newVideoIds = videoIds.filter((id) => !existingVideoIds.has(id));
+						if (newVideoIds.length === 0) return;
+
 						const shortsMap = yield* yt
-							.areVideosShorts(videoIds, ytChannelId, args.maxResults)
+							.areVideosShorts(newVideoIds, ytChannelId, args.maxResults)
 							.pipe(
 								Effect.catchTag('YoutubeError', (err) =>
 									Effect.gen(function* () {
@@ -223,7 +232,7 @@ const channelSyncService = Effect.gen(function* () {
 				{ concurrency: 5 }
 			);
 
-			// Step 4: Upsert all videos
+			// Step 5: Upsert all videos
 			yield* Effect.forEach(
 				allVideoDetailsMap.entries(),
 				([ytVideoId, videoDetails]) =>
@@ -256,11 +265,60 @@ const channelSyncService = Effect.gen(function* () {
 			yield* Console.log(`VIDEO SYNC TOOK ${performance.now() - start}ms`);
 		});
 
+	const syncTwitchLive = (taskName?: string) =>
+		Effect.gen(function* () {
+			const start = performance.now();
+			const channels = yield* db.getAllChannels({
+				ytChannelId: DB_SCHEMA.channels.ytChannelId,
+				twitchUserId: DB_SCHEMA.channels.twitchUserId
+			});
+			const twitchUserIds = channels
+				.map((channel) => channel.twitchUserId)
+				.filter((id) => id !== null && id !== undefined);
+
+			const isTwitchLiveMap = yield* twitch.areChannelsLive(twitchUserIds);
+
+			let successCount = 0;
+			let errorCount = 0;
+			const fullTaskName = taskName ? `${taskName}: ` : '';
+
+			yield* Effect.forEach(channels, (channel) =>
+				Effect.gen(function* () {
+					const result = yield* db
+						.updateChannel(channel.ytChannelId, {
+							isTwitchLive: channel.twitchUserId
+								? isTwitchLiveMap.get(channel.twitchUserId) || false
+								: false
+						})
+						.pipe(Effect.either);
+
+					if (result._tag === 'Right') {
+						successCount++;
+						yield* Console.log(`${fullTaskName}Synced channel (twitch) ${channel.ytChannelId}`);
+					} else {
+						errorCount++;
+						yield* Console.error(
+							`${fullTaskName}Failed to sync channel (twitch) ${channel.ytChannelId}`,
+							result.left
+						);
+					}
+				})
+			);
+
+			yield* Console.log(
+				`TWITCH LIVE SYNC COMPLETED: ${successCount} channels synced, ${errorCount} channels failed`
+			);
+			yield* Console.log(`TWITCH LIVE SYNC TOOK ${performance.now() - start}ms`);
+
+			return isTwitchLiveMap;
+		});
+
 	return {
 		syncChannel,
 		syncVideo,
 		syncChannels,
-		syncVideos
+		syncVideos,
+		syncTwitchLive
 	};
 });
 
