@@ -5,6 +5,8 @@
 	import ToggleMode from '$lib/components/toggle-mode.svelte';
 	import { remoteGetSidebarChannels, type SidebarChannel } from '$lib/remote/channels.remote';
 	import { UserConfigContext } from '$lib/config/user-config.svelte';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { GithubSVG } from '$lib/assets/svg';
 
 	let { children } = $props();
 
@@ -28,6 +30,15 @@
 				<!-- <Separator orientation="vertical" class="mr-2 data-[orientation=vertical]:h-4" /> -->
 			</div>
 			<div class="flex items-center gap-2 px-4">
+				<Button
+					variant="ghost"
+					size="icon"
+					class="size-7"
+					href="https://github.com/EpicAlbin03/hermitcraft"
+					target="_blank"
+				>
+					<GithubSVG class="h-4 w-4" />
+				</Button>
 				<ToggleMode />
 			</div>
 		</header>
