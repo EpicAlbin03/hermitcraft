@@ -211,7 +211,8 @@ const youtubeService = Effect.gen(function* () {
 				nextPageToken = playlistResponse.data.nextPageToken || undefined;
 			} while (nextPageToken && (maxResults === undefined || videoIds.length < maxResults));
 
-			return videoIds;
+			// Remove first 15 videos to not conflict with RSS feed / videoSyncProgram
+			return videoIds.slice(15);
 		});
 
 	const getRSSVideoIds = (ytChannelId: string) =>

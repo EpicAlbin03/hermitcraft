@@ -152,10 +152,6 @@ const channelSyncService = Effect.gen(function* () {
 			taskName?: string;
 			backfill?: boolean;
 			maxResults?: number;
-		} = {
-			taskName: undefined,
-			backfill: false,
-			maxResults: 50
 		}
 	) =>
 		Effect.gen(function* () {
