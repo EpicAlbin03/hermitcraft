@@ -164,7 +164,7 @@
 					<Collapsible.Root open={item.isOpen} class="group/collapsible">
 						{#snippet child({ props })}
 							<Sidebar.MenuItem {...props}>
-								<Collapsible.Trigger>
+								<Collapsible.Trigger class="pr-2!">
 									{#snippet child({ props })}
 										<Sidebar.MenuButton {...props} tooltipContent={item.title}>
 											{#if item.icon}
