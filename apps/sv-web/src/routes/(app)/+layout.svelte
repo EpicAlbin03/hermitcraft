@@ -7,6 +7,8 @@
 	import { UserConfigContext } from '$lib/config/user-config.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { GithubSVG } from '$lib/assets/svg';
+	import * as Popover from '$lib/components/ui/popover/index.js';
+	import { InfoIcon } from '@lucide/svelte';
 
 	let { children } = $props();
 
@@ -30,6 +32,39 @@
 				<!-- <Separator orientation="vertical" class="mr-2 data-[orientation=vertical]:h-4" /> -->
 			</div>
 			<div class="flex items-center gap-2 px-4">
+				<Popover.Root>
+					<Popover.Trigger class="size-7">
+						{#snippet child({ props })}
+							<Button variant="ghost" size="icon" {...props}>
+								<InfoIcon class="h-4 w-4" />
+							</Button>
+						{/snippet}
+					</Popover.Trigger>
+					<Popover.Content class="w-96" align="end">
+						<div class="grid gap-4">
+							<div class="space-y-2">
+								<h4 class="leading-none font-medium">App Info</h4>
+								<ul class="ml-4 list-disc text-sm text-muted-foreground">
+									<li>
+										The latest 15 videos for each channel is updated every 2 minutes. Therefore, new
+										videos can take up to 2 minutes before they appear.
+									</li>
+									<li>
+										Channel info and old videos are updated once a day at 06:00 UTC / 01:00 ET /
+										22:00 PT / 06:00 GMT / 07:00 CET.
+									</li>
+									<li>
+										If you encounter any issues or find something missing, please open a issue on <a
+											href="https://github.com/EpicAlbin03/hermitcraft/issues"
+											target="_blank"
+											class="underline hover:text-primary">GitHub</a
+										>.
+									</li>
+								</ul>
+							</div>
+						</div>
+					</Popover.Content>
+				</Popover.Root>
 				<Button
 					variant="ghost"
 					size="icon"
