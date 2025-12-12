@@ -1,18 +1,19 @@
 <script lang="ts">
-	import { Eye, Users, Video, ChevronDown, ChevronUp, CircleIcon } from '@lucide/svelte';
+	import { Eye, Users, Video, ChevronDown, ChevronUp, Link as LinkIcon } from '@lucide/svelte';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import { AspectRatio } from '$lib/components/ui/aspect-ratio';
 	import { Button } from '$lib/components/ui/button';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import {
 		IsTailwindBreakpoint,
 		type ActiveTailwindBreakpoint
 	} from '$lib/hooks/is-tailwind-breakpoint.svelte';
 	import { useSidebarSpace } from '$lib/hooks/use-sidebar-space.svelte';
 	import { formatCompactNumber, parseChannelDescription } from '$lib/format';
-	import { cn } from '$lib/utils';
+	import { cn, getIconFromUrl } from '$lib/utils';
 	import type { ChannelDetails } from '$lib/remote/channels.remote';
 	import { Image } from '@unpic/svelte';
-	import { TwitchSVG, YoutubeSVG } from '$lib/assets/svg';
+	import { TwitchLogo, YouTubeLogo } from '@selemondev/svgl-svelte';
 
 	type Props = {
 		channel: ChannelDetails;
@@ -113,7 +114,7 @@
 								target="_blank"
 								class="text-sm font-semibold"
 							>
-								<YoutubeSVG class="h-4 w-4" />
+								<YouTubeLogo class="h-4 w-4" />
 								Live
 							</Button>
 						{/if}
@@ -125,7 +126,7 @@
 								target="_blank"
 								class="text-sm font-semibold"
 							>
-								<TwitchSVG class="h-4 w-4" />
+								<TwitchLogo class="h-4 w-4" />
 								Live
 							</Button>
 						{/if}
@@ -149,7 +150,7 @@
 				</span>
 			</div>
 
-			<div class="mt-2 max-w-3xl">
+			<div class="mt-2 max-w-xl">
 				<p
 					class={cn(
 						'text-sm whitespace-pre-wrap',
@@ -166,7 +167,7 @@
 						{/if}
 					{/each}
 				</p>
-				{#if channel.ytDescription.length > 150}
+				{#if channel.ytDescription.length > 175}
 					<Button
 						variant="ghost"
 						size="sm"
@@ -185,5 +186,45 @@
 				{/if}
 			</div>
 		</div>
+
+		{#if channel.links && channel.links.length > 0}
+			<div class="absolute top-2 right-4 flex max-w-md gap-2 md:static md:mt-6 mt-2">
+				<div class="hidden flex-wrap justify-end xl:flex">
+					{#each channel.links as link (link.url)}
+						{@const Icon = getIconFromUrl(link.url, link.title)}
+						<Button variant="ghost" size="sm" href={link.url} target="_blank">
+							<Icon class="h-4 w-4" />
+							{link.title}
+						</Button>
+					{/each}
+				</div>
+
+				<div class="xl:hidden">
+					<DropdownMenu.Root>
+						<DropdownMenu.Trigger>
+							{#snippet child({ props })}
+								<Button {...props} variant="outline" size="sm">
+									<LinkIcon class="h-4 w-4" />
+									Links
+								</Button>
+							{/snippet}
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Content align="end">
+							{#each channel.links as link (link.url)}
+								{@const Icon = getIconFromUrl(link.url, link.title)}
+								<DropdownMenu.Item>
+									{#snippet child({ props })}
+										<a href={link.url} target="_blank" {...props}>
+											<Icon class="h-4 w-4" />
+											{link.title}
+										</a>
+									{/snippet}
+								</DropdownMenu.Item>
+							{/each}
+						</DropdownMenu.Content>
+					</DropdownMenu.Root>
+				</div>
+			</div>
+		{/if}
 	</div>
 </div>

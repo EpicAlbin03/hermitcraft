@@ -75,7 +75,8 @@ const dbService = Effect.gen(function* () {
 							ytVideoCount: DB_SCHEMA.channels.ytVideoCount,
 							twitchUserLogin: DB_SCHEMA.channels.twitchUserLogin,
 							isTwitchLive: DB_SCHEMA.channels.isTwitchLive,
-							ytLiveVideoId: DB_SCHEMA.channels.ytLiveVideoId
+							ytLiveVideoId: DB_SCHEMA.channels.ytLiveVideoId,
+							links: DB_SCHEMA.channels.links
 						})
 						.from(DB_SCHEMA.channels)
 						.where(eq(DB_SCHEMA.channels.ytHandle, handle))
