@@ -262,12 +262,26 @@ const dbService = Effect.gen(function* () {
 								});
 							}
 
-							const ytLiveVideoId = data.livestreamType === 'live' ? data.ytVideoId : null;
+							// Fetch current ytLiveVideoId to prevent race conditions
+							const channel = await tx
+								.select({ ytLiveVideoId: DB_SCHEMA.channels.ytLiveVideoId })
+								.from(DB_SCHEMA.channels)
+								.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId))
+								.limit(1);
 
-							await tx
-								.update(DB_SCHEMA.channels)
-								.set({ ytLiveVideoId: ytLiveVideoId })
-								.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId));
+							const currentLiveVideoId = channel[0]?.ytLiveVideoId;
+
+							if (data.livestreamType === 'live') {
+								await tx
+									.update(DB_SCHEMA.channels)
+									.set({ ytLiveVideoId: data.ytVideoId })
+									.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId));
+							} else if (currentLiveVideoId === data.ytVideoId) {
+								await tx
+									.update(DB_SCHEMA.channels)
+									.set({ ytLiveVideoId: null })
+									.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId));
+							}
 						}),
 					catch: (err) =>
 						new DbError('Failed to upsert video with channel update', {

@@ -39,17 +39,22 @@ const twitchService = Effect.gen(function* () {
 
 	const areChannelsLive = (user_ids: string[]) =>
 		Effect.gen(function* () {
+			if (user_ids.length === 0) return new Map<string, boolean>();
+
 			const response = yield* Effect.tryPromise({
-				try: () => twitch.streams.getStreamsByUserIds(user_ids),
+				try: () => twitch.streams.getStreams({ userId: user_ids, limit: 100 }),
 				catch: (err) =>
-					new TwitchError(`Failed to get streams for users ${user_ids}`, {
+					new TwitchError(`Failed to get streams for users`, {
 						cause: err
 					})
 			});
 
 			const isLiveMap = new Map<string, boolean>();
 			for (const userId of user_ids) {
-				isLiveMap.set(userId, response.find((s) => s.userId === userId) ? true : false);
+				isLiveMap.set(
+					userId,
+					response.data.some((s) => s.userId === userId)
+				);
 			}
 
 			return isLiveMap;

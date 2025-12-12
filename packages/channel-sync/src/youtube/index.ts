@@ -147,11 +147,11 @@ const youtubeService = Effect.gen(function* () {
 				items,
 				(item) =>
 					Effect.gen(function* () {
-						if (!item || !item.id) {
-							return yield* Effect.fail(new YoutubeError(`Video ${item.id} not found`));
+						if (!item || !item.id) return;
+						const result = yield* Effect.either(setVideoDetails(item, item.id));
+						if (result._tag === 'Right') {
+							videoDetailsMap.set(item.id, result.right);
 						}
-						const videoDetails = yield* setVideoDetails(item, item.id);
-						videoDetailsMap.set(item.id, videoDetails);
 					}),
 				{ concurrency: 'unbounded' }
 			);

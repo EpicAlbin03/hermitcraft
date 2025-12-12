@@ -67,8 +67,8 @@ export const channels: Pick<
 		ytChannelId: 'UCFKDEp9si4RmHFWJW1vYsMA',
 		ytName: 'EthosLab',
 		ytHandle: '@ethoslab',
-		twitchUserId: '26773349',
-		twitchUserLogin: 'docm77live',
+		twitchUserId: '',
+		twitchUserLogin: '',
 		links: [
 			{
 				title: 'Twitter',

@@ -16,30 +16,15 @@ const main = Effect.gen(function* () {
 	const channelSync = yield* ChannelSyncService;
 	const db = yield* DbService;
 
-	// Global state for twitch live status
-	const state = { isTwitchLiveMap: new Map<string, boolean>() };
-
 	// 25 channels
 	// 1 quota per channel
 	// Each run = 25 * 1 = 25 quotas
 	const channelSyncProgram = Effect.gen(function* () {
 		yield* Effect.log('BUN_WORKER: starting channel sync');
 		const channels = yield* db.getAllChannels({
-			ytChannelId: DB_SCHEMA.channels.ytChannelId,
-			twitchUserId: DB_SCHEMA.channels.twitchUserId,
-			ytLiveVideoId: DB_SCHEMA.channels.ytLiveVideoId
+			ytChannelId: DB_SCHEMA.channels.ytChannelId
 		});
-		const isTwitchLiveChannels = channels.map((channel) => {
-			return {
-				ytChannelId: channel.ytChannelId,
-				twitchUserId: channel.twitchUserId || undefined,
-				isTwitchLive: channel.twitchUserId
-					? state.isTwitchLiveMap.get(channel.twitchUserId) || false
-					: false,
-				ytLiveVideoId: channel.ytLiveVideoId || undefined
-			};
-		});
-		yield* channelSync.syncChannels(isTwitchLiveChannels, 'BUN_WORKER');
+		yield* channelSync.syncChannels(channels, 'BUN_WORKER');
 		yield* Effect.log('BUN_WORKER: finished channel sync');
 	}).pipe(
 		Effect.catchAllCause((cause) => Effect.logError('BUN_WORKER: channel sync failed', cause)),
@@ -49,7 +34,7 @@ const main = Effect.gen(function* () {
 	// Token-bucket based per minute
 	const twitchSyncProgram = Effect.gen(function* () {
 		yield* Effect.log('BUN_WORKER: starting twitch sync');
-		state.isTwitchLiveMap = yield* channelSync.syncTwitchLive('BUN_WORKER');
+		yield* channelSync.syncTwitchLive('BUN_WORKER');
 		yield* Effect.log('BUN_WORKER: finished twitch sync');
 	}).pipe(
 		Effect.catchAllCause((cause) => Effect.logError('BUN_WORKER: twitch sync failed', cause)),

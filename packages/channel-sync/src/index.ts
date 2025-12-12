@@ -170,10 +170,21 @@ const channelSyncService = Effect.gen(function* () {
 				ytChannelIds,
 				(ytChannelId) =>
 					Effect.gen(function* () {
-						const videoIds = args.backfill
-							? yield* yt.getVideoIdsFromUploadsPlaylist(ytChannelId, args.maxResults)
-							: (yield* yt.getRSSVideoIds(ytChannelId)).slice(0, args.maxResults);
+						const result = yield* Effect.either(
+							args.backfill
+								? yt.getVideoIdsFromUploadsPlaylist(ytChannelId, args.maxResults)
+								: Effect.map(yt.getRSSVideoIds(ytChannelId), (ids) => ids.slice(0, args.maxResults))
+						);
 
+						if (result._tag === 'Left') {
+							yield* Console.error(
+								`${fullTaskName}Failed to get video IDs for ${ytChannelId}`,
+								result.left
+							);
+							return;
+						}
+
+						const videoIds = result.right;
 						videosByChannel.set(ytChannelId, videoIds);
 						allVideoIds.push(...videoIds);
 					}),
