@@ -53,6 +53,7 @@
 	const { fetchVideos, key, channel }: Props = $props();
 
 	const userConfig = UserConfigContext.get();
+	let onlyHermitCraft = $derived(userConfig.current.onlyHermitCraft);
 
 	const VIDEO_CARD_MIN_WIDTH = 260;
 	const VIDEO_CARD_MAX_WIDTH = 420;
@@ -132,7 +133,7 @@
 
 	// Reset state when key, filter, sort, or onlyHermitCraft changes
 	watch(
-		() => [key, activeFilter, activeSort, userConfig.current.onlyHermitCraft] as const,
+		() => [key, activeFilter, activeSort, onlyHermitCraft] as const,
 		() => {
 			videos = [];
 			hasMore = true;
@@ -223,7 +224,7 @@
 				offset: videos.length,
 				filter: activeFilter,
 				sort: activeSort,
-				onlyHermitCraft: userConfig.current.onlyHermitCraft
+				onlyHermitCraft: onlyHermitCraft
 			});
 			if (newVideos.length < batchSize) {
 				hasMore = false;
@@ -267,7 +268,7 @@
 				<div class="flex items-center space-x-2">
 					<Switch
 						id="only-hermitcraft"
-						bind:checked={userConfig.current.onlyHermitCraft}
+						bind:checked={onlyHermitCraft}
 						onCheckedChange={(checked) => userConfig.setConfig({ onlyHermitCraft: checked })}
 					/>
 					<Label for="only-hermitcraft">Only Hermitcraft</Label>
