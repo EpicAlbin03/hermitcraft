@@ -10,10 +10,12 @@
 	} from '$lib/hooks/is-tailwind-breakpoint.svelte';
 	import { useSidebarSpace } from '$lib/hooks/use-sidebar-space.svelte';
 	import { formatCompactNumber, parseChannelDescription } from '$lib/format';
-	import { cn, getIconFromUrl } from '$lib/utils';
+	import { cn } from '$lib/utils';
+	import { getIconFromUrl } from '$lib/utils';
 	import type { ChannelDetails } from '$lib/remote/channels.remote';
 	import { Image } from '@unpic/svelte';
 	import { TwitchLogo, YouTubeLogo } from '@selemondev/svgl-svelte';
+	import ImageIcon from './image-icon.svelte';
 
 	type Props = {
 		channel: ChannelDetails;
@@ -188,12 +190,16 @@
 		</div>
 
 		{#if channel.links && channel.links.length > 0}
-			<div class="absolute top-2 right-4 flex max-w-md gap-2 md:static md:mt-6 mt-2">
+			<div class="absolute top-2 right-4 mt-2 flex max-w-md gap-2 md:static md:mt-6">
 				<div class="hidden flex-wrap justify-end xl:flex">
 					{#each channel.links as link (link.url)}
 						{@const Icon = getIconFromUrl(link.url, link.title)}
 						<Button variant="ghost" size="sm" href={link.url} target="_blank">
-							<Icon class="h-4 w-4" />
+							{#if typeof Icon === 'object' && 'url' in Icon && 'alt' in Icon}
+								<ImageIcon url={Icon.url} alt={Icon.alt} fallback={Icon.fallback} class="h-4 w-4" />
+							{:else}
+								<Icon class="h-4 w-4" />
+							{/if}
 							{link.title}
 						</Button>
 					{/each}
@@ -215,7 +221,16 @@
 								<DropdownMenu.Item>
 									{#snippet child({ props })}
 										<a href={link.url} target="_blank" {...props}>
-											<Icon class="h-4 w-4" />
+											{#if typeof Icon === 'object' && 'url' in Icon && 'alt' in Icon}
+												<ImageIcon
+													url={Icon.url}
+													alt={Icon.alt}
+													fallback={Icon.fallback}
+													class="h-4 w-4"
+												/>
+											{:else}
+												<Icon class="h-4 w-4" />
+											{/if}
 											{link.title}
 										</a>
 									{/snippet}

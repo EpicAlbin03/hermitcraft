@@ -604,6 +604,10 @@ export const channels: Pick<
 			{
 				title: 'Music Blog',
 				url: 'https://xisuma.blogspot.com'
+			},
+			{
+				title: 'Tunnel Rats',
+				url: 'https://www.minecraft.net/marketplace/pdp/xisuma/tunnel-rats/f9db9942-8fde-4a14-92be-ba368aafda0d'
 			}
 		]
 	},

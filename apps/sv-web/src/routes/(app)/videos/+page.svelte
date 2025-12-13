@@ -3,9 +3,9 @@
 	import VideoGrid from '$lib/components/video-grid.svelte';
 	import { remoteGetAllVideos } from '$lib/remote/channels.remote';
 
-	const title = 'HermitCraft Minecraft Videos & Episodes';
+	const title = 'Hermitcraft Minecraft Videos & Episodes';
 	const description =
-		'Watch the latest HermitCraft Minecraft videos and episodes from all HermitCraft members.';
+		'Watch the latest Hermitcraft Minecraft videos and episodes from all Hermitcraft members.';
 </script>
 
 <MetaData {title} {description} />

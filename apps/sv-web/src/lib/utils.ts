@@ -13,7 +13,7 @@ import {
 	BlueskySVG,
 	DiscordSVG
 } from '$lib/assets/svg';
-import { Globe, Shirt } from '@lucide/svelte';
+import { GlobeIcon, ShirtIcon } from '@lucide/svelte';
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -25,6 +25,11 @@ export type WithoutChild<T> = T extends { child?: any } ? Omit<T, 'child'> : T;
 export type WithoutChildren<T> = T extends { children?: any } ? Omit<T, 'children'> : T;
 export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;
 export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?: U | null };
+
+function cleanHostname(hostname: string) {
+	const parts = hostname.replace(/^www\./, '').split('.');
+	return parts.length > 2 ? parts.slice(-2).join('.') : parts.join('.');
+}
 
 export function getIconFromUrl(url: string, title?: string) {
 	const hostname = new URL(url).hostname.toLowerCase();
@@ -54,8 +59,12 @@ export function getIconFromUrl(url: string, title?: string) {
 		case hostname.includes('youtube.com'):
 			return YoutubeSVG;
 		case lowerTitle === 'merch':
-			return Shirt;
+			return ShirtIcon;
 		default:
-			return Globe;
+			return {
+				url: `https://favicon.pub/${cleanHostname(hostname)}`,
+				alt: title ?? '',
+				fallback: GlobeIcon
+			};
 	}
 }

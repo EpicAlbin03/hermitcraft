@@ -1,4 +1,13 @@
-export const maps = [
+export type MapLink = {
+	title: string;
+	url: string;
+	javaUrl?: string;
+	bedrockUrl?: string;
+	mcwUrl?: string;
+	mcMarketplaceUrl?: string;
+};
+
+export const maps: MapLink[] = [
 	{
 		title: 'Gamemode 4',
 		url: '#'
@@ -38,71 +47,77 @@ export const maps = [
 	{
 		title: 'Vanilla S1',
 		url: '#',
-		javaLink: '#',
-		bedrockLink: '#',
-		mcwLink: '#'
+		javaUrl: '#',
+		bedrockUrl: '#',
+		mcwUrl: '#'
 	},
 	{
 		title: 'Vanilla S2',
 		url: '#',
-		javaLink: '#',
-		bedrockLink: '#',
-		mcwLink: '#'
+		javaUrl: '#',
+		bedrockUrl: '#',
+		mcwUrl: '#'
 	},
 	{
 		title: 'Vanilla S3',
 		url: '#',
-		javaLink: '#',
-		bedrockLink: '#',
-		mcwLink: '#'
+		javaUrl: '#',
+		bedrockUrl: '#',
+		mcwUrl: '#'
 	},
 	{
 		title: 'Vanilla S4',
 		url: '#',
-		javaLink: '#',
-		bedrockLink: '#',
-		mcwLink: '#'
+		javaUrl: '#',
+		bedrockUrl: '#',
+		mcwUrl: '#'
 	},
 	{
 		title: 'Vanilla S5',
 		url: '#',
-		javaLink: '#',
-		bedrockLink: '#',
-		mcwLink: '#'
+		javaUrl: '#',
+		bedrockUrl: '#',
+		mcwUrl: '#'
 	},
 	{
 		title: 'Vanilla S6',
 		url: '#',
-		javaLink: '#',
-		bedrockLink: '#',
-		mcwLink: '#'
+		javaUrl: '#',
+		bedrockUrl: '#',
+		mcwUrl: '#'
 	},
 	{
 		title: 'Vanilla S7',
 		url: '#',
-		javaLink: '#',
-		bedrockLink: '#',
-		mcwLink: '#'
+		javaUrl: '#',
+		bedrockUrl: '#',
+		mcwUrl: '#'
 	},
 	{
 		title: 'Vanilla S8',
 		url: '#',
-		javaLink: '#',
-		bedrockLink: '#',
-		mcwLink: '#'
+		javaUrl: '#',
+		bedrockUrl: '#',
+		mcwUrl: '#',
+		mcMarketplaceUrl:
+			'https://www.minecraft.net/marketplace/pdp/hermitcraft/hermitcraft-season-8-map/d24c4047-4486-4b12-b7d8-9fa9acea71a6'
 	},
 	{
 		title: 'Vanilla S9',
 		url: '#',
-		javaLink: '#',
-		bedrockLink: '#',
-		mcwLink: '#'
+		javaUrl: '#',
+		bedrockUrl: '#',
+		mcwUrl: '#',
+		mcMarketplaceUrl:
+			'https://www.minecraft.net/marketplace/pdp/hermitcraft/hermitcraft-season-9-map/85a1edb2-cfc7-4acb-afa7-203cd01354bd'
 	},
 	{
 		title: 'Vanilla S10',
 		url: '#',
-		javaLink: '#',
-		bedrockLink: '#',
-		mcwLink: '#'
+		javaUrl: '#',
+		bedrockUrl: '#',
+		mcwUrl: '#',
+		mcMarketplaceUrl:
+			'https://www.minecraft.net/marketplace/pdp/hermitcraft/hermitcraft-season-10-map/b7fb68d8-23e7-4f39-8266-d9d239dcad4d'
 	}
 ];

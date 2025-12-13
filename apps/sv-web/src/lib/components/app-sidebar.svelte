@@ -111,10 +111,12 @@
 			items: maps
 				.map((map) => {
 					const items = [];
-					if ('javaLink' in map && map.javaLink) items.push({ title: 'Java', url: map.javaLink });
-					if ('bedrockLink' in map && map.bedrockLink)
-						items.push({ title: 'Bedrock', url: map.bedrockLink });
-					if ('mcwLink' in map && map.mcwLink) items.push({ title: 'Mcworld', url: map.mcwLink });
+					if ('javaUrl' in map && map.javaUrl) items.push({ title: 'Java', url: map.javaUrl });
+					if ('bedrockUrl' in map && map.bedrockUrl)
+						items.push({ title: 'Bedrock', url: map.bedrockUrl });
+					if ('mcwUrl' in map && map.mcwUrl) items.push({ title: 'Mcworld', url: map.mcwUrl });
+					if ('mcMarketplaceUrl' in map && map.mcMarketplaceUrl)
+						items.push({ title: 'MC Marketplace', url: map.mcMarketplaceUrl });
 
 					return {
 						title: map.title,
@@ -147,7 +149,7 @@
 		</Sidebar.Menu>
 	</Sidebar.Header>
 	<Sidebar.Content class="no-scrollbar">
-		<Sidebar.Group>
+		<Sidebar.Group class="pt-0">
 			<Sidebar.Menu>
 				{#each items as item (item.title)}
 					<Sidebar.MenuItem>
