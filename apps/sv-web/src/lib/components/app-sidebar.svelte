@@ -240,7 +240,6 @@
 															</a>
 														{/snippet}
 													</Sidebar.MenuSubButton>
-													<!-- TODO: Review this -->
 													{#if subItem.isTwitchLive && subItem.ytLiveVideoId}
 														<DropdownMenu.Root>
 															<DropdownMenu.Trigger>

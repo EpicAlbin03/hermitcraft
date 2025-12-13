@@ -256,7 +256,7 @@
 
 <div>
 	<Tabs.Root value={activeFilter} onValueChange={(value) => handleTabChange(value as VideoFilter)}>
-		<div class="mb-4 flex items-center justify-between gap-4">
+		<div class="mb-4 flex flex-wrap-reverse items-center justify-between gap-4">
 			<Tabs.List>
 				<Tabs.Trigger value="videos">{tabLabels.videos}</Tabs.Trigger>
 				<Tabs.Trigger value="shorts">{tabLabels.shorts}</Tabs.Trigger>
