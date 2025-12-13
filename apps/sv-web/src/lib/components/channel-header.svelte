@@ -13,7 +13,6 @@
 	import { cn } from '$lib/utils';
 	import { getIconFromUrl } from '$lib/utils';
 	import type { ChannelDetails } from '$lib/remote/channels.remote';
-	import { Image } from '@unpic/svelte';
 	import { TwitchLogo, YouTubeLogo } from '@selemondev/svgl-svelte';
 	import ImageIcon from './image-icon.svelte';
 
@@ -48,10 +47,14 @@
 	const contentWidthResolved = $derived(sidebarSpace.contentWidthResolved);
 
 	const bannerRatio = $derived(BANNER_RATIOS[isTailwindBreakpoint] ?? BANNER_RATIOS.xs);
+	// Use stable src for SSR hydration - srcset handles responsive loading
 	const bannerSrc = $derived(
+		channel.ytBannerUrl ? `${channel.ytBannerUrl}=w${BANNER_WIDTHS['2xl']}` : null
+	);
+	const bannerSrcset = $derived(
 		channel.ytBannerUrl
-			? `${channel.ytBannerUrl}=w${BANNER_WIDTHS[isTailwindBreakpoint] ?? BANNER_WIDTHS.xs}`
-			: null
+			? BANNER_SRCSET_WIDTHS.map((w) => `${channel.ytBannerUrl}=w${w} ${w}w`).join(', ')
+			: undefined
 	);
 	const bannerSizes = $derived(
 		[
@@ -61,22 +64,16 @@
 			'100vw'
 		].join(', ')
 	);
-	const bannerWidth = $derived(BANNER_WIDTHS[isTailwindBreakpoint] ?? BANNER_WIDTHS.xs);
-	const bannerHeight = $derived(Math.round(bannerWidth / bannerRatio));
 </script>
 
 <div class="w-full rounded-xl bg-card pb-4 shadow-sm md:pb-6">
 	{#if bannerSrc}
 		<div class="w-full overflow-hidden rounded-t-xl">
 			<AspectRatio ratio={bannerRatio} class="bg-muted">
-				<Image
+				<img
 					src={bannerSrc}
-					layout="fullWidth"
-					width={bannerWidth}
-					height={bannerHeight}
-					breakpoints={BANNER_SRCSET_WIDTHS}
+					srcset={bannerSrcset}
 					sizes={bannerSizes}
-					priority
 					alt={`${channel.ytName} channel banner`}
 					class="h-full w-full object-cover"
 				/>
