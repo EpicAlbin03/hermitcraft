@@ -19,7 +19,8 @@ const main = Effect.gen(function* () {
 					}
 					return channelSync.syncChannel(channel.ytChannelId, {
 						twitchUserId: channel.twitchUserId ?? undefined,
-						twitchUserLogin: channel.twitchUserLogin ?? undefined
+						twitchUserLogin: channel.twitchUserLogin ?? undefined,
+						links: channel.links ?? []
 					});
 				},
 				video: () => channelSync.syncVideo(id)
