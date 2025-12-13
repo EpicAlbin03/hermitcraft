@@ -9,6 +9,7 @@
 	import { GithubSVG } from '$lib/assets/svg';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { InfoIcon } from '@lucide/svelte';
+	import { siteConfig } from '$lib/config/site-config';
 
 	let { children } = $props();
 
@@ -55,7 +56,7 @@
 									</li>
 									<li>
 										If you encounter any issues or find something missing, please open a issue on <a
-											href="https://github.com/EpicAlbin03/hermitcraft/issues"
+											href={`${siteConfig.links.github}/issues`}
 											target="_blank"
 											class="underline hover:text-primary">GitHub</a
 										>.
@@ -69,7 +70,7 @@
 					variant="ghost"
 					size="icon"
 					class="size-7"
-					href="https://github.com/EpicAlbin03/hermitcraft"
+					href={siteConfig.links.github}
 					target="_blank"
 				>
 					<GithubSVG class="h-4 w-4" />

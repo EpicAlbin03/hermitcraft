@@ -19,6 +19,7 @@
 	import { page } from '$app/state';
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
 	import { TwitchSVG, YoutubeSVG } from '$lib/assets/svg';
+	import { siteConfig } from '$lib/config/site-config';
 
 	type Props = ComponentProps<typeof Sidebar.Root> & {
 		channels: SidebarChannel[];
@@ -346,7 +347,7 @@
 				<Sidebar.MenuItem>
 					<Sidebar.MenuButton tooltipContent="Built by @EpicAlbin03">
 						{#snippet child({ props })}
-							<a href="https://x.com/EpicAlbin03" target="_blank" {...props}>
+							<a href={siteConfig.links.twitter} target="_blank" {...props}>
 								<span>Built by @EpicAlbin03</span>
 							</a>
 						{/snippet}
