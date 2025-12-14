@@ -2,6 +2,7 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import type { ComponentProps, Component } from 'svelte';
 	import {
 		ChevronRightIcon,
@@ -148,6 +149,8 @@
 								src="/hermitcraft-banner.png"
 								alt="Hermitcraft"
 								class="mx-auto w-48 rounded-md object-cover"
+								width="192"
+								height="64"
 							/>
 						</a>
 					{/snippet}
@@ -204,11 +207,10 @@
 																<Sidebar.MenuSubButton {...props} isActive={subItem.isActive}>
 																	{#if subItem.icon}
 																		{#if typeof subItem.icon === 'string'}
-																			<img
-																				src={subItem.icon}
-																				alt={subItem.title}
-																				class={cn('h-4 w-4', subItem.iconClass)}
-																			/>
+																			<Avatar.Root class={cn('h-4 w-4 text-[8px]', subItem.iconClass)}>
+																				<Avatar.Image src={subItem.icon} alt={subItem.title} />
+																				<Avatar.Fallback>{subItem.title.slice(0, 2).toUpperCase()}</Avatar.Fallback>
+																			</Avatar.Root>
 																		{:else}
 																			<subItem.icon />
 																		{/if}
@@ -248,11 +250,10 @@
 															>
 																{#if subItem.icon}
 																	{#if typeof subItem.icon === 'string'}
-																		<img
-																			src={subItem.icon}
-																			alt={subItem.title}
-																			class={cn('h-4 w-4', subItem.iconClass)}
-																		/>
+																		<Avatar.Root class={cn('h-4 w-4 text-[8px]', subItem.iconClass)}>
+																			<Avatar.Image src={subItem.icon} alt={subItem.title} />
+																			<Avatar.Fallback>{subItem.title.slice(0, 2).toUpperCase()}</Avatar.Fallback>
+																		</Avatar.Root>
 																	{:else}
 																		<subItem.icon />
 																	{/if}
@@ -268,7 +269,7 @@
 														<DropdownMenu.Root>
 															<DropdownMenu.Trigger>
 																{#snippet child({ props })}
-																	<Sidebar.MenuAction {...props} class="top-1">
+																	<Sidebar.MenuAction {...props} class="top-1 h-6 w-6">
 																		<CircleIcon
 																			class="size-2.5! fill-destructive text-destructive"
 																		/>
@@ -316,7 +317,7 @@
 															</DropdownMenu.Content>
 														</DropdownMenu.Root>
 													{:else if subItem.isTwitchLive}
-														<Sidebar.MenuAction class="top-1">
+														<Sidebar.MenuAction class="top-1 h-6 w-6">
 															{#snippet child({ props })}
 																<a
 																	{...props}
@@ -329,7 +330,7 @@
 															{/snippet}
 														</Sidebar.MenuAction>
 													{:else if subItem.ytLiveVideoId}
-														<Sidebar.MenuAction class="top-1">
+														<Sidebar.MenuAction class="top-1 h-6 w-6">
 															{#snippet child({ props })}
 																<a
 																	{...props}

@@ -36,7 +36,7 @@
 				<Popover.Root>
 					<Popover.Trigger class="size-7">
 						{#snippet child({ props })}
-							<Button variant="ghost" size="icon" {...props}>
+						<Button variant="ghost" size="icon" aria-label="App info" {...props}>
 								<InfoIcon class="h-4 w-4" />
 							</Button>
 						{/snippet}
@@ -72,6 +72,7 @@
 					class="size-7"
 					href={siteConfig.links.github}
 					target="_blank"
+					aria-label="GitHub repository"
 				>
 					<GithubSVG class="h-4 w-4" />
 				</Button>
