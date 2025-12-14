@@ -12,7 +12,7 @@
 	import { cn } from '$lib/utils';
 	import { getIconFromUrl } from '$lib/utils';
 	import type { ChannelDetails } from '$lib/remote/channels.remote';
-	import { TwitchLogo, YouTubeLogo } from '@selemondev/svgl-svelte';
+	import { YoutubeSVG, TwitchSVG } from '$lib/assets/svg';
 	import ImageIcon from './image-icon.svelte';
 
 	type Props = {
@@ -134,7 +134,7 @@
 								target="_blank"
 								class="text-sm font-semibold"
 							>
-								<YouTubeLogo class="h-4 w-4" />
+								<YoutubeSVG class="h-4 w-4" />
 								Live
 							</Button>
 						{/if}
@@ -146,7 +146,7 @@
 								target="_blank"
 								class="text-sm font-semibold"
 							>
-								<TwitchLogo class="h-4 w-4" />
+								<TwitchSVG class="h-4 w-4" />
 								Live
 							</Button>
 						{/if}
