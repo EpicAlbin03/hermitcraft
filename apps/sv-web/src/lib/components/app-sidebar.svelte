@@ -37,7 +37,6 @@
 	type DropdownItem = {
 		title: string;
 		icon: Component;
-		isOpen: boolean;
 		items: SubItem[];
 	};
 
@@ -74,11 +73,16 @@
 		}
 	]);
 
+	let openStates = $state<Record<string, boolean>>({
+    members: true,
+    links: false,
+    maps: false
+});
+
 	const dropdownItems = $derived<DropdownItem[]>([
 		{
 			title: 'Members',
 			icon: UsersIcon,
-			isOpen: true,
 			items: channels
 				.map((channel) => ({
 					title: channel.ytName,
@@ -96,7 +100,6 @@
 		{
 			title: 'Links',
 			icon: LinkIcon,
-			isOpen: false,
 			items: links.map((link) => ({
 				title: link.title,
 				url: link.url,
@@ -107,7 +110,6 @@
 		{
 			title: 'Maps',
 			icon: MapIcon,
-			isOpen: false,
 			items: maps
 				.map((map) => {
 					const items = [];
@@ -164,7 +166,11 @@
 					</Sidebar.MenuItem>
 				{/each}
 				{#each dropdownItems as item (item.title)}
-					<Collapsible.Root open={item.isOpen} class="group/collapsible">
+					<Collapsible.Root
+						open={openStates[item.title.toLowerCase()]}
+						onOpenChange={(v) => (openStates[item.title.toLowerCase()] = v)}
+						class="group/collapsible"
+					>
 						{#snippet child({ props })}
 							<Sidebar.MenuItem {...props}>
 								<Collapsible.Trigger class="pr-2!">
@@ -183,7 +189,9 @@
 								<Collapsible.Content>
 									<Sidebar.MenuSub class="mr-0 pr-0">
 										{#each item.items ?? [] as subItem (subItem.title)}
-											<Sidebar.MenuSubItem>
+											<Sidebar.MenuSubItem
+												class={subItem.items?.length ? 'cursor-default' : undefined}
+											>
 												{#if subItem.items?.length}
 													<DropdownMenu.Root>
 														<DropdownMenu.Trigger>
@@ -210,7 +218,7 @@
 															align={sidebar.isMobile ? 'end' : 'start'}
 														>
 															{#each subItem.items as childItem}
-																<DropdownMenu.Item>
+																<DropdownMenu.Item class="cursor-pointer">
 																	{#snippet child({ props })}
 																		<a href={childItem.url} {...props}>
 																			{childItem.title}
