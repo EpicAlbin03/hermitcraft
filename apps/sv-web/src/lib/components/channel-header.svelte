@@ -45,6 +45,13 @@
 	const isTailwindBreakpoint = $derived(new IsTailwindBreakpoint().current);
 	const sidebarSpace = useSidebarSpace(() => isTailwindBreakpoint);
 	const contentWidthResolved = $derived(sidebarSpace.contentWidthResolved);
+	const channelLinks = $derived([
+		{ title: channel.ytName, url: `https://www.youtube.com/${handle}` },
+		...(channel.twitchUserLogin
+			? [{ title: 'Twitch', url: `https://www.twitch.tv/${channel.twitchUserLogin}` }]
+			: []),
+		...(channel.links ?? [])
+	]);
 
 	const bannerRatio = $derived(BANNER_RATIOS[isTailwindBreakpoint] ?? BANNER_RATIOS.xs);
 	// Use stable src for SSR hydration - srcset handles responsive loading
@@ -186,57 +193,55 @@
 			</div>
 		</div>
 
-		{#if channel.links && channel.links.length > 0}
-			<div class="absolute top-2 right-4 mt-2 flex max-w-md gap-2 md:static md:mt-6">
-				<div class="hidden flex-wrap justify-end xl:flex">
-					{#each channel.links as link (link.url)}
-						{@const Icon = getIconFromUrl(link.url, link.title)}
-						<Button variant="ghost" size="sm" href={link.url} target="_blank">
-							{#if typeof Icon === 'object' && 'url' in Icon && 'alt' in Icon}
-								<ImageIcon url={Icon.url} alt={Icon.alt} fallback={Icon.fallback} class="h-4 w-4" />
-							{:else}
-								<Icon class="h-4 w-4" />
-							{/if}
-							{link.title}
-						</Button>
-					{/each}
-				</div>
-
-				<div class="xl:hidden">
-					<DropdownMenu.Root>
-						<DropdownMenu.Trigger>
-							{#snippet child({ props })}
-								<Button {...props} variant="outline" size="sm">
-									<LinkIcon class="h-4 w-4" />
-									Links
-								</Button>
-							{/snippet}
-						</DropdownMenu.Trigger>
-						<DropdownMenu.Content align="end">
-							{#each channel.links as link (link.url)}
-								{@const Icon = getIconFromUrl(link.url, link.title)}
-								<DropdownMenu.Item>
-									{#snippet child({ props })}
-										<a href={link.url} target="_blank" {...props}>
-											{#if typeof Icon === 'object' && 'url' in Icon && 'alt' in Icon}
-												<ImageIcon
-													url={Icon.url}
-													alt={Icon.alt}
-													fallback={Icon.fallback}
-													class="h-4 w-4"
-												/>
-											{:else}
-												<Icon class="h-4 w-4" />
-											{/if}
-											{link.title}
-										</a>
-									{/snippet}
-								</DropdownMenu.Item>
-							{/each}
-						</DropdownMenu.Content>
-					</DropdownMenu.Root>
-				</div>
+		<div class="absolute top-2 right-4 mt-2 flex max-w-md gap-2 md:static md:mt-6">
+			<div class="hidden flex-wrap justify-end xl:flex">
+				{#each channelLinks as link (link.url)}
+					{@const Icon = getIconFromUrl(link.url, link.title)}
+					<Button variant="ghost" size="sm" href={link.url} target="_blank">
+						{#if typeof Icon === 'object' && 'url' in Icon && 'alt' in Icon}
+							<ImageIcon url={Icon.url} alt={Icon.alt} fallback={Icon.fallback} class="h-4 w-4" />
+						{:else}
+							<Icon class="h-4 w-4" />
+						{/if}
+						{link.title}
+					</Button>
+				{/each}
 			</div>
-		{/if}
+
+			<div class="xl:hidden">
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger>
+						{#snippet child({ props })}
+							<Button {...props} variant="outline" size="sm">
+								<LinkIcon class="h-4 w-4" />
+								Links
+							</Button>
+						{/snippet}
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content align="end">
+						{#each channelLinks as link (link.url)}
+							{@const Icon = getIconFromUrl(link.url, link.title)}
+							<DropdownMenu.Item>
+								{#snippet child({ props })}
+									<a href={link.url} target="_blank" {...props}>
+										{#if typeof Icon === 'object' && 'url' in Icon && 'alt' in Icon}
+											<ImageIcon
+												url={Icon.url}
+												alt={Icon.alt}
+												fallback={Icon.fallback}
+												class="h-4 w-4"
+											/>
+										{:else}
+											<Icon class="h-4 w-4" />
+										{/if}
+										{link.title}
+									</a>
+								{/snippet}
+							</DropdownMenu.Item>
+						{/each}
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+			</div>
+		</div>
 	</div>
 </div>
