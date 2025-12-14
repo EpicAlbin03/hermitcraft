@@ -8,7 +8,6 @@
 		IsTailwindBreakpoint,
 		type ActiveTailwindBreakpoint
 	} from '$lib/hooks/is-tailwind-breakpoint.svelte';
-	import { useSidebarSpace } from '$lib/hooks/use-sidebar-space.svelte';
 	import { formatCompactNumber, parseChannelDescription } from '$lib/format';
 	import { cn } from '$lib/utils';
 	import { getIconFromUrl } from '$lib/utils';
@@ -43,8 +42,6 @@
 
 	let isDescriptionExpanded = $state(false);
 	const isTailwindBreakpoint = $derived(new IsTailwindBreakpoint().current);
-	const sidebarSpace = useSidebarSpace(() => isTailwindBreakpoint);
-	const contentWidthResolved = $derived(sidebarSpace.contentWidthResolved);
 	const channelLinks = $derived([
 		{ title: channel.ytName, url: `https://www.youtube.com/${handle}` },
 		...(channel.twitchUserLogin
@@ -63,15 +60,29 @@
 			? BANNER_SRCSET_WIDTHS.map((w) => `${channel.ytBannerUrl}=w${w} ${w}w`).join(', ')
 			: undefined
 	);
-	const bannerSizes = $derived(
-		[
-			`(min-width: 1536px) ${contentWidthResolved}`,
-			`(min-width: 1024px) ${contentWidthResolved}`,
-			`(min-width: 640px) ${contentWidthResolved}`,
-			'100vw'
-		].join(', ')
+
+	// Preload link values for early image fetching
+	const preloadHref = $derived(channel.ytBannerUrl ? `${channel.ytBannerUrl}=w2560` : undefined);
+	const preloadSrcset = $derived(
+		channel.ytBannerUrl
+			? BANNER_SRCSET_WIDTHS.map((w) => `${channel.ytBannerUrl}=w${w} ${w}w`).join(', ')
+			: undefined
 	);
 </script>
+
+<!-- Preload banner image so browser starts downloading immediately -->
+<svelte:head>
+	{#if preloadHref}
+		<link
+			rel="preload"
+			as="image"
+			href={preloadHref}
+			imagesrcset={preloadSrcset}
+			imagesizes="100vw"
+			fetchpriority="high"
+		/>
+	{/if}
+</svelte:head>
 
 <div class="w-full rounded-xl bg-card pb-4 shadow-sm md:pb-6">
 	{#if bannerSrc}
@@ -80,7 +91,10 @@
 				<img
 					src={bannerSrc}
 					srcset={bannerSrcset}
-					sizes={bannerSizes}
+					sizes="100vw"
+					fetchpriority="high"
+					loading="eager"
+					decoding="sync"
 					alt={`${channel.ytName} channel banner`}
 					class="h-full w-full object-cover"
 				/>

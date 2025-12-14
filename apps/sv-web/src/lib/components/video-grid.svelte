@@ -201,6 +201,7 @@
 	const videoColumnCount = $derived(Math.max(1, getColumnsForWidth(videoGridWidth)));
 	const batchSize = $derived(Math.max(6, videoColumnCount * ROWS_PER_BATCH));
 	const currentTabLabel = $derived(tabLabels[activeFilter]);
+	const rowsVisibleOnLoad = $derived(channel ? 2 : 3);
 
 	const videoGridTemplate = $derived(`repeat(${Math.max(1, videoColumnCount)}, minmax(0, 1fr))`);
 	const videoSizes = $derived(
@@ -305,11 +306,12 @@
 			class="grid gap-4 sm:gap-5"
 			style:grid-template-columns={videoGridTemplate}
 		>
-			{#each videos as video (video.ytVideoId)}
+			{#each videos as video, index (video.ytVideoId)}
 				{@const formattedDuration = formatVideoDuration(video.duration)}
 				{@const channelName = channel?.ytName ?? video.channelName}
 				{@const channelThumbnail = channel?.ytAvatarUrl ?? video.channelAvatarUrl}
 				{@const channelHandle = channel?.ytHandle ?? video.channelHandle}
+				{@const shouldLazyLoad = index >= videoColumnCount * rowsVisibleOnLoad}
 
 				<div class="group relative">
 					<Card.Root
@@ -328,8 +330,13 @@
 										src={video.thumbnailUrl}
 										alt={video.title}
 										sizes={videoSizes}
-										loading="lazy"
-										decoding="async"
+										fetchpriority={!channel && index === 0
+											? 'high'
+											: shouldLazyLoad
+												? 'low'
+												: 'auto'}
+										loading={shouldLazyLoad ? 'lazy' : 'eager'}
+										decoding={shouldLazyLoad ? 'async' : 'sync'}
 										class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 									/>
 									<span

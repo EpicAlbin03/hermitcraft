@@ -142,15 +142,16 @@
 	<Sidebar.Header>
 		<Sidebar.Menu>
 			<Sidebar.MenuItem>
-				<Sidebar.MenuButton size="lg" class="p-0 hover:bg-transparent active:bg-transparent">
+				<Sidebar.MenuButton
+					size="lg"
+					class="flex justify-center p-0 hover:bg-transparent active:bg-transparent"
+				>
 					{#snippet child({ props })}
 						<a href="/videos" {...props}>
-							<img
-								src="/hermitcraft-banner.png"
+							<enhanced:img
+								src="../../../static/hermitcraft-banner.png"
 								alt="Hermitcraft"
-								class="mx-auto w-48 rounded-md object-cover"
-								width="192"
-								height="64"
+								class="w-48 rounded-md object-cover"
 							/>
 						</a>
 					{/snippet}
@@ -207,9 +208,15 @@
 																<Sidebar.MenuSubButton {...props} isActive={subItem.isActive}>
 																	{#if subItem.icon}
 																		{#if typeof subItem.icon === 'string'}
-																			<Avatar.Root class={cn('h-4 w-4 text-[8px]', subItem.iconClass)}>
+																			<Avatar.Root
+																				class={cn('h-4 w-4 text-[8px]', subItem.iconClass)}
+																			>
 																				<Avatar.Image src={subItem.icon} alt={subItem.title} />
-																				<Avatar.Fallback>{subItem.title.slice(0, 2).toUpperCase()}</Avatar.Fallback>
+																				<Avatar.Fallback
+																					>{subItem.title
+																						.slice(0, 2)
+																						.toUpperCase()}</Avatar.Fallback
+																				>
 																			</Avatar.Root>
 																		{:else}
 																			<subItem.icon />
@@ -250,9 +257,13 @@
 															>
 																{#if subItem.icon}
 																	{#if typeof subItem.icon === 'string'}
-																		<Avatar.Root class={cn('h-4 w-4 text-[8px]', subItem.iconClass)}>
+																		<Avatar.Root
+																			class={cn('h-4 w-4 text-[8px]', subItem.iconClass)}
+																		>
 																			<Avatar.Image src={subItem.icon} alt={subItem.title} />
-																			<Avatar.Fallback>{subItem.title.slice(0, 2).toUpperCase()}</Avatar.Fallback>
+																			<Avatar.Fallback
+																				>{subItem.title.slice(0, 2).toUpperCase()}</Avatar.Fallback
+																			>
 																		</Avatar.Root>
 																	{:else}
 																		<subItem.icon />
