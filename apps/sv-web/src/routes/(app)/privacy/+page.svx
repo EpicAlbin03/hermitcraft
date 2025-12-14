@@ -1,0 +1,33 @@
+<script lang="ts">
+	import MetaData from '$lib/components/metadata.svelte';
+	import { siteConfig } from '$lib/config/site-config';
+
+	const title = `Privacy Policy - ${siteConfig.name}`;
+	const description = 'Read the privacy policy for the Hermitcraft website.';
+</script>
+
+<MetaData {title} {description} />
+
+<main class="prose prose-zinc dark:prose-invert p-4 mx-auto">
+
+# Privacy Policy
+
+This website is not affiliated with, endorsed by, or associated with Hermitcraft or its members. It is an unofficial redesign of the [hermitcraft.com](https://hermitcraft.com) website.
+
+## YouTube Client API
+
+{siteConfig.url} uses a YouTube API Client that utilizes YouTube API Services. By using {siteConfig.url}, users are agreeing to be bound by the YouTube Terms of Service. The API Client is internal and does not use visitor information. The API Client retrieves publicly accessable data about channels and videos and stores this data in its database. This information is used solely to display YouTube-related content on this website and is not shared with any third parties.
+
+[YouTube Terms of Service](https://www.youtube.com/t/terms)
+
+[Google Privacy Policy](https://www.google.com/policies/privacy)
+
+## Twitch Client API
+
+{siteConfig.url} uses a Twitch API Client that utilizes Twitch API Services. By using {siteConfig.url}, users are agreeing to be bound by the Twitch Terms of Service. The API Client is internal and does not collect or use visitor information. The API Client retrieves publicly accessible data about streams and stores this data in its database. This information is used solely to display Twitch-related content on this website and is not shared with any third parties.
+
+[Twitch Terms of Service](https://legal.twitch.com/legal/terms-of-service/)
+
+[Twitch Privacy Policy](https://legal.twitch.com/legal/privacy-notice/)
+
+</main>
