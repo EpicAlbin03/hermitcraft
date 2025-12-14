@@ -34,12 +34,6 @@
 
 	const sidebar = useSidebar();
 
-	type DropdownItem = {
-		title: string;
-		icon: Component;
-		items: SubItem[];
-	};
-
 	type Item = {
 		title: string;
 		icon: Component;
@@ -47,21 +41,32 @@
 		isActive?: boolean;
 	};
 
+	type NestedItem = { title: string; url: string };
+
 	type SubItem = {
 		title: string;
 		url: string;
 		icon?: string | Component;
 		iconClass?: string;
 		isActive?: boolean;
-		twitchUserLogin?: string | null;
+		// member-specific
+		twitchUserLogin?: string;
 		isTwitchLive?: boolean;
-		ytLiveVideoId?: string | null;
-		targetBlank?: boolean;
+		ytLiveVideoId?: string;
 		truncate?: boolean;
-		items?: {
-			title: string;
-			url: string;
-		}[];
+		// link-specific
+		targetBlank?: boolean;
+		// map-specific
+		items?: NestedItem[];
+	};
+
+	type DropdownKey = 'members' | 'links' | 'maps';
+
+	type DropdownItem = {
+		key: DropdownKey;
+		title: string;
+		icon: Component;
+		items: SubItem[];
 	};
 
 	const items = $derived<Item[]>([
@@ -73,14 +78,15 @@
 		}
 	]);
 
-	let openStates = $state<Record<string, boolean>>({
-    members: true,
-    links: false,
-    maps: false
-});
+	let openStates = $state<Record<DropdownKey, boolean>>({
+		members: true,
+		links: false,
+		maps: false
+	});
 
 	const dropdownItems = $derived<DropdownItem[]>([
 		{
+			key: 'members',
 			title: 'Members',
 			icon: UsersIcon,
 			items: channels
@@ -98,6 +104,7 @@
 				.sort((a, b) => a.title.localeCompare(b.title))
 		},
 		{
+			key: 'links',
 			title: 'Links',
 			icon: LinkIcon,
 			items: links.map((link) => ({
@@ -108,26 +115,21 @@
 			}))
 		},
 		{
+			key: 'maps',
 			title: 'Maps',
 			icon: MapIcon,
-			items: maps
-				.map((map) => {
-					const items = [];
-					if ('javaUrl' in map && map.javaUrl) items.push({ title: 'Java', url: map.javaUrl });
-					if ('bedrockUrl' in map && map.bedrockUrl)
-						items.push({ title: 'Bedrock', url: map.bedrockUrl });
-					if ('mcwUrl' in map && map.mcwUrl) items.push({ title: 'Mcworld', url: map.mcwUrl });
-					if ('mcMarketplaceUrl' in map && map.mcMarketplaceUrl)
-						items.push({ title: 'MC Marketplace', url: map.mcMarketplaceUrl });
-
-					return {
-						title: map.title,
-						url: map.url,
-						icon: '/favicon-32x32.png',
-						items: items.length > 0 ? items : undefined
-					};
-				})
-				.reverse()
+			items: maps.map((map) => {
+				if ('url' in map) {
+					return { title: map.title, url: map.url, icon: '/favicon-32x32.png' };
+				}
+				const items: NestedItem[] = [
+					{ title: 'Java', url: map.javaUrl },
+					{ title: 'Bedrock', url: map.bedrockUrl },
+					{ title: 'Mcworld', url: map.mcwUrl },
+					...(map.mcMarketplaceUrl ? [{ title: 'MC Marketplace', url: map.mcMarketplaceUrl }] : [])
+				];
+				return { title: map.title, url: items[0]!.url, icon: '/favicon-32x32.png', items };
+			})
 		}
 	]);
 </script>
@@ -165,10 +167,10 @@
 						</Sidebar.MenuButton>
 					</Sidebar.MenuItem>
 				{/each}
-				{#each dropdownItems as item (item.title)}
+				{#each dropdownItems as item (item.key)}
 					<Collapsible.Root
-						open={openStates[item.title.toLowerCase()]}
-						onOpenChange={(v) => (openStates[item.title.toLowerCase()] = v)}
+						open={openStates[item.key]}
+						onOpenChange={(v) => (openStates[item.key] = v)}
 						class="group/collapsible"
 					>
 						{#snippet child({ props })}
