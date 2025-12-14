@@ -10,7 +10,10 @@
 		UsersIcon,
 		VideoIcon,
 		EllipsisIcon,
-		CircleIcon
+		CircleIcon,
+		DownloadIcon,
+		ExternalLinkIcon,
+		ShieldIcon
 	} from '@lucide/svelte';
 	import { links } from '$lib/assets/data/links';
 	import { maps } from '$lib/assets/data/maps';
@@ -18,7 +21,7 @@
 	import type { SidebarChannel } from '$lib/remote/channels.remote';
 	import { page } from '$app/state';
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
-	import { TwitchSVG, YoutubeSVG } from '$lib/assets/svg';
+	import { TwitchSVG, TwitterSVG, YoutubeSVG } from '$lib/assets/svg';
 	import { siteConfig } from '$lib/config/site-config';
 
 	type Props = ComponentProps<typeof Sidebar.Root> & {
@@ -223,6 +226,11 @@
 																<DropdownMenu.Item class="cursor-pointer">
 																	{#snippet child({ props })}
 																		<a href={childItem.url} {...props}>
+																			{#if childItem.url.includes('https://')}
+																				<ExternalLinkIcon class="h-4 w-4" />
+																			{:else}
+																				<DownloadIcon class="h-4 w-4" />
+																			{/if}
 																			{childItem.title}
 																		</a>
 																	{/snippet}
@@ -250,6 +258,9 @@
 																	{/if}
 																{/if}
 																<span class:max-w-40={subItem.truncate}>{subItem.title}</span>
+																{#if item.key === 'maps'}
+																	<DownloadIcon class="ml-auto h-4 w-4" />
+																{/if}
 															</a>
 														{/snippet}
 													</Sidebar.MenuSubButton>
@@ -351,6 +362,7 @@
 					>
 						{#snippet child({ props })}
 							<a href="/privacy" {...props}>
+								<ShieldIcon class="h-4 w-4" />
 								<span>Privacy Policy</span>
 							</a>
 						{/snippet}
@@ -360,6 +372,7 @@
 					<Sidebar.MenuButton tooltipContent="Built by @EpicAlbin03">
 						{#snippet child({ props })}
 							<a href={siteConfig.links.twitter} target="_blank" {...props}>
+								<TwitterSVG class="h-4 w-4" />
 								<span>Built by @EpicAlbin03</span>
 							</a>
 						{/snippet}

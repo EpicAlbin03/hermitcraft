@@ -87,27 +87,27 @@ export const maps: MapLink[] = [
 		url: '/api/download/maps/hermitcraftmodded-s7-hermitpack.zip'
 	},
 	{
-		title: 'Modded S6 Modsauce 2',
+		title: 'Modsauce 2',
 		url: '/api/download/maps/hermitcraftmodded-s6-modsauce2.zip'
 	},
 	{
-		title: 'Modded S5 FTB Infinity',
+		title: 'FTB Infinity',
 		url: '/api/download/maps/hermitcraftmodded-s5-ftbinfinity.zip'
 	},
 	{
-		title: 'Modded S4 Modsauce',
+		title: 'Modsauce',
 		url: '/api/download/maps/hermitcraftmodded-s4-modsauce.zip'
 	},
 	{
-		title: 'Modded S3 FTB Monster',
+		title: 'FTB Monster',
 		url: '/api/download/maps/hermitcraftmodded-s3-ftbmonster.zip'
 	},
 	{
-		title: 'Modded S2 FTB Unleashed',
+		title: 'FTB Unleashed',
 		url: '/api/download/maps/hermitcraftmodded-s2-ftbunleashed.zip'
 	},
 	{
-		title: 'Modded S1 FTB Ultimate',
+		title: 'FTB Ultimate',
 		url: '/api/download/maps/hermitcraftmodded-s1-ftbultimate.zip'
 	},
 	{
