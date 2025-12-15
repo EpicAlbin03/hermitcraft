@@ -28,7 +28,7 @@ const main = Effect.gen(function* () {
 		yield* Effect.log('BUN_WORKER: finished channel sync');
 	}).pipe(
 		Effect.catchAllCause((cause) => Effect.logError('BUN_WORKER: channel sync failed', cause)),
-		Effect.repeat(dailyCron)
+		Effect.schedule(dailyCron)
 	);
 
 	// Token-bucket based per minute
@@ -38,7 +38,7 @@ const main = Effect.gen(function* () {
 		yield* Effect.log('BUN_WORKER: finished twitch sync');
 	}).pipe(
 		Effect.catchAllCause((cause) => Effect.logError('BUN_WORKER: twitch sync failed', cause)),
-		Effect.repeat(Schedule.spaced('2 minutes'))
+		Effect.schedule(Schedule.spaced('2 minutes'))
 	);
 
 	// 25 channels * 15 videos = 375 videos
@@ -56,7 +56,7 @@ const main = Effect.gen(function* () {
 		yield* Effect.log('BUN_WORKER: finished video sync');
 	}).pipe(
 		Effect.catchAllCause((cause) => Effect.logError('BUN_WORKER: video sync failed', cause)),
-		Effect.repeat(Schedule.spaced('2 minutes'))
+		Effect.schedule(Schedule.spaced('2 minutes'))
 	);
 
 	// Example backfill 100 videos per channel (using uploads playlist):
@@ -79,7 +79,7 @@ const main = Effect.gen(function* () {
 		yield* Effect.log('BUN_WORKER: finished backfill sync');
 	}).pipe(
 		Effect.catchAllCause((cause) => Effect.logError('BUN_WORKER: backfill sync failed', cause)),
-		Effect.repeat(dailyCron)
+		Effect.schedule(dailyCron)
 	);
 
 	yield* Effect.all(
