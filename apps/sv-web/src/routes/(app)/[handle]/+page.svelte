@@ -9,7 +9,7 @@
 	const handle = $derived(data.handle);
 	const channel = $derived(await remoteGetChannelDetails(handle));
 
-	const title = $derived(`${channel.ytName} - Hermitcraft Minecraft Videos & Episodes`);
+	const title = $derived(channel.ytName);
 	const description = $derived(
 		`Watch the latest Hermitcraft Minecraft videos and episodes from ${channel.ytName}.`
 	);

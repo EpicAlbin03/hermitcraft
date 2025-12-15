@@ -32,7 +32,9 @@
 		return siteConfig.ogImage.height;
 	});
 
-	const trueTitle = $derived(title === siteConfig.name ? siteConfig.name : title);
+	const trueTitle = $derived(
+		title === siteConfig.name ? siteConfig.name : `${title} - ${siteConfig.name}`
+	);
 </script>
 
 <svelte:head>
