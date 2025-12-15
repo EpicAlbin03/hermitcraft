@@ -280,7 +280,10 @@
 														<DropdownMenu.Root>
 															<DropdownMenu.Trigger>
 																{#snippet child({ props })}
-																	<Sidebar.MenuAction {...props} class="top-1 h-6 w-6">
+																	<Sidebar.MenuAction
+																		{...props}
+																		class="top-0.5 h-6 w-6 hover:border"
+																	>
 																		<CircleIcon
 																			class="size-2.5! fill-destructive text-destructive"
 																		/>
@@ -328,7 +331,7 @@
 															</DropdownMenu.Content>
 														</DropdownMenu.Root>
 													{:else if subItem.isTwitchLive}
-														<Sidebar.MenuAction class="top-1 h-6 w-6">
+														<Sidebar.MenuAction class="top-0.5 h-6 w-6 hover:border">
 															{#snippet child({ props })}
 																<a
 																	{...props}
@@ -341,7 +344,7 @@
 															{/snippet}
 														</Sidebar.MenuAction>
 													{:else if subItem.ytLiveVideoId}
-														<Sidebar.MenuAction class="top-1 h-6 w-6">
+														<Sidebar.MenuAction class="top-0.5 h-6 w-6 hover:border">
 															{#snippet child({ props })}
 																<a
 																	{...props}
