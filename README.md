@@ -1,4 +1,4 @@
-<div align="center">
+<div align="center" style="margin-bottom: 16px;">
  <img align="center" src="./apps/sv-web/static/hermitcraft-banner.png" height="96" />
 </div>
 
@@ -10,7 +10,7 @@ This is an unofficial redesign of the [hermitcraft.com](https://hermitcraft.com)
 
 The project uses the YouTube and Twitch APIs to fetch data about the channels and videos. The goal is to provide a better user experience for the Hermitcraft community.
 
-Visit the website at https://hermitcraft.up.railway.app.
+Visit the website at https://hermitcraft.up.railway.app/videos.
 
 ## Credits
 
