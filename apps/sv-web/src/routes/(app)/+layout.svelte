@@ -36,7 +36,7 @@
 				<Popover.Root>
 					<Popover.Trigger class="size-7">
 						{#snippet child({ props })}
-						<Button variant="ghost" size="icon" aria-label="App info" {...props}>
+							<Button variant="ghost" size="icon" aria-label="App info" {...props}>
 								<InfoIcon class="h-4 w-4" />
 							</Button>
 						{/snippet}
@@ -47,6 +47,14 @@
 								<h4 class="leading-none font-medium">App Info</h4>
 								<ul class="ml-4 list-disc text-sm text-muted-foreground">
 									<li>
+										This website is not affiliated with, endorsed by, or associated with Hermitcraft
+										or its members. It is an unofficial redesign of the <a
+											href="https://hermitcraft.com"
+											target="_blank"
+											class="underline hover:text-primary">hermitcraft.com</a
+										> website.
+									</li>
+									<li>
 										The latest 15 videos for each channel is updated every 2 minutes. Therefore, new
 										videos can take up to 2 minutes before they appear.
 									</li>
@@ -55,7 +63,7 @@
 										22:00 PT / 06:00 GMT / 07:00 CET.
 									</li>
 									<li>
-										If you encounter any issues or find something missing, please open a issue on <a
+										If you encounter any issues or find something missing, please open an issue on <a
 											href={`${siteConfig.links.github}/issues`}
 											target="_blank"
 											class="underline hover:text-primary">GitHub</a
