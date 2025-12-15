@@ -1,4 +1,4 @@
-import { NodeContext } from '@effect/platform-node';
+import { BunContext } from '@effect/platform-bun';
 import { DbError, DbService } from '$lib/services/db';
 import { error } from '@sveltejs/kit';
 import { Effect, Cause, ManagedRuntime, Layer } from 'effect';
@@ -16,7 +16,7 @@ export class AppError extends TaggedError('AppError') {
 	}
 }
 
-const appLayer = Layer.mergeAll(NodeContext.layer, DbService.Default);
+const appLayer = Layer.mergeAll(BunContext.layer, DbService.Default);
 
 const runtime = ManagedRuntime.make(appLayer);
 
