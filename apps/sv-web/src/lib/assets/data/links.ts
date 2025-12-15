@@ -1,11 +1,28 @@
-import { AtlauncherSVG, ModrinthSVG, RedditSVG, TwitchSVG, TwitterSVG } from '$lib/assets/svg';
+import {
+	AtlauncherSVG,
+	ModrinthSVG,
+	RedditSVG,
+	TwitchSVG,
+	TwitterSVG,
+	YoutubeSVG
+} from '$lib/assets/svg';
 import { ShirtIcon } from '@lucide/svelte';
 
 export const links = [
 	{
+		title: 'hermitcraft.com',
+		url: 'https://hermitcraft.com',
+		icon: 'https://favicon.pub/hermitcraft.com'
+	},
+	{
 		title: 'Merch',
 		url: 'https://shop.hermitcraft.com',
 		icon: ShirtIcon
+	},
+	{
+		title: 'YouTube',
+		url: 'https://youtube.com/c/HermitcraftOfficial',
+		icon: YoutubeSVG
 	},
 	{
 		title: 'Twitch',
