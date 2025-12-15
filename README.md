@@ -19,4 +19,4 @@ Visit the website at https://hermitcraft.up.railway.app/videos.
 
 ## License
 
-Licensed under the [MIT license](https://github.com/EpicAlbin03/hermitcraft/blob/main/LICENSE.md).
+Licensed under the [MIT license](https://github.com/EpicAlbin03/hermitcraft/blob/main/LICENSE).
