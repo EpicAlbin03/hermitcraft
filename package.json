@@ -19,10 +19,8 @@
     "clean": "find . -type d \\( -name \"node_modules\" -o -name \"dist\" -o -name \"build\" -o -name \".turbo\" -o -name \".svelte-kit\" \\) -prune -exec rm -rf {} + 2>/dev/null || true",
     "format": "prettier --write \"**/*.{ts,js,svelte,json,md}\"",
     "check-types": "turbo run check-types",
-    "build:web": "turbo run build --filter @hc/sv-web",
-    "build:worker": "turbo run build --filter @hc/bun-worker",
-    "start:web": "bun --filter @hc/sv-web start",
-    "start:worker": "bun --filter @hc/bun-worker start",
+    "docker:web": "docker build -f docker/Dockerfile.web -t hc-sv-web .",
+    "docker:worker": "docker build -f docker/Dockerfile.worker -t hc-bun-worker .",
     "prepare": "effect-language-service patch"
   },
   "devDependencies": {

@@ -5,8 +5,8 @@
 	"private": true,
 	"scripts": {
 		"dev": "bun --watch src/index.ts",
-		"build": "bun build src/index.ts --outdir dist --target bun",
-		"start": "bun run ./dist",
+		"build": "bun build src/index.ts --compile --outfile dist/worker",
+		"start": "./dist/worker",
 		"check": "tsc --noEmit",
 		"format": "prettier --write .",
 		"lint": "prettier --check ."
