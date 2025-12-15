@@ -19,8 +19,10 @@
     "apps/bun-worker": {
       "name": "@hc/bun-worker",
       "dependencies": {
+        "@effect/cluster": "^0.55.0",
         "@effect/platform": "^0.93.3",
         "@effect/platform-bun": "^0.84.0",
+        "@effect/workflow": "^0.15.2",
         "@hc/channel-sync": "*",
         "@hc/db": "*",
         "effect": "^3.19.5",
