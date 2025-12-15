@@ -116,11 +116,12 @@ const channelSyncService = Effect.gen(function* () {
 			let errorCount = 0;
 			const fullTaskName = taskName ? `${taskName}: ` : '';
 
+			yield* Console.log(`${fullTaskName}Syncing channels`);
 			yield* Effect.forEach(
 				channels,
 				(channel) =>
 					Effect.gen(function* () {
-						yield* Console.log(`${fullTaskName}Syncing channel ${channel.ytChannelId}`);
+						// yield* Console.log(`${fullTaskName}Syncing channel ${channel.ytChannelId}`);
 						const result = yield* syncChannel(channel.ytChannelId, {
 							twitchUserId: channel.twitchUserId || undefined,
 							twitchUserLogin: channel.twitchUserLogin || undefined,
@@ -131,7 +132,7 @@ const channelSyncService = Effect.gen(function* () {
 
 						if (result._tag === 'Right') {
 							successCount++;
-							yield* Console.log(`${fullTaskName}Synced channel ${channel.ytChannelId}`);
+							// yield* Console.log(`${fullTaskName}Synced channel ${channel.ytChannelId}`);
 						} else {
 							errorCount++;
 							yield* Console.error(`${fullTaskName}Failed to sync channel`, result.left);
@@ -240,12 +241,13 @@ const channelSyncService = Effect.gen(function* () {
 			);
 
 			// Step 5: Upsert all videos
+			yield* Console.log(`${fullTaskName}Syncing videos`);
 			yield* Effect.forEach(
 				allVideoDetailsMap.entries(),
 				([ytVideoId, videoDetails]) =>
 					Effect.gen(function* () {
 						const videoIsShort = allShortsMap.get(ytVideoId) || false;
-						yield* Console.log(`${fullTaskName}Syncing video ${ytVideoId}`);
+						// yield* Console.log(`${fullTaskName}Syncing video ${ytVideoId}`);
 						const result = yield* db
 							.upsertVideo({ ...videoDetails, isShort: videoIsShort })
 							.pipe(Effect.either);
@@ -256,7 +258,7 @@ const channelSyncService = Effect.gen(function* () {
 								yield* Console.warn(`\x1b[33m${fullTaskName}Skipped video ${ytVideoId}\x1b[0m`);
 							} else {
 								successCount++;
-								yield* Console.log(`${fullTaskName}Synced video ${ytVideoId}`);
+								// yield* Console.log(`${fullTaskName}Synced video ${ytVideoId}`);
 							}
 						} else {
 							errorCount++;
@@ -289,6 +291,7 @@ const channelSyncService = Effect.gen(function* () {
 			let errorCount = 0;
 			const fullTaskName = taskName ? `${taskName}: ` : '';
 
+			yield* Console.log(`${fullTaskName}Syncing channels (twitch)`);
 			yield* Effect.forEach(channels, (channel) =>
 				Effect.gen(function* () {
 					const result = yield* db
@@ -301,7 +304,7 @@ const channelSyncService = Effect.gen(function* () {
 
 					if (result._tag === 'Right') {
 						successCount++;
-						yield* Console.log(`${fullTaskName}Synced channel (twitch) ${channel.ytChannelId}`);
+						// yield* Console.log(`${fullTaskName}Synced channel (twitch) ${channel.ytChannelId}`);
 					} else {
 						errorCount++;
 						yield* Console.error(
