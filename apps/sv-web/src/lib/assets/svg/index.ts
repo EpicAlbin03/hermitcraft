@@ -9,6 +9,7 @@ export { default as PatreonSVG } from './patreon.svelte';
 export { default as RedditSVG } from './reddit.svelte';
 export { default as ThreadsSVG } from './threads.svelte';
 export { default as TikTokSVG } from './tiktok.svelte';
+export { default as TumblrSVG } from './tumblr.svelte';
 export { default as TwitchSVG } from './twitch.svelte';
 export { default as TwitterSVG } from './twitter.svelte';
 export { default as YoutubeSVG } from './youtube.svelte';

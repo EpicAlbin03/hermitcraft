@@ -42,13 +42,25 @@
 
 	let isDescriptionExpanded = $state(false);
 	const isTailwindBreakpoint = $derived(new IsTailwindBreakpoint().current);
-	const channelLinks = $derived([
-		{ title: channel.ytName, url: `https://www.youtube.com/${handle}` },
-		...(channel.twitchUserLogin
+	const channelLinks = $derived.by(() => {
+		const allLinks = [
+			{ title: channel.ytName, url: `https://www.youtube.com/${handle}` },
+			...(channel.links ?? [])
+		];
+
+		const youtubeLinks = allLinks.filter(
+			(link) => link.url.includes('youtube.com') || link.url.includes('youtu.be')
+		);
+		const nonYoutubeLinks = allLinks.filter(
+			(link) => !(link.url.includes('youtube.com') || link.url.includes('youtu.be'))
+		);
+
+		const twitchLink = channel.twitchUserLogin
 			? [{ title: 'Twitch', url: `https://www.twitch.tv/${channel.twitchUserLogin}` }]
-			: []),
-		...(channel.links ?? [])
-	]);
+			: [];
+
+		return [...youtubeLinks, ...twitchLink, ...nonYoutubeLinks];
+	});
 
 	const bannerRatio = $derived(BANNER_RATIOS[isTailwindBreakpoint] ?? BANNER_RATIOS.xs);
 	// Use stable src for SSR hydration - srcset handles responsive loading

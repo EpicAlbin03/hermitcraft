@@ -11,7 +11,8 @@ import {
 	ThreadsSVG,
 	TikTokSVG,
 	BlueskySVG,
-	DiscordSVG
+	DiscordSVG,
+	TumblrSVG
 } from '$lib/assets/svg';
 import { GlobeIcon, ShirtIcon } from '@lucide/svelte';
 
@@ -52,6 +53,8 @@ export function getIconFromUrl(url: string, title?: string) {
 			return ThreadsSVG;
 		case hostname.includes('tiktok.com'):
 			return TikTokSVG;
+		case hostname.includes('tumblr.com'):
+			return TumblrSVG;
 		case hostname.includes('twitch.tv'):
 			return TwitchSVG;
 		case hostname.includes('x.com') || hostname.includes('twitter.com'):
@@ -60,6 +63,8 @@ export function getIconFromUrl(url: string, title?: string) {
 			return YoutubeSVG;
 		case lowerTitle === 'merch':
 			return ShirtIcon;
+		case lowerTitle === 'obrotherhood.com': // Special case
+			return GlobeIcon;
 		default:
 			return {
 				url: `https://favicon.pub/${cleanHostname(hostname)}`,
