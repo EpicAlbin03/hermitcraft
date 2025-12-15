@@ -14,8 +14,10 @@
 		CircleIcon,
 		DownloadIcon,
 		ExternalLinkIcon,
-		ShieldIcon
+		ShieldIcon,
+		GlobeIcon
 	} from '@lucide/svelte';
+	import ImageIcon from '$lib/components/image-icon.svelte';
 	import { links } from '$lib/assets/data/links';
 	import { maps } from '$lib/assets/data/maps';
 	import { cn } from '$lib/utils';
@@ -208,16 +210,12 @@
 																<Sidebar.MenuSubButton {...props} isActive={subItem.isActive}>
 																	{#if subItem.icon}
 																		{#if typeof subItem.icon === 'string'}
-																			<Avatar.Root
-																				class={cn('h-4 w-4 text-[8px]', subItem.iconClass)}
-																			>
-																				<Avatar.Image src={subItem.icon} alt={subItem.title} />
-																				<Avatar.Fallback
-																					>{subItem.title
-																						.slice(0, 2)
-																						.toUpperCase()}</Avatar.Fallback
-																				>
-																			</Avatar.Root>
+																			<ImageIcon
+																				url={subItem.icon}
+																				alt={subItem.title}
+																				class={subItem.iconClass}
+																				fallback={GlobeIcon}
+																			/>
 																		{:else}
 																			<subItem.icon />
 																		{/if}
@@ -257,14 +255,25 @@
 															>
 																{#if subItem.icon}
 																	{#if typeof subItem.icon === 'string'}
-																		<Avatar.Root
-																			class={cn('h-4 w-4 text-[8px]', subItem.iconClass)}
-																		>
-																			<Avatar.Image src={subItem.icon} alt={subItem.title} />
-																			<Avatar.Fallback
-																				>{subItem.title.slice(0, 2).toUpperCase()}</Avatar.Fallback
+																		{#if item.key === 'members'}
+																			<Avatar.Root
+																				class={cn('h-4 w-4 text-[8px]', subItem.iconClass)}
 																			>
-																		</Avatar.Root>
+																				<Avatar.Image src={subItem.icon} alt={subItem.title} />
+																				<Avatar.Fallback
+																					>{subItem.title
+																						.slice(0, 2)
+																						.toUpperCase()}</Avatar.Fallback
+																				>
+																			</Avatar.Root>
+																		{:else}
+																			<ImageIcon
+																				url={subItem.icon}
+																				alt={subItem.title}
+																				class={subItem.iconClass}
+																				fallback={GlobeIcon}
+																			/>
+																		{/if}
 																	{:else}
 																		<subItem.icon />
 																	{/if}
