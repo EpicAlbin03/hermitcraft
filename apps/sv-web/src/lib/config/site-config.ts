@@ -4,7 +4,7 @@ export const siteConfig = {
 	name: 'hermitcraft',
 	url: PUBLIC_URL,
 	ogImage: {
-		url: `${PUBLIC_URL}/opengraph.png`,
+		url: `${PUBLIC_URL}/og.png`,
 		width: '1200',
 		height: '630'
 	},
