@@ -1,4 +1,4 @@
-export const PUBLIC_URL = 'https://localhost:5173'; // TODO: Change
+export const PUBLIC_URL = 'https://hermitcraft.up.railway.app';
 
 export const siteConfig = {
 	name: 'hermitcraft',
