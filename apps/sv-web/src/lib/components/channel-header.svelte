@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { Eye, Users, Video, ChevronDown, ChevronUp, Link as LinkIcon } from '@lucide/svelte';
+	import { useResizeObserver } from 'runed';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import { type ActiveTailwindBreakpoint } from '$lib/hooks/is-tailwind-breakpoint.svelte';
+	import {
+		type ActiveTailwindBreakpoint
+	} from '$lib/hooks/is-tailwind-breakpoint.svelte';
 	import { formatCompactNumber, parseChannelDescription } from '$lib/format';
 	import { cn } from '$lib/utils';
 	import { getIconFromUrl } from '$lib/utils';
@@ -29,6 +32,21 @@
 	const BANNER_SRCSET_WIDTHS = [960, 1280, 1600, 1920, 2120, 2560] as const;
 
 	let isDescriptionExpanded = $state(false);
+	let descriptionEl = $state<HTMLParagraphElement>(null!);
+	let resizeCount = $state(0);
+
+	useResizeObserver(
+		() => descriptionEl,
+		() => resizeCount++
+	);
+
+	const showExpandButton = $derived.by(() => {
+		// resizeCount triggers re-evaluation on resize
+		void resizeCount;
+		if (isDescriptionExpanded) return true;
+		if (!descriptionEl) return false;
+		return descriptionEl.scrollHeight > descriptionEl.clientHeight;
+	});
 
 	const channelLinks = $derived.by(() => {
 		const allLinks = [
@@ -171,6 +189,7 @@
 
 			<div class="mt-2 max-w-xl">
 				<p
+					bind:this={descriptionEl}
 					class={cn(
 						'text-sm whitespace-pre-wrap',
 						!isDescriptionExpanded && 'line-clamp-1 lg:line-clamp-2'
@@ -186,7 +205,7 @@
 						{/if}
 					{/each}
 				</p>
-				{#if channel.ytDescription.length > 175}
+				{#if showExpandButton}
 					<Button
 						variant="ghost"
 						size="sm"
