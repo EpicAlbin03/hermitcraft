@@ -195,7 +195,7 @@
 						!isDescriptionExpanded && 'line-clamp-1 lg:line-clamp-2'
 					)}
 				>
-					{#each parseChannelDescription(channel.ytDescription) as part}
+					{#each parseChannelDescription(channel.ytDescription.trim()) as part}
 						{#if part.type === 'link'}
 							<Button class="p-0" variant="link" size="sm" href={part.content} target="_blank">
 								{part.content}
