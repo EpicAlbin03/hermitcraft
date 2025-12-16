@@ -1,13 +1,9 @@
 <script lang="ts">
 	import { Eye, Users, Video, ChevronDown, ChevronUp, Link as LinkIcon } from '@lucide/svelte';
 	import * as Avatar from '$lib/components/ui/avatar';
-	import { AspectRatio } from '$lib/components/ui/aspect-ratio';
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import {
-		IsTailwindBreakpoint,
-		type ActiveTailwindBreakpoint
-	} from '$lib/hooks/is-tailwind-breakpoint.svelte';
+	import { type ActiveTailwindBreakpoint } from '$lib/hooks/is-tailwind-breakpoint.svelte';
 	import { formatCompactNumber, parseChannelDescription } from '$lib/format';
 	import { cn } from '$lib/utils';
 	import { getIconFromUrl } from '$lib/utils';
@@ -22,14 +18,6 @@
 
 	const { channel, handle }: Props = $props();
 
-	const BANNER_RATIOS: Record<ActiveTailwindBreakpoint, number> = {
-		xs: 2,
-		sm: 5 / 2,
-		md: 8 / 3,
-		lg: 4,
-		xl: 5,
-		'2xl': 7
-	};
 	const BANNER_WIDTHS: Record<ActiveTailwindBreakpoint, number> = {
 		xs: 960,
 		sm: 1280,
@@ -41,7 +29,7 @@
 	const BANNER_SRCSET_WIDTHS = [960, 1280, 1600, 1920, 2120, 2560] as const;
 
 	let isDescriptionExpanded = $state(false);
-	const isTailwindBreakpoint = $derived(new IsTailwindBreakpoint().current);
+
 	const channelLinks = $derived.by(() => {
 		const allLinks = [
 			{ title: channel.ytName, url: `https://www.youtube.com/${handle}` },
@@ -62,7 +50,6 @@
 		return [...youtubeLinks, ...twitchLink, ...nonYoutubeLinks];
 	});
 
-	const bannerRatio = $derived(BANNER_RATIOS[isTailwindBreakpoint] ?? BANNER_RATIOS.xs);
 	// Use stable src for SSR hydration - srcset handles responsive loading
 	const bannerSrc = $derived(
 		channel.ytBannerUrl ? `${channel.ytBannerUrl}=w${BANNER_WIDTHS['2xl']}` : null
@@ -98,28 +85,25 @@
 
 <div class="w-full rounded-xl bg-card pb-4 shadow-sm md:pb-6">
 	{#if bannerSrc}
-		<div class="w-full overflow-hidden rounded-t-xl">
-			<AspectRatio ratio={bannerRatio} class="bg-muted">
-				<img
-					src={bannerSrc}
-					srcset={bannerSrcset}
-					sizes="100vw"
-					fetchpriority="high"
-					loading="eager"
-					decoding="sync"
-					alt={`${channel.ytName} channel banner`}
-					class="h-full w-full object-cover"
-				/>
-			</AspectRatio>
+		<div
+			class="aspect-2/1 w-full overflow-hidden rounded-t-xl bg-muted sm:aspect-5/2 md:aspect-8/3 lg:aspect-4/1 xl:aspect-5/1 2xl:aspect-7/1"
+		>
+			<img
+				src={bannerSrc}
+				srcset={bannerSrcset}
+				sizes="100vw"
+				fetchpriority="high"
+				loading="eager"
+				decoding="sync"
+				alt={`${channel.ytName} channel banner`}
+				class="h-full w-full object-cover"
+			/>
 		</div>
 	{/if}
 
 	<div class="relative flex flex-col items-start gap-2 px-4 md:flex-row md:gap-6 md:px-6">
 		<div class="relative z-10 -mt-12 shrink-0 md:mt-6">
-			<Avatar.Root
-				class="h-24 w-24 border-4 border-card text-3xl shadow-sm md:h-32 md:w-32"
-				loadingStatus="loaded"
-			>
+			<Avatar.Root class="h-24 w-24 border-4 border-card text-3xl shadow-sm md:h-32 md:w-32">
 				{#snippet child({ props })}
 					<a {...props} href={`https://www.youtube.com/${handle}`} target="_blank">
 						<Avatar.Image src={channel.ytAvatarUrl} alt={channel.ytName} />
