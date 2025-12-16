@@ -40,6 +40,10 @@
 
 	const sidebar = useSidebar();
 
+	function closeMobileIfOpen() {
+		if (sidebar.openMobile) sidebar.setOpenMobile(false);
+	}
+
 	type Item = {
 		title: string;
 		icon: Component;
@@ -149,7 +153,7 @@
 					class="flex justify-center p-0 hover:bg-transparent active:bg-transparent"
 				>
 					{#snippet child({ props })}
-						<a href="/videos" {...props}>
+						<a href="/videos" {...props} onclick={closeMobileIfOpen}>
 							<enhanced:img
 								src="../../../static/hermitcraft-banner.png"
 								alt="Hermitcraft"
@@ -168,7 +172,7 @@
 					<Sidebar.MenuItem>
 						<Sidebar.MenuButton isActive={item.isActive}>
 							{#snippet child({ props })}
-								<a {...props} href={item.url}>
+								<a {...props} href={item.url} onclick={closeMobileIfOpen}>
 									<item.icon />
 									<span>{item.title}</span>
 								</a>
@@ -251,6 +255,7 @@
 															<a
 																href={subItem.url}
 																target={subItem.targetBlank ? '_blank' : undefined}
+																onclick={subItem.targetBlank ? undefined : closeMobileIfOpen}
 																{...props}
 															>
 																{#if subItem.icon}
@@ -385,7 +390,7 @@
 						isActive={page.url.pathname.startsWith('/privacy')}
 					>
 						{#snippet child({ props })}
-							<a href="/privacy" {...props}>
+							<a href="/privacy" {...props} onclick={closeMobileIfOpen}>
 								<ShieldIcon class="h-4 w-4" />
 								<span>Privacy Policy</span>
 							</a>
