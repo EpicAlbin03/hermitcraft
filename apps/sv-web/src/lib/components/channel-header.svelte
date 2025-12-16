@@ -116,7 +116,10 @@
 
 	<div class="relative flex flex-col items-start gap-2 px-4 md:flex-row md:gap-6 md:px-6">
 		<div class="relative z-10 -mt-12 shrink-0 md:mt-6">
-			<Avatar.Root class="h-24 w-24 border-4 border-card text-3xl shadow-sm md:h-32 md:w-32">
+			<Avatar.Root
+				class="h-24 w-24 border-4 border-card text-3xl shadow-sm md:h-32 md:w-32"
+				loadingStatus="loaded"
+			>
 				{#snippet child({ props })}
 					<a {...props} href={`https://www.youtube.com/${handle}`} target="_blank">
 						<Avatar.Image src={channel.ytAvatarUrl} alt={channel.ytName} />
