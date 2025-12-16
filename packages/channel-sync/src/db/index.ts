@@ -141,7 +141,18 @@ const dbService = Effect.gen(function* () {
 			});
 		});
 
-	const upsertChannel = (data: Channel) =>
+	const upsertChannel = (
+		data: Omit<
+			Channel,
+			'twitchUserId' | 'twitchUserLogin' | 'isTwitchLive' | 'ytLiveVideoId' | 'links'
+		> &
+			Partial<
+				Pick<
+					Channel,
+					'twitchUserId' | 'twitchUserLogin' | 'isTwitchLive' | 'ytLiveVideoId' | 'links'
+				>
+			>
+	) =>
 		Effect.gen(function* () {
 			const existing = yield* getChannel(data.ytChannelId, {
 				ytChannelId: DB_SCHEMA.channels.ytChannelId
@@ -189,10 +200,10 @@ const dbService = Effect.gen(function* () {
 							ytVideoCount: data.ytVideoCount,
 							ytJoinedAt: data.ytJoinedAt,
 							twitchUserId: data.twitchUserId,
-							twitchUserLogin: data.twitchUserLogin,
-							isTwitchLive: data.isTwitchLive,
-							ytLiveVideoId: data.ytLiveVideoId,
-							links: data.links
+							twitchUserLogin: data.twitchUserLogin || null,
+							isTwitchLive: data.isTwitchLive || false,
+							ytLiveVideoId: data.ytLiveVideoId || null,
+							links: data.links || []
 						}),
 					catch: (err) =>
 						new DbError('Failed to insert channel', {

@@ -20,7 +20,7 @@ const channelSyncService = Effect.gen(function* () {
 
 	const syncChannel = (
 		ytChannelId: string,
-		details: {
+		details?: {
 			twitchUserId?: string;
 			twitchUserLogin?: string;
 			isTwitchLive?: boolean;
@@ -45,11 +45,11 @@ const channelSyncService = Effect.gen(function* () {
 				ytSubscriberCount: channelDetails.ytSubscriberCount,
 				ytVideoCount: channelDetails.ytVideoCount,
 				ytJoinedAt: channelDetails.ytJoinedAt,
-				twitchUserId: details.twitchUserId || null,
-				twitchUserLogin: details.twitchUserLogin || null,
-				isTwitchLive: details.isTwitchLive || false,
-				ytLiveVideoId: details.ytLiveVideoId || null,
-				links: details.links || []
+				twitchUserId: details?.twitchUserId,
+				twitchUserLogin: details?.twitchUserLogin,
+				isTwitchLive: details?.isTwitchLive,
+				ytLiveVideoId: details?.ytLiveVideoId,
+				links: details?.links
 			});
 		}).pipe(
 			Effect.catchTag(
@@ -123,11 +123,11 @@ const channelSyncService = Effect.gen(function* () {
 					Effect.gen(function* () {
 						// yield* Console.log(`${fullTaskName}Syncing channel ${channel.ytChannelId}`);
 						const result = yield* syncChannel(channel.ytChannelId, {
-							twitchUserId: channel.twitchUserId || undefined,
-							twitchUserLogin: channel.twitchUserLogin || undefined,
-							isTwitchLive: channel.isTwitchLive || false,
-							ytLiveVideoId: channel.ytLiveVideoId || undefined,
-							links: channel.links || []
+							twitchUserId: channel.twitchUserId,
+							twitchUserLogin: channel.twitchUserLogin,
+							isTwitchLive: channel.isTwitchLive,
+							ytLiveVideoId: channel.ytLiveVideoId,
+							links: channel.links
 						}).pipe(Effect.either);
 
 						if (result._tag === 'Right') {
