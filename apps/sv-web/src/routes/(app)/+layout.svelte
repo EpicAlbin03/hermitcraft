@@ -1,18 +1,17 @@
 <script lang="ts">
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
-	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import ToggleMode from '$lib/components/toggle-mode.svelte';
-	import { remoteGetSidebarChannels, type SidebarChannel } from '$lib/remote/channels.remote';
+	import { remoteGetSidebarChannels } from '$lib/remote/channels.remote';
 	import { UserConfigContext } from '$lib/config/user-config.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { GithubSVG } from '$lib/assets/svg';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { InfoIcon } from '@lucide/svelte';
 	import { siteConfig } from '$lib/config/site-config';
+
 	let { children } = $props();
 
-	const channels = $derived<SidebarChannel[]>(await remoteGetSidebarChannels());
 	const userConfig = UserConfigContext.get();
 </script>
 
@@ -22,7 +21,9 @@
 		userConfig.setConfig({ sidebarOpen: open });
 	}}
 >
-	<AppSidebar {channels} />
+	{#await remoteGetSidebarChannels() then channels}
+		<AppSidebar {channels} />
+	{/await}
 	<Sidebar.Inset>
 		<header
 			class="flex h-16 shrink-0 items-center justify-between gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12"
