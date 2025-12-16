@@ -2,11 +2,10 @@
 	import { remoteGetChannelDetails, remoteGetChannelVideos } from '$lib/remote/channels.remote';
 	import ChannelHeader from '$lib/components/channel-header.svelte';
 	import VideoGrid from '$lib/components/video-grid.svelte';
-	import type { PageProps } from './$types';
 	import MetaData from '$lib/components/metadata.svelte';
 
-	const { data }: PageProps = $props();
-	const handle = $derived(data.handle);
+	const { params } = $props();
+	const handle = $derived(params.handle);
 	const channel = $derived(await remoteGetChannelDetails(handle));
 
 	const title = $derived(channel.ytName);
