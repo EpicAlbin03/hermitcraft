@@ -14,6 +14,10 @@
 
 This website is not affiliated with, endorsed by, or associated with Hermitcraft or its members. It is an unofficial redesign of the [hermitcraft.com](https://hermitcraft.com) website.
 
+## Security & Abuse Prevention
+
+We process IP addresses to protect our services from abuse, fraud, and excessive requests (e.g., rate limiting). IP addresses are stored temporarily and automatically deleted after a short period.
+
 ## YouTube Client API
 
 {siteConfig.url} uses a YouTube API Client that utilizes YouTube API Services. By using {siteConfig.url}, users are agreeing to be bound by the YouTube Terms of Service. The API Client is internal and does not use visitor information. The API Client retrieves publicly accessable data about channels and videos and stores this data in its database. This information is used solely to display YouTube-related content on this website and is not shared with any third parties.
