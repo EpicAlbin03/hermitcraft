@@ -5,7 +5,7 @@ import { type Icon as IconType } from '@lucide/svelte';
 declare global {
 	namespace App {
 		interface Error {
-			type: 'db' | 'unknown';
+			type: 'db' | 'unknown' | 'rate_limit';
 			message: string;
 			cause?: unknown;
 		}

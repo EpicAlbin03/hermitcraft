@@ -11,8 +11,28 @@ export class CacheError extends TaggedError('CacheError') {
 	}
 }
 
-// Default cache TTL: 2 minutes
-const DEFAULT_TTL = 120;
+export class RateLimitError extends TaggedError('RateLimitError') {
+	remaining: number;
+	resetIn: number;
+	constructor(message: string, remaining: number, resetIn: number) {
+		super();
+		this.message = message;
+		this.remaining = remaining;
+		this.resetIn = resetIn;
+	}
+}
+
+const DEFAULT_TTL = 120; // 2 minutes
+
+export const RATE_LIMITS = {
+	sidebar: { limit: 60, windowSecs: 60 },
+	live: { limit: 60, windowSecs: 60 },
+	channel: { limit: 60, windowSecs: 60 },
+	channelVideos: { limit: 240, windowSecs: 60 },
+	allVideos: { limit: 240, windowSecs: 60 }
+} as const;
+
+export type RateLimitKey = keyof typeof RATE_LIMITS;
 
 const cacheService = Effect.gen(function* () {
 	const redisUrl = yield* Effect.sync(() => env.REDIS_URL);
@@ -132,7 +152,78 @@ const cacheService = Effect.gen(function* () {
 					}
 				},
 				catch: (err) => new CacheError('Failed to delete pattern from cache', { cause: err })
-			}).pipe(Effect.catchAll(() => Effect.succeed(undefined)))
+			}).pipe(Effect.catchAll(() => Effect.succeed(undefined))),
+
+		/**
+		 * Rate limiting using sliding window counter
+		 * @param identifier - Unique identifier (typically IP address or user ID)
+		 * @param endpoint - The endpoint being rate limited (key of RATE_LIMITS)
+		 * @returns Effect that succeeds with rate limit info or fails with RateLimitError
+		 */
+		rateLimit: (identifier: string, endpoint: RateLimitKey) =>
+			Effect.gen(function* () {
+				const config = RATE_LIMITS[endpoint];
+				const key = `ratelimit:${endpoint}:${identifier}`;
+
+				// Increment counter
+				const count = yield* Effect.tryPromise({
+					try: () => client.incr(key),
+					catch: (err) => new CacheError('Failed to increment rate limit counter', { cause: err })
+				});
+
+				// Set expiry if this is the first request in window
+				if (count === 1) {
+					yield* Effect.tryPromise({
+						try: () => client.expire(key, config.windowSecs),
+						catch: (err) => new CacheError('Failed to set rate limit expiry', { cause: err })
+					});
+				}
+
+				// Get TTL for reset time
+				const ttl = yield* Effect.tryPromise({
+					try: () => client.ttl(key),
+					catch: () => config.windowSecs
+				}).pipe(Effect.catchAll(() => Effect.succeed(config.windowSecs)));
+
+				const remaining = Math.max(0, config.limit - count);
+				const limited = count > config.limit;
+
+				if (limited) {
+					return yield* Effect.fail(
+						new RateLimitError(
+							`Rate limit exceeded for ${endpoint}. Try again in ${ttl} seconds.`,
+							remaining,
+							ttl
+						)
+					);
+				}
+
+				return { limited: false, remaining, resetIn: ttl };
+			}).pipe(
+				// If Redis fails, allow the request (fail-open)
+				Effect.catchTag('CacheError', () =>
+					Effect.succeed({ limited: false, remaining: 999, resetIn: 0 })
+				)
+			),
+
+		/**
+		 * Check rate limit without incrementing (peek)
+		 */
+		rateLimitPeek: (identifier: string, endpoint: RateLimitKey) =>
+			Effect.gen(function* () {
+				const config = RATE_LIMITS[endpoint];
+				const key = `ratelimit:${endpoint}:${identifier}`;
+
+				const countStr = yield* Effect.tryPromise({
+					try: () => client.get(key),
+					catch: (err) => new CacheError('Failed to get rate limit counter', { cause: err })
+				}).pipe(Effect.catchAll(() => Effect.succeed(null)));
+
+				const count = countStr ? parseInt(countStr, 10) : 0;
+				const remaining = Math.max(0, config.limit - count);
+
+				return { count, remaining, limit: config.limit };
+			}).pipe(Effect.catchAll(() => Effect.succeed({ count: 0, remaining: 999, limit: 999 })))
 	};
 });
 
@@ -159,6 +250,16 @@ function createNoOpCache() {
 		delPattern: (pattern: string) => {
 			void pattern;
 			return Effect.succeed(undefined);
+		},
+		rateLimit: (identifier: string, endpoint: RateLimitKey) => {
+			void identifier;
+			void endpoint;
+			return Effect.succeed({ limited: false as const, remaining: 999, resetIn: 0 });
+		},
+		rateLimitPeek: (identifier: string, endpoint: RateLimitKey) => {
+			void identifier;
+			void endpoint;
+			return Effect.succeed({ count: 0, remaining: 999, limit: 999 });
 		}
 	};
 }

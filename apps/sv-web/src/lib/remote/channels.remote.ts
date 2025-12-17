@@ -1,46 +1,63 @@
-import { query } from '$app/server';
-import { DbRemoteRunner } from '$lib/remote/helpers';
+import { getRequestEvent, query } from '$app/server';
+import { DbRemoteRunner, getClientIp } from '$lib/remote/helpers';
+import type { RateLimitKey } from '$lib/services/cache';
 import { Effect } from 'effect';
 import { z } from 'zod';
 
 const videoFilterSchema = z.enum(['videos', 'shorts', 'livestreams']);
 const videoSortSchema = z.enum(['latest', 'most_viewed', 'most_liked', 'oldest']);
 
+function getRateLimit(endpoint: RateLimitKey) {
+	const event = getRequestEvent();
+	if (!event) return undefined;
+	return {
+		ip: getClientIp(event.request, event.getClientAddress),
+		endpoint
+	};
+}
+
 export const remoteGetSidebarChannels = query(async () => {
-	return DbRemoteRunner(({ db }) =>
-		Effect.gen(function* () {
-			const [channels, liveStatus] = yield* Effect.all([
-				db.getSidebarChannels(),
-				db.getLiveStatus()
-			]);
-			return channels.map((channel) => ({
-				...channel,
-				...liveStatus[channel.ytHandle]
-			}));
-		})
+	const rateLimit = getRateLimit('sidebar');
+	return DbRemoteRunner(
+		({ db }) =>
+			Effect.gen(function* () {
+				const [channels, liveStatus] = yield* Effect.all([
+					db.getSidebarChannels(),
+					db.getLiveStatus()
+				]);
+				return channels.map((channel) => ({
+					...channel,
+					...liveStatus[channel.ytHandle]
+				}));
+			}),
+		rateLimit
 	);
 });
 
 export type SidebarChannel = Awaited<ReturnType<typeof remoteGetSidebarChannels>>[number];
 
 export const remoteGetLiveStatus = query(async () => {
-	return DbRemoteRunner(({ db }) => db.getLiveStatus());
+	const rateLimit = getRateLimit('live');
+	return DbRemoteRunner(({ db }) => db.getLiveStatus(), rateLimit);
 });
 
 export type LiveStatus = Awaited<ReturnType<typeof remoteGetLiveStatus>>;
 
 export const remoteGetChannelDetails = query(z.string(), async (handle) => {
-	return DbRemoteRunner(({ db }) =>
-		Effect.gen(function* () {
-			const [channel, liveStatus] = yield* Effect.all([
-				db.getChannelByHandle(handle),
-				db.getLiveStatus()
-			]);
-			return {
-				...channel,
-				...liveStatus[channel.ytHandle]
-			};
-		})
+	const rateLimit = getRateLimit('channel');
+	return DbRemoteRunner(
+		({ db }) =>
+			Effect.gen(function* () {
+				const [channel, liveStatus] = yield* Effect.all([
+					db.getChannelByHandle(handle),
+					db.getLiveStatus()
+				]);
+				return {
+					...channel,
+					...liveStatus[channel.ytHandle]
+				};
+			}),
+		rateLimit
 	);
 });
 
@@ -60,8 +77,10 @@ export const remoteGetChannelVideos = query(
 		...paginationSchema.shape
 	}),
 	async ({ ytChannelId, limit, offset, filter, sort, onlyHermitCraft }) => {
-		return DbRemoteRunner(({ db }) =>
-			db.getChannelVideos(ytChannelId, limit, offset, filter, sort, onlyHermitCraft)
+		const rateLimit = getRateLimit('channelVideos');
+		return DbRemoteRunner(
+			({ db }) => db.getChannelVideos(ytChannelId, limit, offset, filter, sort, onlyHermitCraft),
+			rateLimit
 		);
 	}
 );
@@ -71,8 +90,10 @@ export type ChannelVideos = Awaited<ReturnType<typeof remoteGetChannelVideos>>;
 export const remoteGetAllVideos = query(
 	paginationSchema,
 	async ({ limit, offset, filter, sort, onlyHermitCraft }) => {
-		return DbRemoteRunner(({ db }) =>
-			db.getAllVideos(limit, offset, filter, sort, onlyHermitCraft)
+		const rateLimit = getRateLimit('allVideos');
+		return DbRemoteRunner(
+			({ db }) => db.getAllVideos(limit, offset, filter, sort, onlyHermitCraft),
+			rateLimit
 		);
 	}
 );
