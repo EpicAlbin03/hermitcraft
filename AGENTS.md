@@ -35,3 +35,13 @@ The Effect Solutions CLI provides curated best practices and patterns for Effect
 - `effect-solutions list` - List all available topics
 - `effect-solutions show <slug...>` - Read one or more topics
 - `effect-solutions search <term>` - Search topics by keyword
+
+## btca
+
+Trigger: user says "use btca" (for codebase/docs questions).
+
+Run:
+
+- btca ask -t <tech> -q "<question>"
+
+Available <tech>: svelte, tailwindcss, effect, runed
