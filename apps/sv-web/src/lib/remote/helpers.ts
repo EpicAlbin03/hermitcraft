@@ -58,11 +58,14 @@ export const DbRemoteRunner = async <A>(
 		),
 		Effect.catchTag('DbError', (err) =>
 			Effect.fail(
-				new AppError({
-					type: 'db',
-					message: err.message,
-					cause: err.cause
-				})
+				new AppError(
+					{
+						type: 'db',
+						message: err.message,
+						cause: err.cause instanceof Error ? err.cause.message : String(err.cause ?? '')
+					},
+					err.message === 'Channel not found' ? 404 : 500
+				)
 			)
 		),
 		Effect.matchCause({
