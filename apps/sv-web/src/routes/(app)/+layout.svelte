@@ -53,13 +53,13 @@
 									> website.
 								</li>
 								<li>
-									The latest 15 videos for each channel is updated every 2 minutes. Therefore, new
+									The latest 15 videos for each channel are updated every 2 minutes. Therefore, new
 									videos can take up to 2 minutes before they appear. It also checks if channels are
-									live on Twitch and YouTube.
+									live on Twitch and YouTube. This is cached for 2 minutes.
 								</li>
 								<li>
 									Channel info and old videos are updated once a day at 06:00 UTC / 01:00 ET / 22:00
-									PT / 06:00 GMT / 07:00 CET.
+									PT / 06:00 GMT / 07:00 CET. This is cached for 1 hour.
 								</li>
 								<li>
 									If you encounter any issues or find something missing, please open an issue on <a

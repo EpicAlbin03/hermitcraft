@@ -1,18 +1,47 @@
 import { query } from '$app/server';
 import { DbRemoteRunner } from '$lib/remote/helpers';
+import { Effect } from 'effect';
 import { z } from 'zod';
 
 const videoFilterSchema = z.enum(['videos', 'shorts', 'livestreams']);
 const videoSortSchema = z.enum(['latest', 'most_viewed', 'most_liked', 'oldest']);
 
 export const remoteGetSidebarChannels = query(async () => {
-	return DbRemoteRunner(({ db }) => db.getSidebarChannels());
+	return DbRemoteRunner(({ db }) =>
+		Effect.gen(function* () {
+			const [channels, liveStatus] = yield* Effect.all([
+				db.getSidebarChannels(),
+				db.getLiveStatus()
+			]);
+			return channels.map((channel) => ({
+				...channel,
+				...liveStatus[channel.ytHandle]
+			}));
+		})
+	);
 });
 
 export type SidebarChannel = Awaited<ReturnType<typeof remoteGetSidebarChannels>>[number];
 
+export const remoteGetLiveStatus = query(async () => {
+	return DbRemoteRunner(({ db }) => db.getLiveStatus());
+});
+
+export type LiveStatus = Awaited<ReturnType<typeof remoteGetLiveStatus>>;
+
 export const remoteGetChannelDetails = query(z.string(), async (handle) => {
-	return DbRemoteRunner(({ db }) => db.getChannelByHandle(handle));
+	return DbRemoteRunner(({ db }) =>
+		Effect.gen(function* () {
+			const [channel, liveStatus] = yield* Effect.all([
+				db.getChannelByHandle(handle),
+				db.getLiveStatus()
+			]);
+			return {
+				...channel,
+				...liveStatus[channel.ytHandle]
+			};
+		})
+	);
 });
 
 export type ChannelDetails = Awaited<ReturnType<typeof remoteGetChannelDetails>>;
