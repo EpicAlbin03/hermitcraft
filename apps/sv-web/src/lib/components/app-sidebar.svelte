@@ -256,6 +256,9 @@
 																href={subItem.url}
 																target={subItem.targetBlank ? '_blank' : undefined}
 																onclick={subItem.targetBlank ? undefined : closeMobileIfOpen}
+																data-sveltekit-preload-data={item.key === 'members'
+																	? 'false'
+																	: undefined}
 																{...props}
 															>
 																{#if subItem.icon}
