@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { useResizeObserver, useIntersectionObserver, watch } from 'runed';
+	import { useResizeObserver, useIntersectionObserver } from 'runed';
+	import { untrack } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { AspectRatio } from '$lib/components/ui/aspect-ratio';
@@ -90,6 +91,7 @@
 	let hasMore = $state(true);
 	let isIntersecting = $state(false);
 	let error = $state<string | null>(null);
+	let fetchVersion = $state(0);
 
 	const activeFilter = $derived.by((): VideoFilter => {
 		const filterParam = page.url.searchParams.get('filter');
@@ -131,16 +133,22 @@
 		goto(url.toString(), { replaceState: true, noScroll: true, keepFocus: true });
 	}
 
+	// Track current fetch params to detect changes
+	let currentFetchKey = $state('');
+	const fetchKey = $derived(`${key}:${activeFilter}:${activeSort}:${onlyHermitCraft}`);
+
 	// Reset state when key, filter, sort, or onlyHermitCraft changes
-	watch(
-		() => [key, activeFilter, activeSort, onlyHermitCraft] as const,
-		() => {
+	$effect.pre(() => {
+		const newKey = fetchKey;
+		if (untrack(() => currentFetchKey) !== newKey) {
+			currentFetchKey = newKey;
+			fetchVersion++;
 			videos = [];
 			hasMore = true;
 			error = null;
 			isLoading = false;
 		}
-	);
+	});
 
 	const isTailwindBreakpoint = $derived(new IsTailwindBreakpoint().current);
 	const sidebarSpace = useSidebarSpace(() => isTailwindBreakpoint);
@@ -218,6 +226,7 @@
 	async function loadMore() {
 		if (isLoading || !hasMore || error) return;
 
+		const currentVersion = fetchVersion;
 		isLoading = true;
 		try {
 			const newVideos = await fetchVideos({
@@ -227,16 +236,21 @@
 				sort: activeSort,
 				onlyHermitCraft: onlyHermitCraft
 			});
+			// Discard stale results if filter/sort changed during fetch
+			if (currentVersion !== fetchVersion) return;
 			if (newVideos.length < batchSize) {
 				hasMore = false;
 			}
 			videos = [...videos, ...newVideos];
 		} catch (e) {
+			if (currentVersion !== fetchVersion) return;
 			console.error('Failed to load videos:', e);
 			error = 'Failed to load videos';
 			hasMore = false;
 		} finally {
-			isLoading = false;
+			if (currentVersion === fetchVersion) {
+				isLoading = false;
+			}
 		}
 	}
 

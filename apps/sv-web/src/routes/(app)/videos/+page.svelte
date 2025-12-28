@@ -10,8 +10,10 @@
 
 <MetaData {title} {description} />
 
-<VideoGrid
-	fetchVideos={({ limit, offset, filter, sort, onlyHermitCraft }) =>
-		remoteGetAllVideos({ limit, offset, filter, sort, onlyHermitCraft })}
-	key="all-videos"
-/>
+{#key 'all-videos'}
+	<VideoGrid
+		fetchVideos={({ limit, offset, filter, sort, onlyHermitCraft }) =>
+			remoteGetAllVideos({ limit, offset, filter, sort, onlyHermitCraft })}
+		key="all-videos"
+	/>
+{/key}

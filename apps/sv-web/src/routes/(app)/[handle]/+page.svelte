@@ -5,28 +5,30 @@
 	import MetaData from '$lib/components/metadata.svelte';
 
 	const { params } = $props();
-	const handle = $derived(params.handle);
-	const channel = $derived(await remoteGetChannelDetails(handle));
-
-	const title = $derived(channel.ytName);
-	const description = $derived(
-		`Watch the latest Hermitcraft Minecraft videos and episodes from ${channel.ytName}.`
-	);
+	const handle = $derived(params.handle as string);
 </script>
 
-<MetaData {title} {description} />
+{#if handle}
+	{@const channel = await remoteGetChannelDetails(handle)}
+	<MetaData
+		title={channel.ytName}
+		description={`Watch the latest Hermitcraft Minecraft videos and episodes from ${channel.ytName}.`}
+	/>
 
-<ChannelHeader {channel} {handle} />
-<VideoGrid
-	fetchVideos={({ limit, offset, filter, sort, onlyHermitCraft }) =>
-		remoteGetChannelVideos({
-			ytChannelId: channel.ytChannelId,
-			limit,
-			offset,
-			filter,
-			sort,
-			onlyHermitCraft
-		})}
-	key={channel.ytChannelId}
-	{channel}
-/>
+	{#key channel.ytChannelId}
+		<ChannelHeader {channel} {handle} />
+		<VideoGrid
+			fetchVideos={({ limit, offset, filter, sort, onlyHermitCraft }) =>
+				remoteGetChannelVideos({
+					ytChannelId: channel.ytChannelId,
+					limit,
+					offset,
+					filter,
+					sort,
+					onlyHermitCraft
+				})}
+			key={channel.ytChannelId}
+			{channel}
+		/>
+	{/key}
+{/if}
