@@ -90,7 +90,6 @@ const dbService = Effect.gen(function* () {
 							cause: err
 						})
 				});
-				// Return as a map for easy lookup
 				return Object.fromEntries(
 					liveData.map((c) => [
 						c.ytHandle,
@@ -174,28 +173,33 @@ const dbService = Effect.gen(function* () {
 							})
 							.from(DB_SCHEMA.videos)
 							.where(() => {
-								const hermitCraftCondition = onlyHermitCraft
-									? like(DB_SCHEMA.videos.title, '%hermitcraft%')
-									: undefined;
+								const conditions = [
+									inArray(DB_SCHEMA.videos.uploadStatus, ['uploaded', 'processed']),
+									eq(DB_SCHEMA.videos.privacyStatus, 'public')
+								];
+
+								if (onlyHermitCraft) {
+									conditions.push(like(DB_SCHEMA.videos.title, '%hermitcraft%'));
+								}
 
 								if (filter === 'livestreams') {
 									return and(
 										eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
 										inArray(DB_SCHEMA.videos.livestreamType, ['live', 'upcoming', 'completed']),
-										hermitCraftCondition
+										...conditions
 									);
 								} else if (filter === 'shorts') {
 									return and(
 										eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
 										eq(DB_SCHEMA.videos.isShort, true),
-										hermitCraftCondition
+										...conditions
 									);
 								} else {
 									return and(
 										eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
 										eq(DB_SCHEMA.videos.livestreamType, 'none'),
 										eq(DB_SCHEMA.videos.isShort, false),
-										hermitCraftCondition
+										...conditions
 									);
 								}
 							})
@@ -261,22 +265,27 @@ const dbService = Effect.gen(function* () {
 								eq(DB_SCHEMA.videos.ytChannelId, DB_SCHEMA.channels.ytChannelId)
 							)
 							.where(() => {
-								const hermitCraftCondition = onlyHermitCraft
-									? like(DB_SCHEMA.videos.title, '%hermitcraft%')
-									: undefined;
+								const conditions = [
+									inArray(DB_SCHEMA.videos.uploadStatus, ['uploaded', 'processed']),
+									eq(DB_SCHEMA.videos.privacyStatus, 'public')
+								];
+
+								if (onlyHermitCraft) {
+									conditions.push(like(DB_SCHEMA.videos.title, '%hermitcraft%'));
+								}
 
 								if (filter === 'livestreams') {
 									return and(
 										inArray(DB_SCHEMA.videos.livestreamType, ['live', 'upcoming', 'completed']),
-										hermitCraftCondition
+										...conditions
 									);
 								} else if (filter === 'shorts') {
-									return and(eq(DB_SCHEMA.videos.isShort, true), hermitCraftCondition);
+									return and(eq(DB_SCHEMA.videos.isShort, true), ...conditions);
 								} else {
 									return and(
 										eq(DB_SCHEMA.videos.livestreamType, 'none'),
 										eq(DB_SCHEMA.videos.isShort, false),
-										hermitCraftCondition
+										...conditions
 									);
 								}
 							})

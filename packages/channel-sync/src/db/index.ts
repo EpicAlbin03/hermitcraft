@@ -243,6 +243,8 @@ const dbService = Effect.gen(function* () {
 									.set({
 										title: data.title,
 										thumbnailUrl: data.thumbnailUrl,
+										privacyStatus: data.privacyStatus,
+										uploadStatus: data.uploadStatus,
 										viewCount: data.viewCount,
 										likeCount: data.likeCount,
 										commentCount: data.commentCount,
@@ -261,6 +263,8 @@ const dbService = Effect.gen(function* () {
 									title: data.title,
 									thumbnailUrl: data.thumbnailUrl,
 									publishedAt: data.publishedAt,
+									privacyStatus: data.privacyStatus,
+									uploadStatus: data.uploadStatus,
 									viewCount: data.viewCount,
 									likeCount: data.likeCount,
 									commentCount: data.commentCount,
@@ -311,6 +315,8 @@ const dbService = Effect.gen(function* () {
 						.set({
 							title: data.title,
 							thumbnailUrl: data.thumbnailUrl,
+							privacyStatus: data.privacyStatus,
+							uploadStatus: data.uploadStatus,
 							viewCount: data.viewCount,
 							likeCount: data.likeCount,
 							commentCount: data.commentCount,

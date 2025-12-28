@@ -31,6 +31,10 @@ export const videos = table(
 		title: t.varchar('title', { length: 100 }).notNull(),
 		thumbnailUrl: t.varchar('thumbnail_url', { length: 255 }).notNull(),
 		publishedAt: t.datetime('published_at').notNull(),
+		privacyStatus: t.mysqlEnum('privacy_status', ['private', 'public', 'unlisted']).notNull(),
+		uploadStatus: t
+			.mysqlEnum('upload_status', ['deleted', 'failed', 'processed', 'rejected', 'uploaded'])
+			.notNull(),
 		viewCount: t.int('view_count').notNull(),
 		likeCount: t.int('like_count').notNull(),
 		commentCount: t.int('comment_count').notNull(),

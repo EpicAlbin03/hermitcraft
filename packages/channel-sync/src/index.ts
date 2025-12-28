@@ -73,6 +73,8 @@ const channelSyncService = Effect.gen(function* () {
 				title: videoDetails.title,
 				thumbnailUrl: videoDetails.thumbnailUrl,
 				publishedAt: videoDetails.publishedAt,
+				privacyStatus: videoDetails.privacyStatus,
+				uploadStatus: videoDetails.uploadStatus,
 				viewCount: videoDetails.viewCount,
 				likeCount: videoDetails.likeCount,
 				commentCount: videoDetails.commentCount,

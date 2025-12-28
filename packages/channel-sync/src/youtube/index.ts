@@ -87,6 +87,8 @@ const youtubeService = Effect.gen(function* () {
 				title: item.snippet.title || '',
 				thumbnailUrl: thumbnail?.url || '',
 				publishedAt: new Date(item.snippet.publishedAt || 0),
+				privacyStatus: item.status?.privacyStatus || 'public',
+				uploadStatus: item.status?.uploadStatus || 'uploaded',
 				viewCount: parseInt(item.statistics?.viewCount || '0', 10),
 				likeCount: parseInt(item.statistics?.likeCount || '0', 10),
 				commentCount: parseInt(item.statistics?.commentCount || '0', 10),
@@ -102,7 +104,7 @@ const youtubeService = Effect.gen(function* () {
 					item.liveStreamingDetails?.concurrentViewers || '0',
 					10
 				)
-			};
+			} as Omit<Video, 'isShort'>;
 		});
 
 	const getVideoDetails = (ytVideoId: string) =>
@@ -110,7 +112,7 @@ const youtubeService = Effect.gen(function* () {
 			const response = yield* Effect.tryPromise({
 				try: () =>
 					youtube.videos.list({
-						part: ['snippet', 'statistics', 'contentDetails', 'liveStreamingDetails'],
+						part: ['snippet', 'statistics', 'contentDetails', 'liveStreamingDetails', 'status'],
 						id: [ytVideoId]
 					}),
 				catch: (err) =>
@@ -131,7 +133,7 @@ const youtubeService = Effect.gen(function* () {
 			const response = yield* Effect.tryPromise({
 				try: () =>
 					youtube.videos.list({
-						part: ['snippet', 'statistics', 'contentDetails', 'liveStreamingDetails'],
+						part: ['snippet', 'statistics', 'contentDetails', 'liveStreamingDetails', 'status'],
 						id: ytVideoIds
 					}),
 				catch: (err) =>
