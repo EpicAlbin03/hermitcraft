@@ -61,13 +61,26 @@ export function formatRelativeTime(date: Date | string) {
 	};
 
 	if (seconds < timeInSeconds.minute) return 'just now';
-	if (seconds < timeInSeconds.hour)
-		return `${Math.floor(seconds / timeInSeconds.minute)} minutes ago`;
-	if (seconds < timeInSeconds.day) return `${Math.floor(seconds / timeInSeconds.hour)} hours ago`;
-	if (seconds < timeInSeconds.week) return `${Math.floor(seconds / timeInSeconds.day)} days ago`;
-	if (seconds < timeInSeconds.month) return `${Math.floor(seconds / timeInSeconds.week)} weeks ago`;
-	if (seconds < timeInSeconds.year)
-		return `${Math.floor(seconds / timeInSeconds.month)} months ago`;
+	if (seconds < timeInSeconds.hour) {
+		const minutes = Math.floor(seconds / timeInSeconds.minute);
+		return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+	}
+	if (seconds < timeInSeconds.day) {
+		const hours = Math.floor(seconds / timeInSeconds.hour);
+		return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+	}
+	if (seconds < timeInSeconds.week) {
+		const days = Math.floor(seconds / timeInSeconds.day);
+		return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+	}
+	if (seconds < timeInSeconds.month) {
+		const weeks = Math.floor(seconds / timeInSeconds.week);
+		return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+	}
+	if (seconds < timeInSeconds.year) {
+		const months = Math.floor(seconds / timeInSeconds.month);
+		return `${months} ${months === 1 ? 'month' : 'months'} ago`;
+	}
 
 	return formatDate(d);
 }
