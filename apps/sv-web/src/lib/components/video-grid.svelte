@@ -227,10 +227,12 @@
 		if (isLoading || !hasMore || error) return;
 
 		const currentVersion = fetchVersion;
+		// Capture batch size at request time - it may change during fetch due to ResizeObserver
+		const requestBatchSize = batchSize;
 		isLoading = true;
 		try {
 			const newVideos = await fetchVideos({
-				limit: batchSize,
+				limit: requestBatchSize,
 				offset: videos.length,
 				filter: activeFilter,
 				sort: activeSort,
@@ -238,7 +240,7 @@
 			});
 			// Discard stale results if filter/sort changed during fetch
 			if (currentVersion !== fetchVersion) return;
-			if (newVideos.length < batchSize) {
+			if (newVideos.length < requestBatchSize) {
 				hasMore = false;
 			}
 			videos = [...videos, ...newVideos];
