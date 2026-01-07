@@ -346,6 +346,25 @@ const dbService = Effect.gen(function* () {
 				})
 		});
 
+	const markVideosAsPrivate = (ytVideoIds: string[]) =>
+		Effect.gen(function* () {
+			if (ytVideoIds.length === 0) return 0;
+
+			const result = yield* Effect.tryPromise({
+				try: () =>
+					drizzle
+						.update(DB_SCHEMA.videos)
+						.set({ privacyStatus: 'private' })
+						.where(inArray(DB_SCHEMA.videos.ytVideoId, ytVideoIds)),
+				catch: (err) =>
+					new DbError('Failed to mark videos as private', {
+						cause: err
+					})
+			});
+
+			return result[0].affectedRows ?? 0;
+		});
+
 	const deleteChannel = (ytChannelId: string) =>
 		Effect.tryPromise({
 			try: () =>
@@ -385,7 +404,8 @@ const dbService = Effect.gen(function* () {
 		deleteVideo,
 		deleteChannel,
 		deleteAllVideos,
-		deleteAllChannels
+		deleteAllChannels,
+		markVideosAsPrivate
 	};
 });
 

@@ -204,6 +204,7 @@ const channelSyncService = Effect.gen(function* () {
 
 			// Step 3: Batch video IDs into groups of 50 for getBatchVideoDetails
 			const allVideoDetailsMap = new Map<string, Omit<Video, 'isShort'>>();
+			const missingVideoIds: string[] = [];
 
 			for (let i = 0; i < allVideoIds.length; i += 50) {
 				const batch = allVideoIds.slice(i, i + 50);
@@ -211,6 +212,20 @@ const channelSyncService = Effect.gen(function* () {
 				for (const [id, details] of batchDetails.entries()) {
 					allVideoDetailsMap.set(id, details);
 				}
+				// Videos requested but not returned are private/deleted/unlisted
+				for (const id of batch) {
+					if (!batchDetails.has(id) && existingVideoIds.has(id)) {
+						missingVideoIds.push(id);
+					}
+				}
+			}
+
+			// Mark missing videos as private (they were public before but are no longer accessible)
+			if (missingVideoIds.length > 0) {
+				const markedCount = yield* db.markVideosAsPrivate(missingVideoIds);
+				yield* Console.log(
+					`${fullTaskName}Marked ${markedCount} videos as private (no longer accessible via API)`
+				);
 			}
 
 			// Step 4: Get areVideosShorts per channel ONLY for new videos (not in DB)
