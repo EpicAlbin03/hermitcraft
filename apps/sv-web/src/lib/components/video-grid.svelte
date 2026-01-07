@@ -264,7 +264,10 @@
 	);
 
 	$effect(() => {
-		if (isIntersecting && hasMore && !isLoading && !error) {
+		// For initial load (empty videos), don't require intersection - always load
+		// For subsequent loads (pagination), require intersection with sentinel
+		const isInitialLoad = videos.length === 0;
+		if ((isIntersecting || isInitialLoad) && hasMore && !isLoading && !error) {
 			loadMore();
 		}
 	});
