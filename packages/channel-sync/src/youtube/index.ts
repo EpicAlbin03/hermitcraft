@@ -299,6 +299,34 @@ const youtubeService = Effect.gen(function* () {
 			return result;
 		});
 
+	const getLiveStreamVideoIds = (ytChannelId: string, maxResults: number = 10) =>
+		Effect.gen(function* () {
+			const livestreamsPlaylistId = getYtPlaylistId(ytChannelId, 'livestreams');
+			if (!livestreamsPlaylistId) return [];
+
+			const response = yield* Effect.tryPromise({
+				try: () =>
+					youtube.playlistItems.list({
+						part: ['contentDetails'],
+						playlistId: livestreamsPlaylistId,
+						maxResults
+					}),
+				catch: (err) =>
+					new YoutubeError(`Failed to fetch livestreams playlist for ${ytChannelId}`, {
+						cause: err
+					})
+			});
+
+			const videoIds: string[] = [];
+			for (const item of response.data.items || []) {
+				if (item.contentDetails?.videoId) {
+					videoIds.push(item.contentDetails.videoId);
+				}
+			}
+
+			return videoIds;
+		});
+
 	return {
 		getChannelDetails,
 		getVideoDetails,
@@ -306,7 +334,8 @@ const youtubeService = Effect.gen(function* () {
 		getVideoIdsFromUploadsPlaylist,
 		getRSSVideoIds,
 		isVideoShort,
-		areVideosShorts
+		areVideosShorts,
+		getLiveStreamVideoIds
 	};
 });
 

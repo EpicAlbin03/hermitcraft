@@ -340,12 +340,141 @@ const channelSyncService = Effect.gen(function* () {
 			return isTwitchLiveMap;
 		});
 
+	const syncYoutubeLive = (taskName?: string) =>
+		Effect.gen(function* () {
+			const start = performance.now();
+			const fullTaskName = taskName ? `${taskName}: ` : '';
+
+			const channels = yield* db.getAllChannels({
+				ytChannelId: DB_SCHEMA.channels.ytChannelId
+			});
+
+			yield* Console.log(`${fullTaskName}Syncing YouTube live status`);
+
+			let successCount = 0;
+			let errorCount = 0;
+			let liveCount = 0;
+
+			// Collect all video IDs from livestreams playlists
+			const allVideoIds: string[] = [];
+			const videoToChannelMap = new Map<string, string>();
+
+			yield* Effect.forEach(
+				channels,
+				(channel) =>
+					Effect.gen(function* () {
+						const result = yield* Effect.either(
+							yt.getLiveStreamVideoIds(channel.ytChannelId, 5)
+						);
+
+						if (result._tag === 'Left') {
+							yield* Console.warn(
+								`\x1b[33m${fullTaskName}Failed to get livestream video IDs for ${channel.ytChannelId}\x1b[0m`
+							);
+							return;
+						}
+
+						for (const videoId of result.right) {
+							allVideoIds.push(videoId);
+							videoToChannelMap.set(videoId, channel.ytChannelId);
+						}
+					}),
+				{ concurrency: 5 }
+			);
+
+			if (allVideoIds.length === 0) {
+				yield* Console.log(`${fullTaskName}No livestream videos to check`);
+				return;
+			}
+
+			// Get video details in batches of 50
+			const liveVideosByChannel = new Map<string, string | null>();
+			const liveVideoDetails = new Map<string, Omit<Video, 'isShort'>>();
+
+			// Initialize all channels to null (no live video)
+			for (const channel of channels) {
+				liveVideosByChannel.set(channel.ytChannelId, null);
+			}
+
+			for (let i = 0; i < allVideoIds.length; i += 50) {
+				const batch = allVideoIds.slice(i, i + 50);
+				const batchDetails = yield* yt.getBatchVideoDetails(batch);
+
+				for (const [videoId, details] of batchDetails.entries()) {
+					const ytChannelId = videoToChannelMap.get(videoId);
+					if (!ytChannelId) continue;
+
+					if (details.livestreamType === 'live') {
+						liveVideosByChannel.set(ytChannelId, videoId);
+						liveVideoDetails.set(videoId, details);
+						liveCount++;
+					}
+				}
+			}
+
+			// Upsert live videos to database first (to satisfy foreign key constraint)
+			if (liveVideoDetails.size > 0) {
+				yield* Console.log(`${fullTaskName}Upserting ${liveVideoDetails.size} live video(s)`);
+				yield* Effect.forEach(
+					liveVideoDetails.entries(),
+					([videoId, details]) =>
+						Effect.gen(function* () {
+							const result = yield* db
+								.upsertVideo({ ...details, isShort: false })
+								.pipe(Effect.either);
+
+							if (result._tag === 'Left') {
+								yield* Console.error(
+									`${fullTaskName}Failed to upsert live video ${videoId}`,
+									result.left
+								);
+								// Remove from live videos map if upsert failed
+								const ytChannelId = videoToChannelMap.get(videoId);
+								if (ytChannelId) {
+									liveVideosByChannel.set(ytChannelId, null);
+								}
+							}
+						}),
+					{ concurrency: 5 }
+				);
+			}
+
+			// Update channels with live status
+			yield* Effect.forEach(
+				channels,
+				(channel) =>
+					Effect.gen(function* () {
+						const liveVideoId = liveVideosByChannel.get(channel.ytChannelId) ?? null;
+						const result = yield* db
+							.updateChannel(channel.ytChannelId, { ytLiveVideoId: liveVideoId })
+							.pipe(Effect.either);
+
+						if (result._tag === 'Right') {
+							successCount++;
+						} else {
+							errorCount++;
+							yield* Console.error(
+								`${fullTaskName}Failed to update YT live status for ${channel.ytChannelId}`,
+								result.left
+							);
+						}
+					}),
+				{ concurrency: 5 }
+			);
+
+			yield* Console.log(
+				`YOUTUBE LIVE SYNC COMPLETED: ${successCount} channels synced, ${errorCount} failed, ${liveCount} currently live`
+			);
+			yield* Console.log(`YOUTUBE LIVE SYNC TOOK ${performance.now() - start}ms`);
+		});
+
 	return {
 		syncChannel,
 		syncVideo,
 		syncChannels,
 		syncVideos,
-		syncTwitchLive
+		syncTwitchLive,
+		syncYoutubeLive
 	};
 });
 

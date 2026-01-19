@@ -49,6 +49,8 @@ const main = Effect.gen(function* () {
 		if (selected.some(([name]) => name === 'channel')) {
 			yield* channelSync.syncTwitchLive();
 			yield* Console.log('Synced twitch live');
+			yield* channelSync.syncYoutubeLive();
+			yield* Console.log('Synced youtube live');
 		}
 	} else {
 		const ytChannelIds = channels.map((c) => c.ytChannelId);
@@ -95,6 +97,8 @@ const main = Effect.gen(function* () {
 		if (selected.some(([name]) => name === 'channels')) {
 			yield* channelSync.syncTwitchLive();
 			yield* Console.log('Synced twitch live');
+			yield* channelSync.syncYoutubeLive();
+			yield* Console.log('Synced youtube live');
 		}
 	}
 }).pipe(

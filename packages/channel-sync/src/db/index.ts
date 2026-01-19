@@ -218,7 +218,9 @@ const dbService = Effect.gen(function* () {
 	const upsertVideo = (data: Video) =>
 		Effect.gen(function* () {
 			const durationSeconds = parseIsoDurationToSeconds(data.duration);
-			if (durationSeconds === null || durationSeconds === 0) {
+			const isLiveOrUpcoming = data.livestreamType === 'live' || data.livestreamType === 'upcoming';
+			// Allow 0-duration for live/upcoming streams (they don't have a duration yet)
+			if ((durationSeconds === null || durationSeconds === 0) && !isLiveOrUpcoming) {
 				yield* Console.warn(
 					`\x1b[33mDuration is 0 or invalid for video ${data.ytVideoId}, skipping\x1b[0m`
 				);

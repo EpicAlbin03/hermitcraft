@@ -41,6 +41,18 @@ const main = Effect.gen(function* () {
 		Effect.schedule(Schedule.spaced('2 minutes'))
 	);
 
+	// * Disabled due to youtube quota limits
+	// const youtubeLiveSyncProgram = Effect.gen(function* () {
+	// 	yield* Effect.log('BUN_WORKER: starting youtube live sync');
+	// 	yield* channelSync.syncYoutubeLive('BUN_WORKER');
+	// 	yield* Effect.log('BUN_WORKER: finished youtube live sync');
+	// }).pipe(
+	// 	Effect.catchAllCause((cause) =>
+	// 		Effect.logError('BUN_WORKER: youtube live sync failed', cause)
+	// 	),
+	// 	Effect.schedule(Schedule.spaced('2 minutes'))
+	// );
+
 	// 25 channels * 15 videos = 375 videos
 	// 1 quota per 50 videos (375 / 50 = 7.5 = 8 batches) + (1 quota per channel for new videos checking isVideoShort)
 	// Each run = 8 * 1 + upto 25 * playlist batches
@@ -83,8 +95,8 @@ const main = Effect.gen(function* () {
 	);
 
 	yield* Effect.all(
-		[channelSyncProgram, twitchSyncProgram, videoSyncProgram, backfillSyncProgram],
-		{ concurrency: 4 }
+		[channelSyncProgram, twitchSyncProgram, youtubeLiveSyncProgram, videoSyncProgram, backfillSyncProgram],
+		{ concurrency: 5 }
 	);
 }).pipe(Effect.provide(appLayer), Effect.withSpan('BgWorker.main'));
 
