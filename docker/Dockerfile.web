@@ -9,8 +9,7 @@ RUN turbo prune @hc/sv-web --docker
 FROM base AS install
 WORKDIR /app
 COPY --from=prune /app/out/json/ .
-COPY --from=prune /app/out/bun.lock ./bun.lock
-RUN bun install --frozen-lockfile
+RUN bun install
 
 FROM base AS build
 WORKDIR /app
