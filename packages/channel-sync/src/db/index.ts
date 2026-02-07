@@ -144,12 +144,22 @@ const dbService = Effect.gen(function* () {
 	const upsertChannel = (
 		data: Omit<
 			Channel,
-			'twitchUserId' | 'twitchUserLogin' | 'isTwitchLive' | 'ytLiveVideoId' | 'links'
+			| 'twitchUserId'
+			| 'twitchUserLogin'
+			| 'isTwitchLive'
+			| 'ytLiveVideoId'
+			| 'links'
+			| 'ytBannerThumbHash'
 		> &
 			Partial<
 				Pick<
 					Channel,
-					'twitchUserId' | 'twitchUserLogin' | 'isTwitchLive' | 'ytLiveVideoId' | 'links'
+					| 'twitchUserId'
+					| 'twitchUserLogin'
+					| 'isTwitchLive'
+					| 'ytLiveVideoId'
+					| 'links'
+					| 'ytBannerThumbHash'
 				>
 			>
 	) =>
@@ -169,6 +179,7 @@ const dbService = Effect.gen(function* () {
 								ytDescription: data.ytDescription,
 								ytAvatarUrl: data.ytAvatarUrl,
 								ytBannerUrl: data.ytBannerUrl,
+								ytBannerThumbHash: data.ytBannerThumbHash,
 								ytViewCount: data.ytViewCount,
 								ytSubscriberCount: data.ytSubscriberCount,
 								ytVideoCount: data.ytVideoCount,
@@ -195,6 +206,7 @@ const dbService = Effect.gen(function* () {
 							ytDescription: data.ytDescription,
 							ytAvatarUrl: data.ytAvatarUrl,
 							ytBannerUrl: data.ytBannerUrl,
+							ytBannerThumbHash: data.ytBannerThumbHash || null,
 							ytViewCount: data.ytViewCount,
 							ytSubscriberCount: data.ytSubscriberCount,
 							ytVideoCount: data.ytVideoCount,

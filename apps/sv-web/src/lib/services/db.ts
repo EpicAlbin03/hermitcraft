@@ -113,6 +113,7 @@ const dbService = Effect.gen(function* () {
 								ytHandle: DB_SCHEMA.channels.ytHandle,
 								ytAvatarUrl: DB_SCHEMA.channels.ytAvatarUrl,
 								ytBannerUrl: DB_SCHEMA.channels.ytBannerUrl,
+								ytBannerThumbHash: DB_SCHEMA.channels.ytBannerThumbHash,
 								ytDescription: DB_SCHEMA.channels.ytDescription,
 								ytViewCount: DB_SCHEMA.channels.ytViewCount,
 								ytSubscriberCount: DB_SCHEMA.channels.ytSubscriberCount,

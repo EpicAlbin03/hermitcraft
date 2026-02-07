@@ -34,6 +34,15 @@
 	let isDescriptionExpanded = $state(false);
 	let descriptionEl = $state<HTMLParagraphElement>(null!);
 	let resizeCount = $state(0);
+	let bannerLoaded = $state(false);
+	let bannerImgEl = $state<HTMLImageElement>(null!);
+
+	// Detect already-cached banner images (loaded before hydration)
+	$effect(() => {
+		if (bannerImgEl?.complete && bannerImgEl.naturalWidth > 0) {
+			bannerLoaded = true;
+		}
+	});
 
 	useResizeObserver(
 		() => descriptionEl,
@@ -104,17 +113,33 @@
 <div class="w-full rounded-xl bg-card pb-4 shadow-sm md:pb-6">
 	{#if bannerSrc}
 		<div
-			class="aspect-2/1 w-full overflow-hidden rounded-t-xl bg-muted sm:aspect-5/2 md:aspect-8/3 lg:aspect-4/1 xl:aspect-5/1 2xl:aspect-7/1"
+			class="relative aspect-2/1 w-full overflow-hidden rounded-t-xl bg-muted sm:aspect-5/2 md:aspect-8/3 lg:aspect-4/1 xl:aspect-5/1 2xl:aspect-7/1"
 		>
+			{#if channel.ytBannerThumbHash}
+				<img
+					src={channel.ytBannerThumbHash}
+					alt=""
+					aria-hidden="true"
+					class={cn(
+						'absolute inset-0 h-full w-full scale-110 object-cover blur-xl transition-opacity duration-500',
+						bannerLoaded ? 'opacity-0' : 'opacity-100'
+					)}
+				/>
+			{/if}
 			<img
+				bind:this={bannerImgEl}
 				src={bannerSrc}
 				srcset={bannerSrcset}
 				sizes="100vw"
 				fetchpriority="high"
 				loading="eager"
-				decoding="sync"
+				decoding="async"
+				onload={() => (bannerLoaded = true)}
 				alt={`${channel.ytName} channel banner`}
-				class="h-full w-full object-cover"
+				class={cn(
+					'relative h-full w-full object-cover transition-opacity duration-500',
+					bannerLoaded ? 'opacity-100' : 'opacity-0'
+				)}
 			/>
 		</div>
 	{/if}

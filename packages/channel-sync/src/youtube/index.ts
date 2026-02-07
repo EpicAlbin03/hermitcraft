@@ -3,6 +3,8 @@ import { Console, Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { getYtPlaylistId, getVideoLivestreamType, parseYtRSS } from './utils';
 import type { Video } from '@hc/db';
+import sharp from 'sharp';
+import { rgbaToThumbHash, thumbHashToDataURL } from 'thumbhash';
 class YoutubeError extends TaggedError('YoutubeError') {
 	constructor(message: string, options?: { cause?: unknown }) {
 		super();
@@ -22,6 +24,25 @@ const youtubeService = Effect.gen(function* () {
 		version: 'v3',
 		auth: youtubeApiKey
 	});
+
+	const generateBannerThumbHash = (bannerUrl: string) =>
+		Effect.gen(function* () {
+			const res = yield* Effect.tryPromise({
+				try: () => fetch(`${bannerUrl}=w100`),
+				catch: (err) => new YoutubeError('Failed to fetch banner for thumbhash', { cause: err })
+			});
+			const buffer = yield* Effect.tryPromise({
+				try: () => res.arrayBuffer(),
+				catch: (err) => new YoutubeError('Failed to read banner buffer', { cause: err })
+			});
+			const { data, info } = yield* Effect.tryPromise({
+				try: () =>
+					sharp(Buffer.from(buffer)).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+				catch: (err) => new YoutubeError('Failed to decode banner image', { cause: err })
+			});
+			const hash = rgbaToThumbHash(info.width, info.height, data);
+			return thumbHashToDataURL(hash);
+		});
 
 	const getChannelDetails = (ytChannelId: string) =>
 		Effect.gen(function* () {
@@ -49,13 +70,25 @@ const youtubeService = Effect.gen(function* () {
 				item.snippet.thumbnails?.medium ||
 				item.snippet.thumbnails?.default;
 
+			const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl || '';
+			const ytBannerThumbHash = bannerUrl
+				? yield* generateBannerThumbHash(bannerUrl).pipe(
+						Effect.catchAll((err) =>
+							Console.log(`Failed to generate thumbhash: ${err.message}`).pipe(
+								Effect.map(() => null)
+							)
+						)
+					)
+				: null;
+
 			return {
 				ytChannelId: item.id,
 				ytName: item.snippet.title || '',
 				ytHandle: item.snippet.customUrl || '',
 				ytDescription: item.snippet.description || '',
 				ytAvatarUrl: thumbnail?.url || '',
-				ytBannerUrl: item.brandingSettings?.image?.bannerExternalUrl || '',
+				ytBannerUrl: bannerUrl,
+				ytBannerThumbHash,
 				ytViewCount: parseInt(item.statistics?.viewCount || '0', 10),
 				ytSubscriberCount: parseInt(item.statistics?.subscriberCount || '0', 10),
 				ytVideoCount: parseInt(item.statistics?.videoCount || '0', 10),

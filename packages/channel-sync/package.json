@@ -25,6 +25,8 @@
 		"@twurple/auth": "^8.0.2",
 		"effect": "^3.19.5",
 		"googleapis": "^164.1.0",
+		"sharp": "^0.34.5",
+		"thumbhash": "^0.1.1",
 		"zod": "^4.1.12"
 	}
 }

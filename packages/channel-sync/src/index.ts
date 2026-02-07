@@ -41,6 +41,7 @@ const channelSyncService = Effect.gen(function* () {
 				ytDescription: channelDetails.ytDescription,
 				ytAvatarUrl: channelDetails.ytAvatarUrl,
 				ytBannerUrl: channelDetails.ytBannerUrl,
+				ytBannerThumbHash: channelDetails.ytBannerThumbHash,
 				ytViewCount: channelDetails.ytViewCount,
 				ytSubscriberCount: channelDetails.ytSubscriberCount,
 				ytVideoCount: channelDetails.ytVideoCount,

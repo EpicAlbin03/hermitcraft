@@ -9,6 +9,7 @@ export const channels = table('channels', {
 	ytDescription: t.text('yt_description').notNull(),
 	ytAvatarUrl: t.varchar('yt_avatar_url', { length: 255 }).notNull(),
 	ytBannerUrl: t.varchar('yt_banner_url', { length: 255 }).notNull(),
+	ytBannerThumbHash: t.text('yt_banner_thumb_hash'),
 	ytViewCount: t.bigint('yt_view_count', { mode: 'number' }).notNull(),
 	ytSubscriberCount: t.int('yt_subscriber_count').notNull(),
 	ytVideoCount: t.int('yt_video_count').notNull(),
