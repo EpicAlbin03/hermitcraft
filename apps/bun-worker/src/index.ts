@@ -95,7 +95,7 @@ const main = Effect.gen(function* () {
 	);
 
 	yield* Effect.all(
-		[channelSyncProgram, twitchSyncProgram, youtubeLiveSyncProgram, videoSyncProgram, backfillSyncProgram],
+		[channelSyncProgram, twitchSyncProgram, videoSyncProgram, backfillSyncProgram],
 		{ concurrency: 5 }
 	);
 }).pipe(Effect.provide(appLayer), Effect.withSpan('BgWorker.main'));
