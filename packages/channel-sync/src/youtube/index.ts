@@ -3,7 +3,7 @@ import { Console, Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { getYtPlaylistId, getVideoLivestreamType, parseYtRSS } from './utils';
 import type { Video } from '@hc/db';
-import { decode as decodeJpeg } from 'jpeg-js';
+import sharp from 'sharp';
 import { rgbaToThumbHash, thumbHashToDataURL } from 'thumbhash';
 class YoutubeError extends TaggedError('YoutubeError') {
 	constructor(message: string, options?: { cause?: unknown }) {
@@ -27,16 +27,20 @@ const youtubeService = Effect.gen(function* () {
 
 	const generateBannerThumbHash = (bannerUrl: string) =>
 		Effect.gen(function* () {
-		const res = yield* Effect.tryPromise({
-			try: () => fetch(`${bannerUrl}=w100`, { headers: { Accept: 'image/jpeg' } }),
-			catch: (err) => new YoutubeError('Failed to fetch banner for thumbhash', { cause: err })
-		});
-		const buffer = yield* Effect.tryPromise({
-			try: () => res.arrayBuffer(),
-			catch: (err) => new YoutubeError('Failed to read banner buffer', { cause: err })
-		});
-		const decoded = decodeJpeg(new Uint8Array(buffer), { useTArray: true });
-		const hash = rgbaToThumbHash(decoded.width, decoded.height, decoded.data);
+			const res = yield* Effect.tryPromise({
+				try: () => fetch(`${bannerUrl}=w100`),
+				catch: (err) => new YoutubeError('Failed to fetch banner for thumbhash', { cause: err })
+			});
+			const buffer = yield* Effect.tryPromise({
+				try: () => res.arrayBuffer(),
+				catch: (err) => new YoutubeError('Failed to read banner buffer', { cause: err })
+			});
+			const { data, info } = yield* Effect.tryPromise({
+				try: () =>
+					sharp(new Uint8Array(buffer)).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+				catch: (err) => new YoutubeError('Failed to decode banner image', { cause: err })
+			});
+			const hash = rgbaToThumbHash(info.width, info.height, data);
 			return thumbHashToDataURL(hash);
 		});
 
