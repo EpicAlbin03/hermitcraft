@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { Console, Effect, Layer } from 'effect';
+import { Cause, Console, Effect, Layer } from 'effect';
 import { ChannelSyncService, DbService } from '../src';
 import { askQuestion, parseIdArgs, selectOperations } from './utils';
 import { channels } from '../src/channels';
@@ -109,7 +109,7 @@ const main = Effect.gen(function* () {
 			process.exit(0);
 		},
 		onFailure: (cause) => {
-			console.error('Seed failed:', cause);
+			console.error('Seed failed:', Cause.pretty(cause));
 			process.exit(1);
 		}
 	})
