@@ -4,6 +4,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "docker compose -f docker/docker-compose.yml up -d && dotenv -- turbo run dev",
+    "dev:web": "dotenv -- bun run --cwd apps/sv-web dev",
     "dev:no-db": "dotenv -- turbo run dev",
     "db:up": "docker compose -f docker/docker-compose.yml up -d",
     "db:down": "docker compose -f docker/docker-compose.yml down",
