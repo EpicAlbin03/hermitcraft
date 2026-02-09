@@ -289,6 +289,13 @@ const channelSyncService = Effect.gen(function* () {
 			yield* Console.log(
 				`VIDEO SYNC COMPLETED: ${successCount} videos synced, ${errorCount} videos failed, ${skipCount} videos skipped`
 			);
+
+			// Clean up stale ytLiveVideoId references (e.g. ended/private livestreams)
+			const clearedCount = yield* db.cleanupStaleLiveReferences();
+			if (clearedCount > 0) {
+				yield* Console.log(`Cleared ${clearedCount} stale YouTube live reference(s)`);
+			}
+
 			yield* Console.log(`VIDEO SYNC TOOK ${performance.now() - start}ms`);
 		});
 
@@ -364,9 +371,7 @@ const channelSyncService = Effect.gen(function* () {
 				channels,
 				(channel) =>
 					Effect.gen(function* () {
-						const result = yield* Effect.either(
-							yt.getLiveStreamVideoIds(channel.ytChannelId, 5)
-						);
+						const result = yield* Effect.either(yt.getLiveStreamVideoIds(channel.ytChannelId, 5));
 
 						if (result._tag === 'Left') {
 							yield* Console.warn(

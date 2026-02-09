@@ -1,4 +1,14 @@
-import { DB_SCHEMA, getDrizzleInstance, eq, inArray, type Video, type Channel } from '@hc/db';
+import {
+	DB_SCHEMA,
+	getDrizzleInstance,
+	eq,
+	inArray,
+	and,
+	isNotNull,
+	ne,
+	type Video,
+	type Channel
+} from '@hc/db';
 import { Console, Effect } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { parseIsoDurationToSeconds } from '../youtube/utils';
@@ -376,7 +386,78 @@ const dbService = Effect.gen(function* () {
 					})
 			});
 
+			// Clear ytLiveVideoId on channels referencing any of these now-private videos
+			yield* Effect.tryPromise({
+				try: () =>
+					drizzle
+						.update(DB_SCHEMA.channels)
+						.set({ ytLiveVideoId: null })
+						.where(inArray(DB_SCHEMA.channels.ytLiveVideoId, ytVideoIds)),
+				catch: (err) =>
+					new DbError('Failed to clear live video refs for private videos', {
+						cause: err
+					})
+			});
+
 			return result[0].affectedRows ?? 0;
+		});
+
+	const cleanupStaleLiveReferences = () =>
+		Effect.gen(function* () {
+			// Find channels with a ytLiveVideoId that no longer points to a valid live video
+			const channelsWithLive = yield* Effect.tryPromise({
+				try: () =>
+					drizzle
+						.select({
+							ytChannelId: DB_SCHEMA.channels.ytChannelId,
+							ytLiveVideoId: DB_SCHEMA.channels.ytLiveVideoId
+						})
+						.from(DB_SCHEMA.channels)
+						.where(isNotNull(DB_SCHEMA.channels.ytLiveVideoId)),
+				catch: (err) => new DbError('Failed to get channels with live videos', { cause: err })
+			});
+
+			if (channelsWithLive.length === 0) return 0;
+
+			const liveVideoIds = channelsWithLive
+				.map((c) => c.ytLiveVideoId)
+				.filter((id): id is string => id !== null);
+
+			// Check which of these videos are still valid and live
+			const validLiveVideos = yield* Effect.tryPromise({
+				try: () =>
+					drizzle
+						.select({ ytVideoId: DB_SCHEMA.videos.ytVideoId })
+						.from(DB_SCHEMA.videos)
+						.where(
+							and(
+								inArray(DB_SCHEMA.videos.ytVideoId, liveVideoIds),
+								eq(DB_SCHEMA.videos.livestreamType, 'live'),
+								eq(DB_SCHEMA.videos.privacyStatus, 'public')
+							)
+						),
+				catch: (err) => new DbError('Failed to validate live videos', { cause: err })
+			});
+
+			const validLiveVideoIds = new Set(validLiveVideos.map((v) => v.ytVideoId));
+
+			// Find channels whose ytLiveVideoId is stale
+			const staleChannelIds = channelsWithLive
+				.filter((c) => c.ytLiveVideoId && !validLiveVideoIds.has(c.ytLiveVideoId))
+				.map((c) => c.ytChannelId);
+
+			if (staleChannelIds.length === 0) return 0;
+
+			yield* Effect.tryPromise({
+				try: () =>
+					drizzle
+						.update(DB_SCHEMA.channels)
+						.set({ ytLiveVideoId: null })
+						.where(inArray(DB_SCHEMA.channels.ytChannelId, staleChannelIds)),
+				catch: (err) => new DbError('Failed to clear stale live video references', { cause: err })
+			});
+
+			return staleChannelIds.length;
 		});
 
 	const deleteChannel = (ytChannelId: string) =>
@@ -419,7 +500,8 @@ const dbService = Effect.gen(function* () {
 		deleteChannel,
 		deleteAllVideos,
 		deleteAllChannels,
-		markVideosAsPrivate
+		markVideosAsPrivate,
+		cleanupStaleLiveReferences
 	};
 });
 
