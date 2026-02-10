@@ -386,6 +386,24 @@ const dbService = Effect.gen(function* () {
 					})
 			});
 
+			// Mark live streams as completed (they ended and went private)
+			yield* Effect.tryPromise({
+				try: () =>
+					drizzle
+						.update(DB_SCHEMA.videos)
+						.set({ livestreamType: 'completed' })
+						.where(
+							and(
+								inArray(DB_SCHEMA.videos.ytVideoId, ytVideoIds),
+								eq(DB_SCHEMA.videos.livestreamType, 'live')
+							)
+						),
+				catch: (err) =>
+					new DbError('Failed to mark live videos as completed', {
+						cause: err
+					})
+			});
+
 			// Clear ytLiveVideoId on channels referencing any of these now-private videos
 			yield* Effect.tryPromise({
 				try: () =>

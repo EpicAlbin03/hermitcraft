@@ -195,6 +195,22 @@ const channelSyncService = Effect.gen(function* () {
 				{ concurrency: 5 }
 			);
 
+			// Step 1.5: Include currently-referenced live video IDs so ended/private streams get re-checked
+			const channelsWithLive = yield* db.getAllChannels({
+				ytChannelId: DB_SCHEMA.channels.ytChannelId,
+				ytLiveVideoId: DB_SCHEMA.channels.ytLiveVideoId
+			});
+			const allVideoIdsSet = new Set(allVideoIds);
+			for (const channel of channelsWithLive) {
+				if (channel.ytLiveVideoId && !allVideoIdsSet.has(channel.ytLiveVideoId)) {
+					allVideoIds.push(channel.ytLiveVideoId);
+					allVideoIdsSet.add(channel.ytLiveVideoId);
+					const channelVideos = videosByChannel.get(channel.ytChannelId) || [];
+					channelVideos.push(channel.ytLiveVideoId);
+					videosByChannel.set(channel.ytChannelId, channelVideos);
+				}
+			}
+
 			// Step 2: Check which videos already exist in DB and get their isShort values
 			const existingVideos = yield* db.getVideos(allVideoIds, {
 				ytVideoId: DB_SCHEMA.videos.ytVideoId,
