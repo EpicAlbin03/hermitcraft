@@ -9,10 +9,10 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { InfoIcon } from '@lucide/svelte';
 	import { siteConfig } from '$lib/config/site-config';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 
 	let { children } = $props();
 
-	const channels = $derived<SidebarChannel[]>(await remoteGetSidebarChannels());
 	const userConfig = UserConfigContext.get();
 </script>
 
@@ -22,7 +22,31 @@
 		userConfig.setConfig({ sidebarOpen: open });
 	}}
 >
-	<AppSidebar {channels} />
+	<svelte:boundary>
+		{#await remoteGetSidebarChannels() then channels}
+			<AppSidebar channels={channels as SidebarChannel[]} />
+		{/await}
+		{#snippet pending()}
+			<Sidebar.Root collapsible="offcanvas">
+				<Sidebar.Header>
+					<div class="px-2 pt-2">
+						<Skeleton class="h-16 w-full rounded-md" />
+					</div>
+				</Sidebar.Header>
+				<Sidebar.Content class="no-scrollbar">
+					<Sidebar.Group class="pt-0">
+						<Sidebar.Menu>
+							{#each [1, 2, 3, 4, 5, 6, 7, 8] as item (item)}
+								<Sidebar.MenuItem>
+									<Sidebar.MenuSkeleton showIcon />
+								</Sidebar.MenuItem>
+							{/each}
+						</Sidebar.Menu>
+					</Sidebar.Group>
+				</Sidebar.Content>
+			</Sidebar.Root>
+		{/snippet}
+	</svelte:boundary>
 	<Sidebar.Inset>
 		<header
 			class="flex h-16 shrink-0 items-center justify-between gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12"
