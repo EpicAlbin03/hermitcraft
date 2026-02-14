@@ -8,7 +8,9 @@ export const GET: RequestHandler = async ({ params }) => {
 		status: 200,
 		headers: {
 			'Content-Type': 'application/octet-stream', // generic binary
-			'Content-Disposition': `attachment; filename="${params.file}"` // triggers download
+			'Content-Disposition': `attachment; filename="${params.file}"`, // triggers download
+			'Cache-Control': 'public, max-age=86400, immutable',
+			'Content-Length': file.size.toString()
 		}
 	});
 };
