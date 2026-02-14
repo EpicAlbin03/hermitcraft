@@ -2,11 +2,11 @@
 
 import { Console, Effect } from 'effect';
 import { DbService } from '../src';
-import { askQuestion, parseIdArgs, selectOperations } from './utils';
+import { askQuestion, color, parseScriptArgs, prompt, selectOperations } from './utils';
 
 const main = Effect.gen(function* () {
 	const db = yield* DbService;
-	const id = parseIdArgs();
+	const { id, yes, all, operations } = parseScriptArgs();
 
 	if (id) {
 		const { selected, names } = yield* selectOperations({
@@ -14,24 +14,32 @@ const main = Effect.gen(function* () {
 				channel: () => db.deleteChannel(id),
 				video: () => db.deleteVideo(id)
 			},
-			prompt: 'Select what to wipe (channel or video)'
+			prompt: 'Select what to wipe (channel or video)',
+			autoSelect: operations,
+			all
 		});
 
 		if (selected.length === 0) {
-			yield* Console.log('No valid selection. Aborting.');
+			yield* Console.log(color.warn('No valid selection. Aborting.'));
 			return;
 		}
 
-		const confirmation = yield* askQuestion(`Delete ${names} with id "${id}"? Type "yes": `);
-		if (confirmation.trim() !== 'yes') {
-			yield* Console.log('Aborted.');
-			return;
+		if (!yes) {
+			const confirmation = yield* askQuestion(
+				prompt.confirmTypeYes(`Delete ${names} with id "${id}"?`)
+			);
+			if (confirmation.trim() !== 'yes') {
+				yield* Console.log(color.warn('Aborted.'));
+				return;
+			}
 		}
+
+		yield* Console.log(color.action(`Running operations: ${names}`));
 
 		yield* Effect.forEach(selected, ([name, wipe]) =>
 			Effect.gen(function* () {
 				yield* wipe();
-				yield* Console.log(`Deleted ${name}: ${id}`);
+				yield* Console.log(color.success(`Deleted ${name}: ${id}`));
 			})
 		);
 	} else {
@@ -40,29 +48,33 @@ const main = Effect.gen(function* () {
 				videos: () => db.deleteAllVideos(),
 				channels: () => db.deleteAllChannels()
 			},
-			prompt: 'Select tables to wipe'
+			prompt: 'Select tables to wipe',
+			autoSelect: operations,
+			all
 		});
 
 		if (selected.length === 0) {
-			yield* Console.log('No valid tables selected. Aborting.');
+			yield* Console.log(color.warn('No valid selection. Aborting.'));
 			return;
 		}
 
-		const confirmation = yield* askQuestion(
-			`This will wipe the following tables: ${names}. Type "yes" to continue: `
-		);
+		if (!yes) {
+			const confirmation = yield* askQuestion(
+				prompt.confirmTypeYes(`Wipe the following: ${names}.`)
+			);
 
-		if (confirmation.trim() !== 'yes') {
-			yield* Console.log('Aborted.');
-			return;
+			if (confirmation.trim() !== 'yes') {
+				yield* Console.log(color.warn('Aborted.'));
+				return;
+			}
 		}
 
-		yield* Console.log(`Wiping DB tables: ${names}...`);
+		yield* Console.log(color.action(`Running operations: ${names}`));
 
 		yield* Effect.forEach(selected, ([name, wipe]) =>
 			Effect.gen(function* () {
 				yield* wipe();
-				yield* Console.log(`Wiped ${name}`);
+				yield* Console.log(color.success(`Wiped ${name}`));
 			})
 		);
 	}
@@ -70,11 +82,11 @@ const main = Effect.gen(function* () {
 	Effect.provide(DbService.Default),
 	Effect.matchCause({
 		onSuccess: () => {
-			console.log('DB wipe completed successfully');
+			console.log(color.success('DB wipe completed successfully'));
 			process.exit(0);
 		},
 		onFailure: (cause) => {
-			console.error('Wipe failed:', cause);
+			console.error(color.error('Wipe failed:'), cause);
 			process.exit(1);
 		}
 	})

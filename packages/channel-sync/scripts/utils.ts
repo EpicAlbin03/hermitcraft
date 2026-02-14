@@ -1,19 +1,75 @@
 import { Effect } from 'effect';
 import { parseArgs } from 'util';
 
+const ANSI = {
+	reset: '\x1b[0m',
+	blue: '\x1b[34m',
+	cyan: '\x1b[36m',
+	green: '\x1b[32m',
+	yellow: '\x1b[33m',
+	red: '\x1b[31m'
+} as const;
+
+const withColor = (text: string, color: string) => `${color}${text}${ANSI.reset}`;
+
+export const color = {
+	info: (text: string) => withColor(text, ANSI.cyan),
+	action: (text: string) => withColor(text, ANSI.blue),
+	success: (text: string) => withColor(text, ANSI.green),
+	warn: (text: string) => withColor(text, ANSI.yellow),
+	error: (text: string) => withColor(text, ANSI.red)
+};
+
+export const prompt = {
+	chooseSpecificOps: 'Choose specific operations? (y/N): ',
+	selectOperations: (label: string, options: string[]) =>
+		`${label} (comma-separated). Available: ${options.join(', ')}: `,
+	confirmTypeYes: (message: string) => `${message} Type "yes" to continue: `
+};
+
 export const parseIdArgs = () => {
+	const { id } = parseScriptArgs();
+	return id;
+};
+
+export const parseScriptArgs = () => {
 	const { values } = parseArgs({
 		args: Bun.argv,
 		options: {
 			id: {
 				type: 'string',
 				short: 'i'
+			},
+			yes: {
+				type: 'boolean',
+				short: 'y',
+				default: false
+			},
+			all: {
+				type: 'boolean',
+				short: 'a',
+				default: false
+			},
+			ops: {
+				type: 'string',
+				short: 'o'
 			}
 		},
 		strict: true,
 		allowPositionals: true
 	});
-	return values.id;
+
+	const operations = values.ops
+		?.split(',')
+		.map((item) => item.trim().toLowerCase())
+		.filter(Boolean);
+
+	return {
+		id: values.id,
+		yes: values.yes,
+		all: values.all,
+		operations
+	};
 };
 
 export const askQuestion = (prompt: string) =>
@@ -36,9 +92,33 @@ export type OperationMap<T extends string> = Record<T, () => Effect.Effect<void,
 export const selectOperations = <T extends string>(args: {
 	operations: OperationMap<T>;
 	prompt: string;
+	autoSelect?: string[];
+	all?: boolean;
 }) =>
 	Effect.gen(function* () {
-		const confirmInput = yield* askQuestion(`Specify which operations? (y/N): `);
+		if (args.all) {
+			const selected = Object.entries(args.operations) as Array<
+				[T, () => Effect.Effect<void, unknown>]
+			>;
+			const names = selected.map(([name]) => name).join(', ');
+			return { selected, names };
+		}
+
+		if (args.autoSelect && args.autoSelect.length > 0) {
+			const unique = Array.from(new Set(args.autoSelect));
+			const selected = unique
+				.map((name) => {
+					const key = name as T;
+					const handler = args.operations[key];
+					return handler ? ([key, handler] as const) : null;
+				})
+				.filter((entry): entry is [T, () => Effect.Effect<void, unknown>] => Boolean(entry));
+
+			const names = selected.map(([name]) => name).join(', ');
+			return { selected, names };
+		}
+
+		const confirmInput = yield* askQuestion(prompt.chooseSpecificOps);
 		const wantsSpecific = /^y(es)?$/i.test(confirmInput.trim());
 
 		let selected = Object.entries(args.operations) as Array<
@@ -47,7 +127,7 @@ export const selectOperations = <T extends string>(args: {
 
 		if (wantsSpecific) {
 			const selection = yield* askQuestion(
-				`${args.prompt} (comma-separated). Available: ${Object.keys(args.operations).join(', ')}: `
+				prompt.selectOperations(args.prompt, Object.keys(args.operations))
 			);
 
 			const parsed = selection
