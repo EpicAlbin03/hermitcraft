@@ -20,7 +20,7 @@ We process IP addresses to protect our services from abuse, fraud, and excessive
 
 ## YouTube Client API
 
-{siteConfig.url} uses a YouTube API Client that utilizes YouTube API Services. By using {siteConfig.url}, users are agreeing to be bound by the YouTube Terms of Service. The API Client is internal and does not use visitor information. The API Client retrieves publicly accessable data about channels and videos and stores this data in its database. This information is used solely to display YouTube-related content on this website and is not shared with any third parties.
+[{siteConfig.url}]({siteConfig.url}) uses a YouTube API Client that utilizes YouTube API Services. By using {siteConfig.url}, users are agreeing to be bound by the YouTube Terms of Service. The API Client is internal and does not use visitor information. The API Client retrieves publicly accessable data about channels and videos and stores this data in its database. This information is used solely to display YouTube-related content on this website and is not shared with any third parties.
 
 [YouTube Terms of Service](https://www.youtube.com/t/terms)
 
@@ -28,7 +28,7 @@ We process IP addresses to protect our services from abuse, fraud, and excessive
 
 ## Twitch Client API
 
-{siteConfig.url} uses a Twitch API Client that utilizes Twitch API Services. By using {siteConfig.url}, users are agreeing to be bound by the Twitch Terms of Service. The API Client is internal and does not collect or use visitor information. The API Client retrieves publicly accessible data about streams and stores this data in its database. This information is used solely to display Twitch-related content on this website and is not shared with any third parties.
+[{siteConfig.url}]({siteConfig.url}) uses a Twitch API Client that utilizes Twitch API Services. By using {siteConfig.url}, users are agreeing to be bound by the Twitch Terms of Service. The API Client is internal and does not collect or use visitor information. The API Client retrieves publicly accessible data about streams and stores this data in its database. This information is used solely to display Twitch-related content on this website and is not shared with any third parties.
 
 [Twitch Terms of Service](https://legal.twitch.com/legal/terms-of-service/)
 
