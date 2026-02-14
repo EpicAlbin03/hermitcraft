@@ -2,12 +2,12 @@
 
 import { Cause, Console, Effect, Layer } from 'effect';
 import { ChannelSyncService, DbService } from '../src';
-import { askQuestion, color, parseIdArgs, prompt, selectOperations } from './utils';
+import { askQuestion, color, parseScriptArgs, prompt, selectOperations } from './utils';
 import { channels } from '../src/channels';
 
 const main = Effect.gen(function* () {
 	const channelSync = yield* ChannelSyncService;
-	const id = parseIdArgs();
+	const { id, yes, all, operations } = parseScriptArgs();
 
 	if (id) {
 		const { selected, names } = yield* selectOperations({
@@ -25,7 +25,9 @@ const main = Effect.gen(function* () {
 				},
 				video: () => channelSync.syncVideo(id)
 			},
-			prompt: 'Select what to seed (channel or video)'
+			prompt: 'Select what to seed (channel or video)',
+			autoSelect: operations,
+			all
 		});
 
 		if (selected.length === 0) {
@@ -33,12 +35,14 @@ const main = Effect.gen(function* () {
 			return;
 		}
 
-		const confirmation = yield* askQuestion(
-			prompt.confirmTypeYes(`Sync ${names} with id "${id}"?`)
-		);
-		if (confirmation.trim() !== 'yes') {
-			yield* Console.log(color.warn('Aborted.'));
-			return;
+		if (!yes) {
+			const confirmation = yield* askQuestion(
+				prompt.confirmTypeYes(`Sync ${names} with id "${id}"?`)
+			);
+			if (confirmation.trim() !== 'yes') {
+				yield* Console.log(color.warn('Aborted.'));
+				return;
+			}
 		}
 
 		yield* Console.log(color.action(`Running operations: ${names}`));
@@ -72,7 +76,9 @@ const main = Effect.gen(function* () {
 					),
 				videos: () => channelSync.syncVideos(ytChannelIds, { maxResults: 15 })
 			},
-			prompt: 'Select tables to seed'
+			prompt: 'Select tables to seed',
+			autoSelect: operations,
+			all
 		});
 
 		if (selected.length === 0) {
@@ -80,11 +86,15 @@ const main = Effect.gen(function* () {
 			return;
 		}
 
-		const confirmation = yield* askQuestion(prompt.confirmTypeYes(`Sync the following: ${names}.`));
+		if (!yes) {
+			const confirmation = yield* askQuestion(
+				prompt.confirmTypeYes(`Sync the following: ${names}.`)
+			);
 
-		if (confirmation.trim() !== 'yes') {
-			yield* Console.log(color.warn('Aborted.'));
-			return;
+			if (confirmation.trim() !== 'yes') {
+				yield* Console.log(color.warn('Aborted.'));
+				return;
+			}
 		}
 
 		yield* Console.log(color.action(`Running operations: ${names}`));

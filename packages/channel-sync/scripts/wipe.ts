@@ -2,11 +2,11 @@
 
 import { Console, Effect } from 'effect';
 import { DbService } from '../src';
-import { askQuestion, color, parseIdArgs, prompt, selectOperations } from './utils';
+import { askQuestion, color, parseScriptArgs, prompt, selectOperations } from './utils';
 
 const main = Effect.gen(function* () {
 	const db = yield* DbService;
-	const id = parseIdArgs();
+	const { id, yes, all, operations } = parseScriptArgs();
 
 	if (id) {
 		const { selected, names } = yield* selectOperations({
@@ -14,7 +14,9 @@ const main = Effect.gen(function* () {
 				channel: () => db.deleteChannel(id),
 				video: () => db.deleteVideo(id)
 			},
-			prompt: 'Select what to wipe (channel or video)'
+			prompt: 'Select what to wipe (channel or video)',
+			autoSelect: operations,
+			all
 		});
 
 		if (selected.length === 0) {
@@ -22,12 +24,14 @@ const main = Effect.gen(function* () {
 			return;
 		}
 
-		const confirmation = yield* askQuestion(
-			prompt.confirmTypeYes(`Delete ${names} with id "${id}"?`)
-		);
-		if (confirmation.trim() !== 'yes') {
-			yield* Console.log(color.warn('Aborted.'));
-			return;
+		if (!yes) {
+			const confirmation = yield* askQuestion(
+				prompt.confirmTypeYes(`Delete ${names} with id "${id}"?`)
+			);
+			if (confirmation.trim() !== 'yes') {
+				yield* Console.log(color.warn('Aborted.'));
+				return;
+			}
 		}
 
 		yield* Console.log(color.action(`Running operations: ${names}`));
@@ -44,7 +48,9 @@ const main = Effect.gen(function* () {
 				videos: () => db.deleteAllVideos(),
 				channels: () => db.deleteAllChannels()
 			},
-			prompt: 'Select tables to wipe'
+			prompt: 'Select tables to wipe',
+			autoSelect: operations,
+			all
 		});
 
 		if (selected.length === 0) {
@@ -52,11 +58,15 @@ const main = Effect.gen(function* () {
 			return;
 		}
 
-		const confirmation = yield* askQuestion(prompt.confirmTypeYes(`Wipe the following: ${names}.`));
+		if (!yes) {
+			const confirmation = yield* askQuestion(
+				prompt.confirmTypeYes(`Wipe the following: ${names}.`)
+			);
 
-		if (confirmation.trim() !== 'yes') {
-			yield* Console.log(color.warn('Aborted.'));
-			return;
+			if (confirmation.trim() !== 'yes') {
+				yield* Console.log(color.warn('Aborted.'));
+				return;
+			}
 		}
 
 		yield* Console.log(color.action(`Running operations: ${names}`));
