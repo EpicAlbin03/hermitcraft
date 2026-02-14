@@ -89,8 +89,7 @@ const cacheService = Effect.gen(function* () {
 				// Store in cache (fire and forget, don't block on cache write)
 				yield* Effect.tryPromise({
 					try: async () => {
-						await client.set(key, JSON.stringify(result));
-						await client.expire(key, ttl);
+						await client.send('SET', [key, JSON.stringify(result), 'EX', ttl.toString()]);
 					},
 					catch: (err) => new CacheError('Failed to set cache', { cause: err })
 				}).pipe(Effect.catchAll(() => Effect.succeed(undefined)));
