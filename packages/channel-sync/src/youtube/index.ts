@@ -1,5 +1,5 @@
 import { google, youtube_v3 } from 'googleapis';
-import { Console, Effect } from 'effect';
+import { Console, Effect, Schedule } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { getYtPlaylistId, getVideoLivestreamType, parseYtRSS } from './utils';
 import type { Video } from '@hc/db';
@@ -255,12 +255,15 @@ const youtubeService = Effect.gen(function* () {
 			// Latest 15 videos
 			const response = yield* Effect.tryPromise({
 				try: () => fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${ytChannelId}`),
-				catch: (err) => new YoutubeError(`Failed to fetch RSS for channel`, { cause: err })
+				catch: (err) =>
+					new YoutubeError(`Failed to fetch RSS for channel ${ytChannelId}`, { cause: err })
 			});
 
 			if (!response.ok) {
 				return yield* Effect.fail(
-					new YoutubeError(`Failed to fetch RSS for channel ${ytChannelId}`)
+					new YoutubeError(
+						`Failed to fetch RSS for channel ${ytChannelId} (HTTP ${response.status})`
+					)
 				);
 			}
 
@@ -270,7 +273,9 @@ const youtubeService = Effect.gen(function* () {
 			});
 
 			return parseYtRSS(xml);
-		});
+		}).pipe(
+			Effect.retry(Schedule.exponential('1 seconds').pipe(Schedule.compose(Schedule.recurs(3))))
+		);
 
 	const isVideoShort = (ytVideoId: string, ytChannelId: string) =>
 		Effect.gen(function* () {
