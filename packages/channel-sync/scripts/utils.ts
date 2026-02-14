@@ -1,6 +1,32 @@
 import { Effect } from 'effect';
 import { parseArgs } from 'util';
 
+const ANSI = {
+	reset: '\x1b[0m',
+	blue: '\x1b[34m',
+	cyan: '\x1b[36m',
+	green: '\x1b[32m',
+	yellow: '\x1b[33m',
+	red: '\x1b[31m'
+} as const;
+
+const withColor = (text: string, color: string) => `${color}${text}${ANSI.reset}`;
+
+export const color = {
+	info: (text: string) => withColor(text, ANSI.cyan),
+	action: (text: string) => withColor(text, ANSI.blue),
+	success: (text: string) => withColor(text, ANSI.green),
+	warn: (text: string) => withColor(text, ANSI.yellow),
+	error: (text: string) => withColor(text, ANSI.red)
+};
+
+export const prompt = {
+	chooseSpecificOps: 'Choose specific operations? (y/N): ',
+	selectOperations: (label: string, options: string[]) =>
+		`${label} (comma-separated). Available: ${options.join(', ')}: `,
+	confirmTypeYes: (message: string) => `${message} Type "yes" to continue: `
+};
+
 export const parseIdArgs = () => {
 	const { values } = parseArgs({
 		args: Bun.argv,
@@ -38,7 +64,7 @@ export const selectOperations = <T extends string>(args: {
 	prompt: string;
 }) =>
 	Effect.gen(function* () {
-		const confirmInput = yield* askQuestion(`Specify which operations? (y/N): `);
+		const confirmInput = yield* askQuestion(prompt.chooseSpecificOps);
 		const wantsSpecific = /^y(es)?$/i.test(confirmInput.trim());
 
 		let selected = Object.entries(args.operations) as Array<
@@ -47,7 +73,7 @@ export const selectOperations = <T extends string>(args: {
 
 		if (wantsSpecific) {
 			const selection = yield* askQuestion(
-				`${args.prompt} (comma-separated). Available: ${Object.keys(args.operations).join(', ')}: `
+				prompt.selectOperations(args.prompt, Object.keys(args.operations))
 			);
 
 			const parsed = selection

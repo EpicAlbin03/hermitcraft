@@ -2,7 +2,7 @@
 
 import { Cause, Console, Effect, Layer } from 'effect';
 import { ChannelSyncService, DbService } from '../src';
-import { askQuestion, parseIdArgs, selectOperations } from './utils';
+import { askQuestion, color, parseIdArgs, prompt, selectOperations } from './utils';
 import { channels } from '../src/channels';
 
 const main = Effect.gen(function* () {
@@ -29,28 +29,32 @@ const main = Effect.gen(function* () {
 		});
 
 		if (selected.length === 0) {
-			yield* Console.log('No valid selection. Aborting.');
+			yield* Console.log(color.warn('No valid selection. Aborting.'));
 			return;
 		}
 
-		const confirmation = yield* askQuestion(`Sync ${names} with id "${id}"? Type "yes": `);
+		const confirmation = yield* askQuestion(
+			prompt.confirmTypeYes(`Sync ${names} with id "${id}"?`)
+		);
 		if (confirmation.trim() !== 'yes') {
-			yield* Console.log('Aborted.');
+			yield* Console.log(color.warn('Aborted.'));
 			return;
 		}
+
+		yield* Console.log(color.action(`Running operations: ${names}`));
 
 		yield* Effect.forEach(selected, ([name, sync]) =>
 			Effect.gen(function* () {
 				yield* sync();
-				yield* Console.log(`Synced ${name}: ${id}`);
+				yield* Console.log(color.success(`Synced ${name}: ${id}`));
 			})
 		);
 
 		if (selected.some(([name]) => name === 'channel')) {
 			yield* channelSync.syncTwitchLive();
-			yield* Console.log('Synced twitch live');
+			yield* Console.log(color.success('Synced twitch live'));
 			yield* channelSync.syncYoutubeLive();
-			yield* Console.log('Synced youtube live');
+			yield* Console.log(color.success('Synced youtube live'));
 		}
 	} else {
 		const ytChannelIds = channels.map((c) => c.ytChannelId);
@@ -72,44 +76,42 @@ const main = Effect.gen(function* () {
 		});
 
 		if (selected.length === 0) {
-			yield* Console.log('No valid tables selected. Aborting.');
+			yield* Console.log(color.warn('No valid selection. Aborting.'));
 			return;
 		}
 
-		const confirmation = yield* askQuestion(
-			`This will sync the following tables: ${names}. Type "yes" to continue: `
-		);
+		const confirmation = yield* askQuestion(prompt.confirmTypeYes(`Sync the following: ${names}.`));
 
 		if (confirmation.trim() !== 'yes') {
-			yield* Console.log('Aborted.');
+			yield* Console.log(color.warn('Aborted.'));
 			return;
 		}
 
-		yield* Console.log(`Seeding: ${names}...`);
+		yield* Console.log(color.action(`Running operations: ${names}`));
 
 		yield* Effect.forEach(selected, ([name, sync]) =>
 			Effect.gen(function* () {
 				yield* sync();
-				yield* Console.log(`Synced ${name}`);
+				yield* Console.log(color.success(`Synced ${name}`));
 			})
 		);
 
 		if (selected.some(([name]) => name === 'channels')) {
 			yield* channelSync.syncTwitchLive();
-			yield* Console.log('Synced twitch live');
+			yield* Console.log(color.success('Synced twitch live'));
 			yield* channelSync.syncYoutubeLive();
-			yield* Console.log('Synced youtube live');
+			yield* Console.log(color.success('Synced youtube live'));
 		}
 	}
 }).pipe(
 	Effect.provide(ChannelSyncService.Default.pipe(Layer.provide(DbService.Default))),
 	Effect.matchCause({
 		onSuccess: () => {
-			console.log('Seed completed successfully');
+			console.log(color.success('Seed completed successfully'));
 			process.exit(0);
 		},
 		onFailure: (cause) => {
-			console.error('Seed failed:', Cause.pretty(cause));
+			console.error(color.error('Seed failed:'), Cause.pretty(cause));
 			process.exit(1);
 		}
 	})
