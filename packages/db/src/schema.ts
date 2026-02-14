@@ -51,5 +51,28 @@ export const videos = table(
 		createdAt: t.timestamp('created_at').notNull().defaultNow(),
 		modifiedAt: t.timestamp('modified_at').notNull().defaultNow()
 	},
-	(table) => [t.index('yt_channel_id_and_published_at').on(table.ytChannelId, table.publishedAt)]
+	(table) => [
+		t.index('yt_channel_id_and_published_at').on(table.ytChannelId, table.publishedAt),
+		t
+			.index('channel_filtered_videos')
+			.on(
+				table.ytChannelId,
+				table.privacyStatus,
+				table.uploadStatus,
+				table.livestreamType,
+				table.isShort,
+				table.publishedAt
+			),
+		t
+			.index('all_filtered_videos')
+			.on(
+				table.privacyStatus,
+				table.uploadStatus,
+				table.livestreamType,
+				table.isShort,
+				table.publishedAt
+			),
+		t.index('view_count').on(table.viewCount),
+		t.index('like_count').on(table.likeCount)
+	]
 );

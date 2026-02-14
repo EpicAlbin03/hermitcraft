@@ -45,21 +45,14 @@
 							<h4 class="leading-none font-medium">App Info</h4>
 							<ul class="flex list-none flex-col gap-2 p-0 text-sm text-muted-foreground">
 								<li>
-									This website is not affiliated with, endorsed by, or associated with Hermitcraft
-									or its members. It is an unofficial redesign of the <a
-										href="https://hermitcraft.com"
-										target="_blank"
-										class="underline hover:text-primary">hermitcraft.com</a
-									> website.
-								</li>
-								<li>
 									The latest 15 videos for each channel are updated every 2 minutes. Therefore, new
 									videos can take up to 2 minutes before they appear. It also checks if channels are
-									live on Twitch and YouTube. This is cached for 2 minutes.
+									live on Twitch and YouTube. Videos, live status, and channel details are cached
+									for 2 minutes.
 								</li>
 								<li>
-									Channel info and old videos are updated once a day at 06:00 UTC / 01:00 ET / 22:00
-									PT / 06:00 GMT / 07:00 CET. This is cached for 1 hour.
+									The channel list and old videos are updated once a day at 06:00 UTC / 01:00 ET /
+									22:00 PT / 06:00 GMT / 07:00 CET. The channel list is cached for 1 hour.
 								</li>
 								<li>
 									If you encounter any issues or find something missing, please open an issue on <a

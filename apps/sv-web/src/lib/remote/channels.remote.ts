@@ -45,26 +45,13 @@ export type LiveStatus = Awaited<ReturnType<typeof remoteGetLiveStatus>>;
 
 export const remoteGetChannelDetails = query(z.string(), async (handle) => {
 	const rateLimit = getRateLimit('channel');
-	return DbRemoteRunner(
-		({ db }) =>
-			Effect.gen(function* () {
-				const [channel, liveStatus] = yield* Effect.all([
-					db.getChannelByHandle(handle),
-					db.getLiveStatus()
-				]);
-				return {
-					...channel,
-					...liveStatus[channel.ytHandle]
-				};
-			}),
-		rateLimit
-	);
+	return DbRemoteRunner(({ db }) => db.getChannelByHandle(handle), rateLimit);
 });
 
 export type ChannelDetails = Awaited<ReturnType<typeof remoteGetChannelDetails>>;
 
 const paginationSchema = z.object({
-	limit: z.number().min(1).max(100),
+	limit: z.number().min(1).max(48),
 	offset: z.number().min(0),
 	filter: videoFilterSchema.default('videos'),
 	sort: videoSortSchema.default('latest'),

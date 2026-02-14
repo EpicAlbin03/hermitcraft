@@ -17,7 +17,7 @@ export class DbError extends TaggedError('DbError') {
 const CACHE_TTL = {
 	SIDEBAR_CHANNELS: 3600, // Channel list (synced daily) - 1 hour
 	LIVE_STATUS: 120, // Twitch & YT live status (synced every 2 min)
-	CHANNEL_DETAILS: 3600, // Channel details (synced daily) - 1 hour
+	CHANNEL_DETAILS: 120, // Includes live status fields (synced every 2 min)
 	CHANNEL_VIDEOS: 120, // Videos synced every 2 min
 	ALL_VIDEOS: 120 // Videos synced every 2 min
 } as const;
@@ -119,6 +119,8 @@ const dbService = Effect.gen(function* () {
 								ytSubscriberCount: DB_SCHEMA.channels.ytSubscriberCount,
 								ytVideoCount: DB_SCHEMA.channels.ytVideoCount,
 								twitchUserLogin: DB_SCHEMA.channels.twitchUserLogin,
+								isTwitchLive: DB_SCHEMA.channels.isTwitchLive,
+								ytLiveVideoId: DB_SCHEMA.channels.ytLiveVideoId,
 								links: DB_SCHEMA.channels.links
 							})
 							.from(DB_SCHEMA.channels)

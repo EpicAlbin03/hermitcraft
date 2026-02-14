@@ -1,0 +1,369 @@
+{
+  "version": "5",
+  "dialect": "mysql",
+  "id": "fd222a4a-ddd1-4d7e-b17d-00f48c2b0132",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "channels": {
+      "name": "channels",
+      "columns": {
+        "yt_channel_id": {
+          "name": "yt_channel_id",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "yt_name": {
+          "name": "yt_name",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "yt_handle": {
+          "name": "yt_handle",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "yt_description": {
+          "name": "yt_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "yt_avatar_url": {
+          "name": "yt_avatar_url",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "yt_banner_url": {
+          "name": "yt_banner_url",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "yt_banner_thumb_hash": {
+          "name": "yt_banner_thumb_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "yt_view_count": {
+          "name": "yt_view_count",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "yt_subscriber_count": {
+          "name": "yt_subscriber_count",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "yt_video_count": {
+          "name": "yt_video_count",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "yt_joined_at": {
+          "name": "yt_joined_at",
+          "type": "datetime",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "twitch_user_id": {
+          "name": "twitch_user_id",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "twitch_user_login": {
+          "name": "twitch_user_login",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_twitch_live": {
+          "name": "is_twitch_live",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "yt_live_video_id": {
+          "name": "yt_live_video_id",
+          "type": "varchar(11)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "links": {
+          "name": "links",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "modified_at": {
+          "name": "modified_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "channels_yt_live_video_id_videos_yt_video_id_fk": {
+          "name": "channels_yt_live_video_id_videos_yt_video_id_fk",
+          "tableFrom": "channels",
+          "tableTo": "videos",
+          "columnsFrom": [
+            "yt_live_video_id"
+          ],
+          "columnsTo": [
+            "yt_video_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "channels_yt_channel_id": {
+          "name": "channels_yt_channel_id",
+          "columns": [
+            "yt_channel_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "videos": {
+      "name": "videos",
+      "columns": {
+        "yt_video_id": {
+          "name": "yt_video_id",
+          "type": "varchar(11)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "yt_channel_id": {
+          "name": "yt_channel_id",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "thumbnail_url": {
+          "name": "thumbnail_url",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "datetime",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "privacy_status": {
+          "name": "privacy_status",
+          "type": "enum('private','public','unlisted')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "upload_status": {
+          "name": "upload_status",
+          "type": "enum('deleted','failed','processed','rejected','uploaded')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "view_count": {
+          "name": "view_count",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "like_count": {
+          "name": "like_count",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "comment_count": {
+          "name": "comment_count",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "duration": {
+          "name": "duration",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_short": {
+          "name": "is_short",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "livestream_type": {
+          "name": "livestream_type",
+          "type": "enum('live','none','upcoming','completed')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'none'"
+        },
+        "livestream_scheduled_start_time": {
+          "name": "livestream_scheduled_start_time",
+          "type": "datetime",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "livestream_actual_start_time": {
+          "name": "livestream_actual_start_time",
+          "type": "datetime",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "livestream_concurrent_viewers": {
+          "name": "livestream_concurrent_viewers",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "modified_at": {
+          "name": "modified_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "yt_channel_id_and_published_at": {
+          "name": "yt_channel_id_and_published_at",
+          "columns": [
+            "yt_channel_id",
+            "published_at"
+          ],
+          "isUnique": false
+        },
+        "channel_filtered_videos": {
+          "name": "channel_filtered_videos",
+          "columns": [
+            "yt_channel_id",
+            "privacy_status",
+            "upload_status",
+            "livestream_type",
+            "is_short",
+            "published_at"
+          ],
+          "isUnique": false
+        },
+        "all_filtered_videos": {
+          "name": "all_filtered_videos",
+          "columns": [
+            "privacy_status",
+            "upload_status",
+            "livestream_type",
+            "is_short",
+            "published_at"
+          ],
+          "isUnique": false
+        },
+        "view_count": {
+          "name": "view_count",
+          "columns": [
+            "view_count"
+          ],
+          "isUnique": false
+        },
+        "like_count": {
+          "name": "like_count",
+          "columns": [
+            "like_count"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "videos_yt_video_id": {
+          "name": "videos_yt_video_id",
+          "columns": [
+            "yt_video_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    }
+  },
+  "views": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "tables": {},
+    "indexes": {}
+  }
+}
