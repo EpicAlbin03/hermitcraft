@@ -207,7 +207,18 @@
 	}
 
 	const videoColumnCount = $derived(Math.max(1, getColumnsForWidth(videoGridWidth)));
-	const batchSize = $derived(Math.max(6, videoColumnCount * ROWS_PER_BATCH));
+	function getBatchSizeForColumns(columns: number, loadedCount: number): number {
+		const safeColumns = Math.max(1, columns);
+		const baselineRows = safeColumns >= 3 ? ROWS_PER_BATCH : ROWS_PER_BATCH + 1;
+		const baselineBatchSize = safeColumns * baselineRows;
+		const remainder = loadedCount % safeColumns;
+
+		if (remainder === 0) {
+			return baselineBatchSize;
+		}
+
+		return baselineBatchSize - remainder;
+	}
 	const currentTabLabel = $derived(tabLabels[activeFilter]);
 	const rowsVisibleOnLoad = $derived(channel ? 2 : 3);
 
@@ -227,8 +238,7 @@
 		if (isLoading || !hasMore || error) return;
 
 		const currentVersion = fetchVersion;
-		// Capture batch size at request time - it may change during fetch due to ResizeObserver
-		const requestBatchSize = batchSize;
+		const requestBatchSize = getBatchSizeForColumns(videoColumnCount, videos.length);
 		isLoading = true;
 		try {
 			const newVideos = await fetchVideos({
