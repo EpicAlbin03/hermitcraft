@@ -10,6 +10,7 @@
 	import { InfoIcon } from '@lucide/svelte';
 	import { siteConfig } from '$lib/config/site-config';
 	import { Skeleton } from '$lib/components/ui/skeleton';
+	import ScrollToTop from '$lib/components/scroll-to-top.svelte';
 
 	let { children } = $props();
 
@@ -102,5 +103,6 @@
 		<div class="flex flex-1 flex-col gap-6 p-4 pt-0">
 			{@render children()}
 		</div>
+		<ScrollToTop />
 	</Sidebar.Inset>
 </Sidebar.Provider>
