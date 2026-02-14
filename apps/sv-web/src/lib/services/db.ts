@@ -36,9 +36,10 @@ const dbService = Effect.gen(function* () {
 	const drizzle = yield* Effect.acquireRelease(
 		Effect.try(() => getDrizzleInstance(dbUrl)),
 		(db) =>
-			Effect.sync(() => {
+			Effect.promise(async () => {
 				console.log('Releasing database connection...');
-				db.$client.end();
+				const pool = db.$client;
+				await pool.end();
 			})
 	).pipe(
 		Effect.catchAll((err) => {
