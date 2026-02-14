@@ -299,7 +299,7 @@
 					value={activeSort}
 					onValueChange={(value) => handleSortChange(value as VideoSort)}
 				>
-					<Select.Trigger class="w-[120px]">
+					<Select.Trigger class="w-30">
 						<span class="flex items-center gap-2">
 							<selectedSortOption.icon />
 							{selectedSortOption.label}
