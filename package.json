@@ -39,6 +39,8 @@
     "packages/*"
   ],
   "dependencies": {
-    "@typescript/native-preview": "^7.0.0-dev.20251123.1"
+    "@typescript/native-preview": "^7.0.0-dev.20251123.1",
+    "effect": "^3.19.17",
+    "mysql2": "^3.17.1"
   }
 }
