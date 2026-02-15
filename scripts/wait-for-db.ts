@@ -13,8 +13,8 @@ async function waitForDb() {
     throw new Error("MYSQL_URL is not set")
   }
 
-  const timeoutMs = toNumber(Bun.env.DB_WAIT_TIMEOUT_MS, 60_000)
-  const intervalMs = toNumber(Bun.env.DB_WAIT_INTERVAL_MS, 2_000)
+  const timeoutMs = toNumber(Bun.env.DB_WAIT_TIMEOUT_MS, 30_000)
+  const intervalMs = toNumber(Bun.env.DB_WAIT_INTERVAL_MS, 1_000)
   const deadline = Date.now() + timeoutMs
 
   let attempt = 0
