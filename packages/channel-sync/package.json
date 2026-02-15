@@ -21,6 +21,8 @@
 		"@hc/db": "*"
 	},
 	"dependencies": {
+		"@effect/cli": "^0.73.2",
+		"@effect/platform-bun": "^0.86.0",
 		"@twurple/api": "^8.0.2",
 		"@twurple/auth": "^8.0.2",
 		"effect": "^3.19.5",

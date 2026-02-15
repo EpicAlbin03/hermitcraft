@@ -1,5 +1,5 @@
+import { Prompt } from '@effect/cli';
 import { Effect } from 'effect';
-import { parseArgs } from 'util';
 
 const ANSI = {
 	reset: '\x1b[0m',
@@ -20,78 +20,17 @@ export const color = {
 	error: (text: string) => withColor(text, ANSI.red)
 };
 
-export const prompt = {
-	chooseSpecificOps: 'Choose specific operations? (y/N): ',
-	selectOperations: (label: string, options: string[]) =>
-		`${label} (comma-separated). Available: ${options.join(', ')}: `,
-	confirmTypeYes: (message: string) => `${message} Type "yes" to continue: `
-};
-
-export const parseIdArgs = () => {
-	const { id } = parseScriptArgs();
-	return id;
-};
-
-export const parseScriptArgs = () => {
-	const { values } = parseArgs({
-		args: Bun.argv,
-		options: {
-			id: {
-				type: 'string',
-				short: 'i'
-			},
-			yes: {
-				type: 'boolean',
-				short: 'y',
-				default: false
-			},
-			all: {
-				type: 'boolean',
-				short: 'a',
-				default: false
-			},
-			ops: {
-				type: 'string',
-				short: 'o'
-			}
-		},
-		strict: true,
-		allowPositionals: true
-	});
-
-	const operations = values.ops
+export const parseOperations = (value?: string) =>
+	value
 		?.split(',')
 		.map((item) => item.trim().toLowerCase())
-		.filter(Boolean);
-
-	return {
-		id: values.id,
-		yes: values.yes,
-		all: values.all,
-		operations
-	};
-};
-
-export const askQuestion = (prompt: string) =>
-	Effect.promise<string>(
-		() =>
-			new Promise((resolve) => {
-				process.stdout.write(prompt);
-				process.stdin.resume();
-				const handler = (chunk: Buffer) => {
-					process.stdin.pause();
-					process.stdin.off('data', handler);
-					resolve(chunk.toString().trim());
-				};
-				process.stdin.on('data', handler);
-			})
-	);
+		.filter(Boolean) ?? [];
 
 export type OperationMap<T extends string> = Record<T, () => Effect.Effect<void, unknown>>;
 
 export const selectOperations = <T extends string>(args: {
 	operations: OperationMap<T>;
-	prompt: string;
+	promptLabel: string;
 	autoSelect?: string[];
 	all?: boolean;
 }) =>
@@ -118,22 +57,21 @@ export const selectOperations = <T extends string>(args: {
 			return { selected, names };
 		}
 
-		const confirmInput = yield* askQuestion(prompt.chooseSpecificOps);
-		const wantsSpecific = /^y(es)?$/i.test(confirmInput.trim());
+		const wantsSpecific = yield* Prompt.confirm({
+			message: 'Choose specific operations?',
+			initial: false
+		});
 
 		let selected = Object.entries(args.operations) as Array<
 			[T, () => Effect.Effect<void, unknown>]
 		>;
 
 		if (wantsSpecific) {
-			const selection = yield* askQuestion(
-				prompt.selectOperations(args.prompt, Object.keys(args.operations))
-			);
+			const selection = yield* Prompt.text({
+				message: `${args.promptLabel} (comma-separated). Available: ${Object.keys(args.operations).join(', ')}`
+			});
 
-			const parsed = selection
-				.split(',')
-				.map((item) => item.trim().toLowerCase())
-				.filter(Boolean);
+			const parsed = parseOperations(selection);
 
 			const unique = Array.from(new Set(parsed));
 

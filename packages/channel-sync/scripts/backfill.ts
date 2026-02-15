@@ -1,20 +1,32 @@
 #!/usr/bin/env bun
 
+import { Command, Options } from '@effect/cli';
+import { BunContext, BunRuntime } from '@effect/platform-bun';
 import { ChannelSyncService, DbService } from '../src';
-import { Console, Effect, Layer } from 'effect';
-import { color, parseIdArgs } from './utils';
+import { Console, Effect, Layer, Option } from 'effect';
+import { color } from './utils';
 import { DB_SCHEMA } from '@hc/db';
 
-const main = Effect.gen(function* () {
-	const channelSync = yield* ChannelSyncService;
-	const db = yield* DbService;
-	const id = parseIdArgs();
+const id = Options.text('id').pipe(Options.withAlias('i'), Options.optional);
 
-	if (id) {
-		yield* Console.log(color.action(`Starting backfill for channel: ${id}`));
-		yield* channelSync.syncVideos([id], { backfill: true, taskName: 'BACKFILL', maxResults: 100 });
-		yield* Console.log(color.success(`Backfilled channel: ${id}`));
-	} else {
+const command = Command.make('backfill', { id }, ({ id }) =>
+	Effect.gen(function* () {
+		const channelSync = yield* ChannelSyncService;
+		const db = yield* DbService;
+
+		const maybeId = Option.getOrUndefined(id);
+
+		if (maybeId) {
+			yield* Console.log(color.action(`Starting backfill for channel: ${maybeId}`));
+			yield* channelSync.syncVideos([maybeId], {
+				backfill: true,
+				taskName: 'BACKFILL',
+				maxResults: 100
+			});
+			yield* Console.log(color.success(`Backfilled channel: ${maybeId}`));
+			return;
+		}
+
 		yield* Console.log(color.info('No channel ID specified; backfilling all channels.'));
 		const channels = yield* db.getAllChannels({
 			ytChannelId: DB_SCHEMA.channels.ytChannelId,
@@ -47,19 +59,31 @@ const main = Effect.gen(function* () {
 				);
 			})
 		);
-	}
-}).pipe(
-	Effect.provide(Layer.provideMerge(ChannelSyncService.Default, DbService.Default)),
-	Effect.matchCause({
-		onSuccess: () => {
-			console.log(color.success('Backfill completed successfully'));
-			process.exit(0);
-		},
-		onFailure: (cause) => {
-			console.error(color.error('Backfill failed:'), cause);
-			process.exit(1);
-		}
 	})
 );
 
-Effect.runPromise(main);
+const program = (args: ReadonlyArray<string>) =>
+	Effect.scoped(
+		Effect.gen(function* () {
+			yield* Command.run(command, {
+				name: '@hc/channel-sync backfill',
+				version: 'INTERNAL'
+			})(args);
+		})
+	);
+
+const MainLayer = ChannelSyncService.Default.pipe(
+	Layer.provideMerge(DbService.Default),
+	Layer.provideMerge(BunContext.layer)
+);
+
+program(process.argv).pipe(
+	Effect.provide(MainLayer),
+	Effect.catchAllCause((cause) =>
+		Effect.sync(() => {
+			console.error(color.error('Backfill failed:'), cause);
+			process.exit(1);
+		})
+	),
+	BunRuntime.runMain
+);

@@ -1,54 +1,67 @@
 #!/usr/bin/env bun
 
-import { Console, Effect } from 'effect';
+import { Command, Options, Prompt } from '@effect/cli';
+import { BunContext, BunRuntime } from '@effect/platform-bun';
+import { Console, Effect, Layer, Option } from 'effect';
 import { DbService } from '../src';
-import { askQuestion, color, parseScriptArgs, prompt, selectOperations } from './utils';
+import { color, parseOperations, selectOperations } from './utils';
 
-const main = Effect.gen(function* () {
-	const db = yield* DbService;
-	const { id, yes, all, operations } = parseScriptArgs();
+const id = Options.text('id').pipe(Options.withAlias('i'), Options.optional);
+const yes = Options.boolean('yes').pipe(Options.withAlias('y'));
+const all = Options.boolean('all').pipe(Options.withAlias('a'));
+const ops = Options.text('ops').pipe(Options.withAlias('o'), Options.optional);
 
-	if (id) {
-		const { selected, names } = yield* selectOperations({
-			operations: {
-				channel: () => db.deleteChannel(id),
-				video: () => db.deleteVideo(id)
-			},
-			prompt: 'Select what to wipe (channel or video)',
-			autoSelect: operations,
-			all
-		});
+const command = Command.make('wipe', { id, yes, all, ops }, ({ id, yes, all, ops }) =>
+	Effect.gen(function* () {
+		const db = yield* DbService;
+		const operations = parseOperations(Option.getOrUndefined(ops));
 
-		if (selected.length === 0) {
-			yield* Console.log(color.warn('No valid selection. Aborting.'));
+		const maybeId = Option.getOrUndefined(id);
+
+		if (maybeId) {
+			const { selected, names } = yield* selectOperations({
+				operations: {
+					channel: () => db.deleteChannel(maybeId),
+					video: () => db.deleteVideo(maybeId)
+				},
+				promptLabel: 'Select what to wipe (channel or video)',
+				autoSelect: operations,
+				all
+			});
+
+			if (selected.length === 0) {
+				yield* Console.log(color.warn('No valid selection. Aborting.'));
+				return;
+			}
+
+			if (!yes) {
+				const confirmed = yield* Prompt.confirm({
+					message: `Delete ${names} with id "${maybeId}"?`
+				});
+				if (!confirmed) {
+					yield* Console.log(color.warn('Aborted.'));
+					return;
+				}
+			}
+
+			yield* Console.log(color.action(`Running operations: ${names}`));
+
+			yield* Effect.forEach(selected, ([name, wipe]) =>
+				Effect.gen(function* () {
+					yield* wipe();
+					yield* Console.log(color.success(`Deleted ${name}: ${maybeId}`));
+				})
+			);
+
 			return;
 		}
 
-		if (!yes) {
-			const confirmation = yield* askQuestion(
-				prompt.confirmTypeYes(`Delete ${names} with id "${id}"?`)
-			);
-			if (confirmation.trim() !== 'yes') {
-				yield* Console.log(color.warn('Aborted.'));
-				return;
-			}
-		}
-
-		yield* Console.log(color.action(`Running operations: ${names}`));
-
-		yield* Effect.forEach(selected, ([name, wipe]) =>
-			Effect.gen(function* () {
-				yield* wipe();
-				yield* Console.log(color.success(`Deleted ${name}: ${id}`));
-			})
-		);
-	} else {
 		const { selected, names } = yield* selectOperations({
 			operations: {
 				videos: () => db.deleteAllVideos(),
 				channels: () => db.deleteAllChannels()
 			},
-			prompt: 'Select tables to wipe',
+			promptLabel: 'Select tables to wipe',
 			autoSelect: operations,
 			all
 		});
@@ -59,11 +72,11 @@ const main = Effect.gen(function* () {
 		}
 
 		if (!yes) {
-			const confirmation = yield* askQuestion(
-				prompt.confirmTypeYes(`Wipe the following: ${names}.`)
-			);
+			const confirmed = yield* Prompt.confirm({
+				message: `Wipe the following: ${names}.`
+			});
 
-			if (confirmation.trim() !== 'yes') {
+			if (!confirmed) {
 				yield* Console.log(color.warn('Aborted.'));
 				return;
 			}
@@ -77,19 +90,26 @@ const main = Effect.gen(function* () {
 				yield* Console.log(color.success(`Wiped ${name}`));
 			})
 		);
-	}
-}).pipe(
-	Effect.provide(DbService.Default),
-	Effect.matchCause({
-		onSuccess: () => {
-			console.log(color.success('DB wipe completed successfully'));
-			process.exit(0);
-		},
-		onFailure: (cause) => {
-			console.error(color.error('Wipe failed:'), cause);
-			process.exit(1);
-		}
 	})
 );
 
-Effect.runPromise(main);
+const program = (args: ReadonlyArray<string>) =>
+	Effect.scoped(
+		Effect.gen(function* () {
+			yield* Command.run(command, {
+				name: '@hc/channel-sync wipe',
+				version: 'INTERNAL'
+			})(args);
+		})
+	);
+
+program(process.argv).pipe(
+	Effect.provide(DbService.Default.pipe(Layer.provideMerge(BunContext.layer))),
+	Effect.catchAllCause((cause) =>
+		Effect.sync(() => {
+			console.error(color.error('Wipe failed:'), cause);
+			process.exit(1);
+		})
+	),
+	BunRuntime.runMain
+);
