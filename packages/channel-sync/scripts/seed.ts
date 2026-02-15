@@ -1,66 +1,79 @@
 #!/usr/bin/env bun
 
-import { Cause, Console, Effect, Layer } from 'effect';
+import { Command, Options, Prompt } from '@effect/cli';
+import { BunContext, BunRuntime } from '@effect/platform-bun';
+import { Cause, Console, Effect, Layer, Option } from 'effect';
 import { ChannelSyncService, DbService } from '../src';
-import { askQuestion, color, parseScriptArgs, prompt, selectOperations } from './utils';
+import { color, parseOperations, selectOperations } from './utils';
 import { channels } from '../src/channels';
 
-const main = Effect.gen(function* () {
-	const channelSync = yield* ChannelSyncService;
-	const { id, yes, all, operations } = parseScriptArgs();
+const id = Options.text('id').pipe(Options.withAlias('i'), Options.optional);
+const yes = Options.boolean('yes').pipe(Options.withAlias('y'));
+const all = Options.boolean('all').pipe(Options.withAlias('a'));
+const ops = Options.text('ops').pipe(Options.withAlias('o'), Options.optional);
 
-	if (id) {
-		const { selected, names } = yield* selectOperations({
-			operations: {
-				channel: () => {
-					const channel = channels.find((c) => c.ytChannelId === id);
-					if (!channel || !channel.ytChannelId) {
-						return Effect.die(`Channel ${id} not found in channels list`);
-					}
-					return channelSync.syncChannel(channel.ytChannelId, {
-						twitchUserId: channel.twitchUserId ?? undefined,
-						twitchUserLogin: channel.twitchUserLogin ?? undefined,
-						links: channel.links ?? []
-					});
+const command = Command.make('seed', { id, yes, all, ops }, ({ id, yes, all, ops }) =>
+	Effect.gen(function* () {
+		const channelSync = yield* ChannelSyncService;
+		const operations = parseOperations(Option.getOrUndefined(ops));
+
+		const maybeId = Option.getOrUndefined(id);
+
+		if (maybeId) {
+			const { selected, names } = yield* selectOperations({
+				operations: {
+					channel: () => {
+						const channel = channels.find((c) => c.ytChannelId === maybeId);
+						if (!channel || !channel.ytChannelId) {
+							return Effect.die(`Channel ${maybeId} not found in channels list`);
+						}
+						return channelSync.syncChannel(channel.ytChannelId, {
+							twitchUserId: channel.twitchUserId ?? undefined,
+							twitchUserLogin: channel.twitchUserLogin ?? undefined,
+							links: channel.links ?? []
+						});
+					},
+					video: () => channelSync.syncVideo(maybeId)
 				},
-				video: () => channelSync.syncVideo(id)
-			},
-			prompt: 'Select what to seed (channel or video)',
-			autoSelect: operations,
-			all
-		});
+				promptLabel: 'Select what to seed (channel or video)',
+				autoSelect: operations,
+				all
+			});
 
-		if (selected.length === 0) {
-			yield* Console.log(color.warn('No valid selection. Aborting.'));
+			if (selected.length === 0) {
+				yield* Console.log(color.warn('No valid selection. Aborting.'));
+				return;
+			}
+
+			if (!yes) {
+				const confirmed = yield* Prompt.confirm({
+					message: `Sync ${names} with id "${maybeId}"?`
+				});
+				if (!confirmed) {
+					yield* Console.log(color.warn('Aborted.'));
+					return;
+				}
+			}
+
+			yield* Console.log(color.action(`Running operations: ${names}`));
+
+			yield* Effect.forEach(selected, ([name, sync]) =>
+				Effect.gen(function* () {
+					yield* sync();
+					yield* Console.log(color.success(`Synced ${name}: ${maybeId}`));
+				})
+			);
+
+			if (selected.some(([name]) => name === 'channel')) {
+				yield* channelSync.syncTwitchLive();
+				yield* Console.log(color.success('Synced twitch live'));
+				yield* channelSync.syncYoutubeLive();
+				yield* Console.log(color.success('Synced youtube live'));
+			}
+
 			return;
 		}
 
-		if (!yes) {
-			const confirmation = yield* askQuestion(
-				prompt.confirmTypeYes(`Sync ${names} with id "${id}"?`)
-			);
-			if (confirmation.trim() !== 'yes') {
-				yield* Console.log(color.warn('Aborted.'));
-				return;
-			}
-		}
-
-		yield* Console.log(color.action(`Running operations: ${names}`));
-
-		yield* Effect.forEach(selected, ([name, sync]) =>
-			Effect.gen(function* () {
-				yield* sync();
-				yield* Console.log(color.success(`Synced ${name}: ${id}`));
-			})
-		);
-
-		if (selected.some(([name]) => name === 'channel')) {
-			yield* channelSync.syncTwitchLive();
-			yield* Console.log(color.success('Synced twitch live'));
-			yield* channelSync.syncYoutubeLive();
-			yield* Console.log(color.success('Synced youtube live'));
-		}
-	} else {
 		const ytChannelIds = channels.map((c) => c.ytChannelId);
 
 		const { selected, names } = yield* selectOperations({
@@ -76,7 +89,7 @@ const main = Effect.gen(function* () {
 					),
 				videos: () => channelSync.syncVideos(ytChannelIds, { maxResults: 15 })
 			},
-			prompt: 'Select tables to seed',
+			promptLabel: 'Select tables to seed',
 			autoSelect: operations,
 			all
 		});
@@ -87,11 +100,11 @@ const main = Effect.gen(function* () {
 		}
 
 		if (!yes) {
-			const confirmation = yield* askQuestion(
-				prompt.confirmTypeYes(`Sync the following: ${names}.`)
-			);
+			const confirmed = yield* Prompt.confirm({
+				message: `Sync the following: ${names}.`
+			});
 
-			if (confirmation.trim() !== 'yes') {
+			if (!confirmed) {
 				yield* Console.log(color.warn('Aborted.'));
 				return;
 			}
@@ -112,19 +125,31 @@ const main = Effect.gen(function* () {
 			yield* channelSync.syncYoutubeLive();
 			yield* Console.log(color.success('Synced youtube live'));
 		}
-	}
-}).pipe(
-	Effect.provide(ChannelSyncService.Default.pipe(Layer.provide(DbService.Default))),
-	Effect.matchCause({
-		onSuccess: () => {
-			console.log(color.success('Seed completed successfully'));
-			process.exit(0);
-		},
-		onFailure: (cause) => {
-			console.error(color.error('Seed failed:'), Cause.pretty(cause));
-			process.exit(1);
-		}
 	})
 );
 
-Effect.runPromise(main);
+const program = (args: ReadonlyArray<string>) =>
+	Effect.scoped(
+		Effect.gen(function* () {
+			yield* Command.run(command, {
+				name: '@hc/channel-sync seed',
+				version: 'INTERNAL'
+			})(args);
+		})
+	);
+
+const MainLayer = ChannelSyncService.Default.pipe(
+	Layer.provideMerge(DbService.Default),
+	Layer.provideMerge(BunContext.layer)
+);
+
+program(process.argv).pipe(
+	Effect.provide(MainLayer),
+	Effect.catchAllCause((cause) =>
+		Effect.sync(() => {
+			console.error(color.error('Seed failed:'), Cause.pretty(cause));
+			process.exit(1);
+		})
+	),
+	BunRuntime.runMain
+);
