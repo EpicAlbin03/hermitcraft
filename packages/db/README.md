@@ -2,8 +2,10 @@
 
 This is the database schema and connection for the project.
 
-To push the schema to the database:
+### Usage
 
 ```bash
-bun db:push
+bun run db:push
+bun run db:generate
+bun run db:migrate
 ```
