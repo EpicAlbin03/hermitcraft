@@ -26,7 +26,7 @@
 
 - **Conciseness:** Be extremely concise.
 - **Types:** Do NOT write explicit return types unless necessary.
-- **Files:** `apps/sv-web` (SvelteKit), `apps/bun-worker`, `packages/db`.
+- **Files:** `apps/sv-web` (SvelteKit), `apps/bun-worker`, `packages/db`, `packages/channel-sync/`.
 
 ## Effect Solutions Usage
 
