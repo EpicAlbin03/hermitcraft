@@ -533,7 +533,7 @@ export const channels: Pick<
 		ytName: 'rendog',
 		ytHandle: '@rendog',
 		twitchUserId: '30600786',
-		twitchUserLogin: 'rendog',
+		twitchUserLogin: 'rendogtv',
 		links: [
 			{
 				title: 'rendogtv',
