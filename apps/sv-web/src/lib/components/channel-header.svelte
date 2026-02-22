@@ -4,9 +4,7 @@
 	import * as Avatar from '$lib/components/ui/avatar';
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import {
-		type ActiveTailwindBreakpoint
-	} from '$lib/hooks/is-tailwind-breakpoint.svelte';
+	import { type ActiveTailwindBreakpoint } from '$lib/hooks/is-tailwind-breakpoint.svelte';
 	import { formatCompactNumber, parseChannelDescription } from '$lib/format';
 	import { cn } from '$lib/utils';
 	import { getIconFromUrl } from '$lib/utils';
@@ -20,6 +18,7 @@
 	};
 
 	const { channel, handle }: Props = $props();
+	const channelHandle = $derived(channel.ytHandle ?? handle);
 
 	const BANNER_WIDTHS: Record<ActiveTailwindBreakpoint, number> = {
 		xs: 960,
@@ -59,7 +58,7 @@
 
 	const channelLinks = $derived.by(() => {
 		const allLinks = [
-			{ title: channel.ytName, url: `https://www.youtube.com/${handle}` },
+			{ title: channel.ytName, url: `https://www.youtube.com/${channelHandle}` },
 			...(channel.links ?? [])
 		];
 
@@ -148,7 +147,7 @@
 		<div class="relative z-10 -mt-12 shrink-0 md:mt-6">
 			<Avatar.Root class="h-24 w-24 border-4 border-card text-3xl shadow-sm md:h-32 md:w-32">
 				{#snippet child({ props })}
-					<a {...props} href={`https://www.youtube.com/${handle}`} target="_blank">
+					<a {...props} href={`https://www.youtube.com/${channelHandle}`} target="_blank">
 						<Avatar.Image src={channel.ytAvatarUrl} alt={channel.ytName} />
 						<Avatar.Fallback>{channel.ytName.slice(0, 2).toUpperCase()}</Avatar.Fallback>
 					</a>
@@ -162,7 +161,7 @@
 					<Button
 						variant="link"
 						class="p-0 text-2xl font-bold md:text-3xl"
-						href={`https://www.youtube.com/${handle}`}
+						href={`https://www.youtube.com/${channelHandle}`}
 						target="_blank"
 					>
 						{channel.ytName}
@@ -194,7 +193,7 @@
 						{/if}
 					</div>
 				</div>
-				<p class="text-muted-foreground">{handle}</p>
+				<p class="text-muted-foreground">{channelHandle}</p>
 			</div>
 
 			<div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
