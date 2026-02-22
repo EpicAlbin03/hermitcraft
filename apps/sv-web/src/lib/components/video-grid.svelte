@@ -399,6 +399,7 @@
 										{#if channelName && channelHandle && channelThumbnail}
 											<a
 												href="/{channelHandle}"
+												data-sveltekit-preload-data="false"
 												class="group/channel flex items-center gap-2 text-muted-foreground hover:text-foreground"
 											>
 												<Avatar class="h-6 w-6 shrink-0">
