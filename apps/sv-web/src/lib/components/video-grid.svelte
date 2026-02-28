@@ -417,16 +417,20 @@
 								<div class="text-muted-foreground">
 									<div class="flex flex-col gap-2 text-xs">
 										{#if video.livestreamType === 'live'}
-											<div class="flex items-center gap-3">
+											<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
 												{#if video.livestreamConcurrentViewers}
-													<span class="flex items-center gap-1">
+													<span class="flex items-center gap-1 whitespace-nowrap">
 														<Eye class="h-3 w-3" />
-														{formatCompactNumber(video.livestreamConcurrentViewers)}
+														<span class="font-semibold"
+															>{formatCompactNumber(video.livestreamConcurrentViewers)}</span
+														>
+														Views
 													</span>
 												{/if}
-												<span class="flex items-center gap-1">
+												<span class="flex items-center gap-1 whitespace-nowrap">
 													<ThumbsUp class="h-3 w-3" />
-													{formatCompactNumber(video.likeCount)}
+													<span class="font-semibold">{formatCompactNumber(video.likeCount)}</span>
+													Likes
 												</span>
 												{#if video.livestreamActualStartTime}
 													<span class="flex items-center gap-1">
@@ -436,10 +440,11 @@
 												{/if}
 											</div>
 										{:else if video.livestreamType === 'upcoming'}
-											<div class="flex items-center gap-3">
-												<span class="flex items-center gap-1">
+											<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+												<span class="flex items-center gap-1 whitespace-nowrap">
 													<ThumbsUp class="h-3 w-3" />
-													{formatCompactNumber(video.likeCount)}
+													<span class="font-semibold">{formatCompactNumber(video.likeCount)}</span>
+													Likes
 												</span>
 												{#if video.livestreamScheduledStartTime}
 													<span class="flex items-center gap-1">
@@ -449,18 +454,23 @@
 												{/if}
 											</div>
 										{:else}
-											<div class="flex items-center gap-3">
-												<span class="flex items-center gap-1">
+											<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+												<span class="flex items-center gap-1 whitespace-nowrap">
 													<Eye class="h-3 w-3" />
-													{formatCompactNumber(video.viewCount)}
+													<span class="font-semibold">{formatCompactNumber(video.viewCount)}</span>
+													Views
 												</span>
-												<span class="flex items-center gap-1">
+												<span class="flex items-center gap-1 whitespace-nowrap">
 													<ThumbsUp class="h-3 w-3" />
-													{formatCompactNumber(video.likeCount)}
+													<span class="font-semibold">{formatCompactNumber(video.likeCount)}</span>
+													Likes
 												</span>
-												<span class="flex items-center gap-1">
+												<span class="flex items-center gap-1 whitespace-nowrap">
 													<MessageCircle class="h-3 w-3" />
-													{formatCompactNumber(video.commentCount)}
+													<span class="font-semibold"
+														>{formatCompactNumber(video.commentCount)}</span
+													>
+													Comments
 												</span>
 											</div>
 											<div class="flex items-center gap-3">
