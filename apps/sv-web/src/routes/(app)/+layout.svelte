@@ -52,6 +52,23 @@
 			<div class="flex items-center gap-2 px-4">
 				<Sidebar.Trigger class="-ml-1" />
 				<!-- <Separator orientation="vertical" class="mr-2 data-[orientation=vertical]:h-4" /> -->
+				<a
+					href="https://www.youtube.com"
+					target="_blank"
+					class="flex items-center"
+					aria-label="Developed with YouTube"
+				>
+					<enhanced:img
+						src="../../../static/developed-with-yt.png"
+						alt="Developed with YouTube"
+						class="h-16 w-auto dark:hidden"
+					/>
+					<enhanced:img
+						src="../../../static/developed-with-yt-dark.png"
+						alt="Developed with YouTube"
+						class="hidden h-16 w-auto dark:block"
+					/>
+				</a>
 			</div>
 			<div class="flex items-center gap-2 px-4">
 				<Popover.Root>

@@ -3,7 +3,7 @@
 	import { siteConfig } from '$lib/config/site-config';
 
 	const title = 'Privacy Policy';
-	const description = 'Read the privacy policy for the Hermitcraft website.';
+	const description = 'Read the privacy policy for this website.';
 </script>
 
 <MetaData {title} {description} />
@@ -14,13 +14,47 @@
 
 This website is not affiliated with, endorsed by, or associated with Hermitcraft or its members. It is an unofficial redesign of the [hermitcraft.com](https://hermitcraft.com) website.
 
+## What We Collect
+
+We do not offer user accounts, sign-in, comments, or user uploads.
+
+- We do **not** collect names, emails, passwords, or other account/profile data.
+- We do **not** request access to your personal YouTube or Twitch account data.
+- We do **not** access private account data from YouTube or Twitch.
+
+## Cookies and Similar Technologies
+
+[{siteConfig.url}]({siteConfig.url}) stores a single first-party cookie named `hc_user_config` for appearance-related preferences.
+
+- Purpose: save appearance/UI preferences.
+- Example values stored: `onlyHermitCraft` and `sidebarOpen`.
+- Lifetime: up to 1 year (`max-age=31536000`).
+- Scope: same-site usage on this website only.
+
+We do not use this cookie for advertising, analytics profiling, or cross-site tracking. We do not place third-party tracking cookies.
+
 ## Security & Abuse Prevention
 
-We process IP addresses to protect our services from abuse, fraud, and excessive requests (e.g., rate limiting). IP addresses are stored temporarily and automatically deleted after a short period.
+We process IP addresses to protect our services from abuse, fraud, and excessive requests (for rate limiting).
+
+- IP addresses are stored in Redis cache for 60 seconds.
+- Redis automatically deletes rate-limit entries after the 60-second window.
+- IP addresses are not used for advertising or profiling.
 
 ## YouTube Client API
 
-[{siteConfig.url}]({siteConfig.url}) uses a YouTube API Client that utilizes YouTube API Services. By using {siteConfig.url}, users are agreeing to be bound by the YouTube Terms of Service. The API Client is internal and does not use visitor information. The API Client retrieves publicly accessable data about channels and videos and stores this data in its database. This information is used solely to display YouTube-related content on this website and is not shared with any third parties.
+[{siteConfig.url}]({siteConfig.url}) uses a YouTube API Client that utilizes YouTube API Services. By using [{siteConfig.url}]({siteConfig.url}), users are agreeing to be bound by the [YouTube Terms of Service](https://www.youtube.com/t/terms).
+
+The API Client only queries a predefined list of approximately 25 Hermitcraft-related YouTube channels.
+
+The API Client accesses and stores **public YouTube API Data** for those channels and their public videos, including:
+
+- Channel data (for example: channel ID, channel name, handle/custom URL, description, avatar/banner URLs, public subscriber/video/view counts, channel join date).
+- Video data (for example: video ID, channel ID, title, thumbnail URL, publish date, duration, public view/like/comment counts, privacy/upload status provided by the API, livestream metadata).
+
+This information is used only to display YouTube-related content on this website. We do not sell this data and do not share it with third parties for advertising.
+
+We do not collect user-specific YouTube account data from visitors of this site.
 
 [YouTube Terms of Service](https://www.youtube.com/t/terms)
 
@@ -28,10 +62,29 @@ We process IP addresses to protect our services from abuse, fraud, and excessive
 
 ## Twitch Client API
 
-[{siteConfig.url}]({siteConfig.url}) uses a Twitch API Client that utilizes Twitch API Services. By using {siteConfig.url}, users are agreeing to be bound by the Twitch Terms of Service. The API Client is internal and does not collect or use visitor information. The API Client retrieves publicly accessible data about streams and stores this data in its database. This information is used solely to display Twitch-related content on this website and is not shared with any third parties.
+[{siteConfig.url}]({siteConfig.url}) uses a Twitch API Client that utilizes Twitch API Services. By using [{siteConfig.url}]({siteConfig.url}), users are agreeing to be bound by the [Twitch Terms of Service](https://legal.twitch.com/legal/terms-of-service/).
+
+The API Client uses a predefined list of channels in this project (approximately 25 total entries, including Twitch account mappings where available).
+
+The API Client accesses and stores Twitch-related data used by this site, including:
+
+- Configured channel mappings (for example: Twitch user ID and Twitch login) from this project's predefined channel list.
+- Public live status checks from Twitch API responses (stored as whether a channel is currently live).
+
+This information is used only to display Twitch-related content and live indicators on this website. We do not sell this data and do not share it with third parties for advertising.
+
+We do not collect user-specific Twitch account data from visitors of this site.
 
 [Twitch Terms of Service](https://legal.twitch.com/legal/terms-of-service/)
 
 [Twitch Privacy Policy](https://legal.twitch.com/legal/privacy-notice/)
+
+## Contact Information
+
+Contact the site maintainer through the appropriate channel:
+
+- [GitHub Issues]({siteConfig.links.github}/issues) for issues, bugs, feature requests, and anything related to development of this website.
+- [GitHub Repository]({siteConfig.links.github}) for source code and project information.
+- Email at [inquires@albincarlsson.com](mailto:inquires@albincarlsson.com) for questions about this Privacy Policy and other non-development matters.
 
 </main>
