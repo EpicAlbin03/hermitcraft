@@ -18,6 +18,7 @@
 	viewBox="0 0 602.19 515.87"
 	style="enable-background:new 0 0 602.19 515.87;"
 	xml:space="preserve"
+	class="size-5!"
 	{...props}
 >
 	<style type="text/css">

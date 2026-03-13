@@ -255,9 +255,9 @@
 					{@const Icon = getIconFromUrl(link.url, link.title)}
 					<Button variant="ghost" size="sm" href={link.url} target="_blank">
 						{#if typeof Icon === 'object' && 'url' in Icon && 'alt' in Icon}
-							<ImageIcon url={Icon.url} alt={Icon.alt} fallback={Icon.fallback} class="h-4 w-4" />
+							<ImageIcon url={Icon.url} alt={Icon.alt} fallback={Icon.fallback} class="size-4" />
 						{:else}
-							<Icon class="h-4 w-4" />
+							<Icon class={Icon === YoutubeSVG ? 'size-5' : 'size-4'} />
 						{/if}
 						{link.title}
 					</Button>
@@ -285,10 +285,10 @@
 												url={Icon.url}
 												alt={Icon.alt}
 												fallback={Icon.fallback}
-												class="h-4 w-4"
+												class="size-4"
 											/>
 										{:else}
-											<Icon class="h-4 w-4" />
+											<Icon class={Icon === YoutubeSVG ? 'size-5' : 'size-4'} />
 										{/if}
 										{link.title}
 									</a>
