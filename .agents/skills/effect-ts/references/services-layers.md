@@ -56,8 +56,8 @@ Effect.gen(function* () {
 
 // Effect.fn - automatic tracing and telemetry (preferred for named functions)
 const fetchUser = Effect.fn("fetchUser")(function* (id: string) {
-  const db = yield* Database
-  return yield* db.query(id)
-})
+  const db = yield* Database;
+  return yield* db.query(id);
+});
 // Creates spans, captures call sites, provides better stack traces
 ```

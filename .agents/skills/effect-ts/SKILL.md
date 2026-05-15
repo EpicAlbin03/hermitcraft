@@ -128,27 +128,27 @@ existing codebase patterns (when they exist).
 ### Creating Effects
 
 ```typescript
-Effect.succeed(value) // Wrap success value
-Effect.fail(error) // Create failed effect
-Effect.tryPromise(fn) // Wrap promise-returning function
-Effect.try(fn) // Wrap synchronous throwing function
-Effect.sync(fn) // Wrap synchronous non-throwing function
+Effect.succeed(value); // Wrap success value
+Effect.fail(error); // Create failed effect
+Effect.tryPromise(fn); // Wrap promise-returning function
+Effect.try(fn); // Wrap synchronous throwing function
+Effect.sync(fn); // Wrap synchronous non-throwing function
 ```
 
 ### Composing Effects
 
 ```typescript
-Effect.flatMap(effect, fn) // Chain effects
-Effect.map(effect, fn) // Transform success value
-Effect.tap(effect, fn) // Side effect without changing value
-Effect.all([...effects]) // Run effects (concurrency configurable)
-Effect.forEach(items, fn) // Map over items with effects
+Effect.flatMap(effect, fn); // Chain effects
+Effect.map(effect, fn); // Transform success value
+Effect.tap(effect, fn); // Side effect without changing value
+Effect.all([...effects]); // Run effects (concurrency configurable)
+Effect.forEach(items, fn); // Map over items with effects
 
 // Collect ALL errors (not just first)
-Effect.all([e1, e2, e3], { mode: "validate" }) // Returns all failures
+Effect.all([e1, e2, e3], { mode: "validate" }); // Returns all failures
 
 // Partial success handling
-Effect.partition([e1, e2, e3]) // Returns [failures, successes]
+Effect.partition([e1, e2, e3]); // Returns [failures, successes]
 ```
 
 ### Error Handling
@@ -156,20 +156,20 @@ Effect.partition([e1, e2, e3]) // Returns [failures, successes]
 ```typescript
 // Define typed errors with Data.TaggedError (preferred)
 class UserNotFoundError extends Data.TaggedError("UserNotFoundError")<{
-  userId: string
+  userId: string;
 }> {}
 
 // Direct yield of errors (no Effect.fail wrapper needed)
 Effect.gen(function* () {
   if (!user) {
-    return yield* new UserNotFoundError({ userId })
+    return yield* new UserNotFoundError({ userId });
   }
-})
+});
 
-Effect.catchTag(effect, tag, fn) // Handle specific error tag
-Effect.catchAll(effect, fn) // Handle all errors
-Effect.result(effect) // Convert to Exit value
-Effect.orElse(effect, alt) // Fallback effect
+Effect.catchTag(effect, tag, fn); // Handle specific error tag
+Effect.catchAll(effect, fn); // Handle all errors
+Effect.result(effect); // Convert to Exit value
+Effect.orElse(effect, alt); // Fallback effect
 ```
 
 ### Error Taxonomy
@@ -188,13 +188,13 @@ Categorize errors for appropriate handling:
 // Pattern: Normalize unknown errors at boundary
 const safeBoundary = Effect.catchAllDefect(effect, (defect) =>
   Effect.fail(new UnknownError({ cause: defect })),
-)
+);
 
 // Pattern: Catch user-initiated cancellations separately
-Effect.catchTag(effect, "UserCancelledError", () => Effect.succeed(null))
+Effect.catchTag(effect, "UserCancelledError", () => Effect.succeed(null));
 
 // Pattern: Handle interruptions differently from failures
-Effect.onInterrupt(effect, () => Effect.log("Operation cancelled"))
+Effect.onInterrupt(effect, () => Effect.log("Operation cancelled"));
 ```
 
 ### Pattern Matching (Match Module)

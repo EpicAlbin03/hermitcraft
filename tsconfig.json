@@ -3,18 +3,24 @@
   "compilerOptions": {
     "lib": ["ESNext"],
     "target": "ESNext",
-    "module": "Preserve",
+    "module": "preserve",
     "moduleDetection": "force",
     "allowJs": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
+    "rewriteRelativeImportExtensions": true,
     "noEmit": true,
     "strict": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
+    "incremental": true,
+    "composite": true,
+    "declarationMap": true,
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
     "plugins": [
       {
         "name": "@effect/language-service"
