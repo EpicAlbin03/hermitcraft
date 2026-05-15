@@ -26,6 +26,5 @@
         "name": "@effect/language-service"
       }
     ]
-  },
-  "exclude": ["node_modules", "dist", "build", ".turbo", "coverage"]
+  }
 }

@@ -1,0 +1,4 @@
+{
+  "extends": "@hc/tsconfig/base",
+  "exclude": ["node_modules", "dist", "build"]
+}
