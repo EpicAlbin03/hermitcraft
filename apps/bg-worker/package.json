@@ -1,0 +1,23 @@
+{
+	"name": "@hc/bg-worker",
+	"module": "src/index.ts",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "bun --watch src/index.ts",
+		"build": "bun build src/index.ts --compile --outfile build/bg-worker",
+		"start": "./build/bg-worker",
+		"check": "tsc --noEmit",
+		"format": "prettier --write .",
+		"lint": "prettier --check ."
+	},
+	"dependencies": {},
+	"devDependencies": {
+		"@hc/tsconfig": "workspace:*",
+		"@types/bun": "latest",
+		"prettier": "^3.8.3"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}
