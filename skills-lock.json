@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "effect-ts": {
+      "source": "paulrberg/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/effect-ts/SKILL.md",
+      "computedHash": "7a8e4dd3a989005d01f1612d17272d2b51abbf0fe03d215762128f97d9486ba8"
+    }
+  }
+}
