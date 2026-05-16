@@ -13,7 +13,6 @@
 	},
 	"dependencies": {},
 	"devDependencies": {
-		"@hc/tsconfig": "workspace:*",
 		"@types/bun": "catalog:",
 		"prettier": "catalog:",
 		"typescript": "catalog:"
