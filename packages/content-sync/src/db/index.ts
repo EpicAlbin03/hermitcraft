@@ -1,12 +1,23 @@
-import { DB_SCHEMA, Db, DbError } from '@hc/db';
-import { Effect } from 'effect';
+import { DB } from '@hc/db/connection';
+import { DB_SCHEMA, type Channel } from '@hc/db/schema';
+import { Context, Effect } from 'effect';
+import * as Data from 'effect/Data';
+import { getColumns } from 'drizzle-orm';
+
+class DbError extends Data.TaggedError('DbError')<{ message: string; cause?: unknown }> { }
+
+const {
+	createdAt,
+	modifiedAt,
+	...channelColumns
+} = getColumns(DB_SCHEMA.channels);
 
 const dbService = Effect.gen(function* () {
-	const db = yield* Db;
+	const db = yield* DB;
 
-	const getAllChannels = () =>
+	const getAllChannels = (): Effect.Effect<Channel[], DbError> =>
 		db
-			.select()
+			.select(channelColumns)
 			.from(DB_SCHEMA.channels)
 			.pipe(
 				Effect.mapError(
@@ -23,4 +34,8 @@ const dbService = Effect.gen(function* () {
 	};
 });
 
-// export DbService
+type DbServiceShape = Effect.Success<typeof dbService>;
+
+export class DbService extends Context.Service<DbService, DbServiceShape>()(
+	"@hc/content-sync/db/DbService"
+) { }

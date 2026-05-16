@@ -21,6 +21,7 @@
 		"@twurple/api": "^8.1.4",
 		"@twurple/auth": "^8.1.4",
 		"effect": "catalog:",
+		"drizzle-orm": "catalog:",
 		"googleapis": "^164.1.0",
 		"jpeg-js": "^0.4.4",
 		"sharp": "^0.34.5",

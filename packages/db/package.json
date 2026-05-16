@@ -3,7 +3,8 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		"./connection": "./src/connection.ts",
+		"./schema": "./src/schema.ts"
 	},
 	"scripts": {
 		"db:push": "drizzle-kit push",
@@ -16,7 +17,7 @@
 	"dependencies": {
 		"@effect/sql": "^0.51.1",
 		"@effect/sql-pg": "^0.52.1",
-		"drizzle-orm": "1.0.0-rc.2",
+		"drizzle-orm": "catalog:",
 		"effect": "catalog:",
 		"pg": "^8.20.0"
 	},

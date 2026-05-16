@@ -1,9 +1,11 @@
 import { PgClient } from '@effect/sql-pg';
+import * as Effect from 'effect/Effect';
+import * as Redacted from 'effect/Redacted';
 import * as PgDrizzle from 'drizzle-orm/effect-postgres';
-import type { EffectPgDatabase } from 'drizzle-orm/effect-postgres';
-import { Config, Context, Layer } from 'effect';
-import { TaggedError } from 'effect/Data';
-import { type CustomTypesConfig, types } from 'pg';
-import * as mySchema from './schema';
+import { relations } from './relations';
 
-const DRIZZLE_DATE_TIME_TYPE_IDS = [1184, 1114, 1082, 1186, 1231, 1115, 1185, 1187, 1182];
+export const PgClientLive = PgClient.layer({
+	url: Redacted.make(Bun.env.DATABASE_URL!)
+});
+
+export const DB = PgDrizzle.make({ relations }).pipe(Effect.provide(PgDrizzle.DefaultServices));
