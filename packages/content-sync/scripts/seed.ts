@@ -129,26 +129,22 @@ const command = Command.make('seed', { id, yes, all, ops }, ({ id, yes, all, ops
 );
 
 const program = (args: ReadonlyArray<string>) =>
-	Effect.scoped(
-		Effect.gen(function* () {
-			yield* Command.run(command, {
-				name: '@hc/channel-sync seed',
-				version: 'INTERNAL'
-			})(args);
-		})
-	);
+	Command.run(command, {
+		name: '@hc/content-sync seed',
+		version: 'INTERNAL'
+	})(args);
 
-const MainLayer = ChannelSyncService.Default.pipe(
-	Layer.provideMerge(DbService.Default),
+const MainLayer = ChannelSyncService.layer.pipe(
+	Layer.provideMerge(DbService.layer),
 	Layer.provideMerge(BunContext.layer)
 );
 
 program(process.argv).pipe(
 	Effect.provide(MainLayer),
-	Effect.catchAllCause((cause) =>
+	Effect.catchCause((cause) =>
 		Effect.sync(() => {
 			console.error(color.error('Seed failed:'), Cause.pretty(cause));
-			process.exit(1);
+			process.exitCode = 1;
 		})
 	),
 	BunRuntime.runMain

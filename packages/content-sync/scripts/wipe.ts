@@ -94,21 +94,17 @@ const command = Command.make('wipe', { id, yes, all, ops }, ({ id, yes, all, ops
 );
 
 const program = (args: ReadonlyArray<string>) =>
-	Effect.scoped(
-		Effect.gen(function* () {
-			yield* Command.run(command, {
-				name: '@hc/channel-sync wipe',
-				version: 'INTERNAL'
-			})(args);
-		})
-	);
+	Command.run(command, {
+		name: '@hc/content-sync wipe',
+		version: 'INTERNAL'
+	})(args);
 
 program(process.argv).pipe(
-	Effect.provide(DbService.Default.pipe(Layer.provideMerge(BunContext.layer))),
-	Effect.catchAllCause((cause) =>
+	Effect.provide(DbService.layer.pipe(Layer.provideMerge(BunContext.layer))),
+	Effect.catchCause((cause) =>
 		Effect.sync(() => {
 			console.error(color.error('Wipe failed:'), cause);
-			process.exit(1);
+			process.exitCode = 1;
 		})
 	),
 	BunRuntime.runMain

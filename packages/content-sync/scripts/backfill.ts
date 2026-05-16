@@ -46,7 +46,7 @@ const command = Command.make('backfill', { id }, ({ id }) =>
 						maxResults: 100
 					})
 					.pipe(
-						Effect.catchAll((err) => {
+						Effect.catch((err) => {
 							console.error(
 								color.error(`Failed to backfill ${channel.ytName} (${channel.ytChannelId}):`),
 								err
@@ -63,26 +63,22 @@ const command = Command.make('backfill', { id }, ({ id }) =>
 );
 
 const program = (args: ReadonlyArray<string>) =>
-	Effect.scoped(
-		Effect.gen(function* () {
-			yield* Command.run(command, {
-				name: '@hc/channel-sync backfill',
-				version: 'INTERNAL'
-			})(args);
-		})
-	);
+	Command.run(command, {
+		name: '@hc/content-sync backfill',
+		version: 'INTERNAL'
+	})(args);
 
-const MainLayer = ChannelSyncService.Default.pipe(
-	Layer.provideMerge(DbService.Default),
+const MainLayer = ChannelSyncService.layer.pipe(
+	Layer.provideMerge(DbService.layer),
 	Layer.provideMerge(BunContext.layer)
 );
 
 program(process.argv).pipe(
 	Effect.provide(MainLayer),
-	Effect.catchAllCause((cause) =>
+	Effect.catchCause((cause) =>
 		Effect.sync(() => {
 			console.error(color.error('Backfill failed:'), cause);
-			process.exit(1);
+			process.exitCode = 1;
 		})
 	),
 	BunRuntime.runMain

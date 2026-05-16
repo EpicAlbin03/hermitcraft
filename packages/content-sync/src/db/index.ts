@@ -5,21 +5,17 @@ import {
 	inArray,
 	and,
 	isNotNull,
-	ne,
 	type Video,
 	type Channel
 } from '@hc/db';
-import { Console, Effect } from 'effect';
+import { Console, Context, Effect, Layer } from 'effect';
 import { TaggedError } from 'effect/Data';
 import { parseIsoDurationToSeconds } from '../youtube/utils';
 
-class DbError extends TaggedError('DbError') {
-	constructor(message: string, options?: { cause?: unknown }) {
-		super();
-		this.message = message;
-		this.cause = options?.cause;
-	}
-}
+class DbError extends TaggedError('DbError')<{
+	message: string;
+	cause?: unknown;
+}> {}
 
 const dbService = Effect.gen(function* () {
 	const dbUrl = yield* Effect.sync(() => Bun.env.MYSQL_URL);
@@ -27,19 +23,15 @@ const dbService = Effect.gen(function* () {
 		return yield* Effect.die('MYSQL_URL is not set...');
 	}
 
-	const drizzle = yield* Effect.acquireRelease(
-		Effect.try(() => getDrizzleInstance(dbUrl)),
-		(db) =>
-			Effect.sync(() => {
-				console.log('Closing database connection...');
-				db.$client.end();
-			})
-	).pipe(
-		Effect.catchAll((err) => {
+	const drizzle = yield* getDrizzleInstance(dbUrl).pipe(
+		Effect.catch((err) => {
 			console.error('Failed to connect to database...', err);
 			return Effect.die('Failed to connect to database...');
 		})
 	);
+
+	const withDbError = <A, E, R>(effect: Effect.Effect<A, E, R>, message: string) =>
+		effect.pipe(Effect.mapError((cause) => new DbError({ message, cause })));
 
 	type ChannelColumns = typeof DB_SCHEMA.channels;
 	type ChannelSelection = {
@@ -64,13 +56,10 @@ const dbService = Effect.gen(function* () {
 		selection?: T
 	) =>
 		Effect.gen(function* () {
-			const channels = yield* Effect.tryPromise({
-				try: () => drizzle.select(selection ?? {}).from(DB_SCHEMA.channels),
-				catch: (err) =>
-					new DbError('Failed to get all channels...', {
-						cause: err
-					})
-			});
+			const channels = yield* withDbError(
+				drizzle.select(selection ?? {}).from(DB_SCHEMA.channels),
+				'Failed to get all channels...'
+			);
 
 			return channels as ChannelSelectResult<T>[];
 		});
@@ -80,18 +69,14 @@ const dbService = Effect.gen(function* () {
 		selection?: T
 	) =>
 		Effect.gen(function* () {
-			const channels = yield* Effect.tryPromise({
-				try: () =>
-					drizzle
-						.select(selection ?? {})
-						.from(DB_SCHEMA.channels)
-						.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId))
-						.limit(1),
-				catch: (err) =>
-					new DbError('Failed to get channel', {
-						cause: err
-					})
-			});
+			const channels = yield* withDbError(
+				drizzle
+					.select(selection ?? {})
+					.from(DB_SCHEMA.channels)
+					.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId))
+					.limit(1),
+				'Failed to get channel'
+			);
 
 			return (channels[0] ?? null) as ChannelSelectResult<T> | null;
 		});
@@ -101,18 +86,14 @@ const dbService = Effect.gen(function* () {
 		selection?: T
 	) =>
 		Effect.gen(function* () {
-			const videos = yield* Effect.tryPromise({
-				try: () =>
-					drizzle
-						.select(selection ?? {})
-						.from(DB_SCHEMA.videos)
-						.where(eq(DB_SCHEMA.videos.ytVideoId, ytVideoId))
-						.limit(1),
-				catch: (err) =>
-					new DbError('Failed to get video', {
-						cause: err
-					})
-			});
+			const videos = yield* withDbError(
+				drizzle
+					.select(selection ?? {})
+					.from(DB_SCHEMA.videos)
+					.where(eq(DB_SCHEMA.videos.ytVideoId, ytVideoId))
+					.limit(1),
+				'Failed to get video'
+			);
 
 			return (videos[0] ?? null) as VideoSelectResult<T> | null;
 		});
@@ -124,32 +105,25 @@ const dbService = Effect.gen(function* () {
 		Effect.gen(function* () {
 			if (ytVideoIds.length === 0) return [] as VideoSelectResult<T>[];
 
-			const videos = yield* Effect.tryPromise({
-				try: () =>
-					drizzle
-						.select(selection ?? {})
-						.from(DB_SCHEMA.videos)
-						.where(inArray(DB_SCHEMA.videos.ytVideoId, ytVideoIds)),
-				catch: (err) =>
-					new DbError('Failed to get videos', {
-						cause: err
-					})
-			});
+			const videos = yield* withDbError(
+				drizzle
+					.select(selection ?? {})
+					.from(DB_SCHEMA.videos)
+					.where(inArray(DB_SCHEMA.videos.ytVideoId, ytVideoIds)),
+				'Failed to get videos'
+			);
 
 			return videos as VideoSelectResult<T>[];
 		});
 
 	const updateChannel = (ytChannelId: string, data: Partial<Channel>) =>
-		Effect.gen(function* () {
-			yield* Effect.tryPromise({
-				try: () =>
-					drizzle
-						.update(DB_SCHEMA.channels)
-						.set(data)
-						.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId)),
-				catch: (err) => new DbError('Failed to update channel', { cause: err })
-			});
-		});
+		withDbError(
+			drizzle
+				.update(DB_SCHEMA.channels)
+				.set(data)
+				.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId)),
+			'Failed to update channel'
+		);
 
 	const upsertChannel = (
 		data: Omit<
@@ -179,62 +153,54 @@ const dbService = Effect.gen(function* () {
 			});
 
 			if (existing) {
-				yield* Effect.tryPromise({
-					try: () =>
-						drizzle
-							.update(DB_SCHEMA.channels)
-							.set({
-								ytName: data.ytName,
-								ytHandle: data.ytHandle,
-								ytDescription: data.ytDescription,
-								ytAvatarUrl: data.ytAvatarUrl,
-								ytBannerUrl: data.ytBannerUrl,
-								ytBannerThumbHash: data.ytBannerThumbHash,
-								ytViewCount: data.ytViewCount,
-								ytSubscriberCount: data.ytSubscriberCount,
-								ytVideoCount: data.ytVideoCount,
-								twitchUserLogin: data.twitchUserLogin,
-								// isTwitchLive: handled by twitchSyncProgram
-								// ytLiveVideoId: handled by videoSyncProgram
-								links: data.links
-							})
-							.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId)),
-					catch: (err) =>
-						new DbError('Failed to update channel', {
-							cause: err
-						})
-				});
-
-				return { ytChannelId: data.ytChannelId, wasInserted: false };
-			} else {
-				yield* Effect.tryPromise({
-					try: () =>
-						drizzle.insert(DB_SCHEMA.channels).values({
-							ytChannelId: data.ytChannelId,
+				yield* withDbError(
+					drizzle
+						.update(DB_SCHEMA.channels)
+						.set({
 							ytName: data.ytName,
 							ytHandle: data.ytHandle,
 							ytDescription: data.ytDescription,
 							ytAvatarUrl: data.ytAvatarUrl,
 							ytBannerUrl: data.ytBannerUrl,
-							ytBannerThumbHash: data.ytBannerThumbHash || null,
+							ytBannerThumbHash: data.ytBannerThumbHash,
 							ytViewCount: data.ytViewCount,
 							ytSubscriberCount: data.ytSubscriberCount,
 							ytVideoCount: data.ytVideoCount,
-							ytJoinedAt: data.ytJoinedAt,
-							twitchUserId: data.twitchUserId,
-							twitchUserLogin: data.twitchUserLogin || null,
-							isTwitchLive: data.isTwitchLive || false,
-							ytLiveVideoId: data.ytLiveVideoId || null,
-							links: data.links || []
-						}),
-					catch: (err) =>
-						new DbError('Failed to insert channel', {
-							cause: err
+							twitchUserLogin: data.twitchUserLogin,
+							// isTwitchLive: handled by twitchSyncProgram
+							// ytLiveVideoId: handled by videoSyncProgram
+							links: data.links
 						})
-				});
+						.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId)),
+					'Failed to update channel'
+				);
 
-				return { ytChannelId: data.ytChannelId, wasInserted: true };
+				return { ytChannelId: data.ytChannelId, wasInserted: false };
 			}
+
+			yield* withDbError(
+				drizzle.insert(DB_SCHEMA.channels).values({
+					ytChannelId: data.ytChannelId,
+					ytName: data.ytName,
+					ytHandle: data.ytHandle,
+					ytDescription: data.ytDescription,
+					ytAvatarUrl: data.ytAvatarUrl,
+					ytBannerUrl: data.ytBannerUrl,
+					ytBannerThumbHash: data.ytBannerThumbHash || null,
+					ytViewCount: data.ytViewCount,
+					ytSubscriberCount: data.ytSubscriberCount,
+					ytVideoCount: data.ytVideoCount,
+					ytJoinedAt: data.ytJoinedAt,
+					twitchUserId: data.twitchUserId,
+					twitchUserLogin: data.twitchUserLogin || null,
+					isTwitchLive: data.isTwitchLive || false,
+					ytLiveVideoId: data.ytLiveVideoId || null,
+					links: data.links || []
+				}),
+				'Failed to insert channel'
+			);
+
+			return { ytChannelId: data.ytChannelId, wasInserted: true };
 		});
 
 	const upsertVideo = (data: Video) =>
@@ -258,11 +224,11 @@ const dbService = Effect.gen(function* () {
 
 			if (shouldUpdateChannel) {
 				// Use transaction to update both video and channel atomically
-				yield* Effect.tryPromise({
-					try: () =>
-						drizzle.transaction(async (tx) => {
+				yield* withDbError(
+					drizzle.transaction((tx) =>
+						Effect.gen(function* () {
 							if (existing) {
-								await tx
+								yield* tx
 									.update(DB_SCHEMA.videos)
 									.set({
 										title: data.title,
@@ -281,7 +247,7 @@ const dbService = Effect.gen(function* () {
 									})
 									.where(eq(DB_SCHEMA.videos.ytVideoId, data.ytVideoId));
 							} else {
-								await tx.insert(DB_SCHEMA.videos).values({
+								yield* tx.insert(DB_SCHEMA.videos).values({
 									ytVideoId: data.ytVideoId,
 									ytChannelId: data.ytChannelId,
 									title: data.title,
@@ -301,8 +267,7 @@ const dbService = Effect.gen(function* () {
 								});
 							}
 
-							// Fetch current ytLiveVideoId to prevent race conditions
-							const channel = await tx
+							const channel = yield* tx
 								.select({ ytLiveVideoId: DB_SCHEMA.channels.ytLiveVideoId })
 								.from(DB_SCHEMA.channels)
 								.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId))
@@ -311,200 +276,156 @@ const dbService = Effect.gen(function* () {
 							const currentLiveVideoId = channel[0]?.ytLiveVideoId;
 
 							if (data.livestreamType === 'live') {
-								await tx
+								yield* tx
 									.update(DB_SCHEMA.channels)
 									.set({ ytLiveVideoId: data.ytVideoId })
 									.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId));
 							} else if (currentLiveVideoId === data.ytVideoId) {
-								await tx
+								yield* tx
 									.update(DB_SCHEMA.channels)
 									.set({ ytLiveVideoId: null })
 									.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId));
 							}
-						}),
-					catch: (err) =>
-						new DbError('Failed to upsert video with channel update', {
-							cause: err
 						})
-				});
+					),
+					'Failed to upsert video with channel update'
+				);
 
 				return { ytVideoId: data.ytVideoId, wasInserted: !existing, wasSkipped: false };
 			}
 
 			// No livestreamType change, just update video normally
-			yield* Effect.tryPromise({
-				try: () =>
-					drizzle
-						.update(DB_SCHEMA.videos)
-						.set({
-							title: data.title,
-							thumbnailUrl: data.thumbnailUrl,
-							privacyStatus: data.privacyStatus,
-							uploadStatus: data.uploadStatus,
-							viewCount: data.viewCount,
-							likeCount: data.likeCount,
-							commentCount: data.commentCount,
-							duration: data.duration,
-							isShort: data.isShort,
-							livestreamType: data.livestreamType,
-							livestreamScheduledStartTime: data.livestreamScheduledStartTime,
-							livestreamActualStartTime: data.livestreamActualStartTime,
-							livestreamConcurrentViewers: data.livestreamConcurrentViewers
-						})
-						.where(eq(DB_SCHEMA.videos.ytVideoId, data.ytVideoId)),
-				catch: (err) =>
-					new DbError('Failed to update video', {
-						cause: err
+			yield* withDbError(
+				drizzle
+					.update(DB_SCHEMA.videos)
+					.set({
+						title: data.title,
+						thumbnailUrl: data.thumbnailUrl,
+						privacyStatus: data.privacyStatus,
+						uploadStatus: data.uploadStatus,
+						viewCount: data.viewCount,
+						likeCount: data.likeCount,
+						commentCount: data.commentCount,
+						duration: data.duration,
+						isShort: data.isShort,
+						livestreamType: data.livestreamType,
+						livestreamScheduledStartTime: data.livestreamScheduledStartTime,
+						livestreamActualStartTime: data.livestreamActualStartTime,
+						livestreamConcurrentViewers: data.livestreamConcurrentViewers
 					})
-			});
+					.where(eq(DB_SCHEMA.videos.ytVideoId, data.ytVideoId)),
+				'Failed to update video'
+			);
 
 			return { ytVideoId: data.ytVideoId, wasInserted: false, wasSkipped: false };
 		});
 
 	const deleteVideo = (ytVideoId: string) =>
-		Effect.tryPromise({
-			try: () => drizzle.delete(DB_SCHEMA.videos).where(eq(DB_SCHEMA.videos.ytVideoId, ytVideoId)),
-			catch: (err) =>
-				new DbError('Failed to delete video', {
-					cause: err
-				})
-		});
+		withDbError(
+			drizzle.delete(DB_SCHEMA.videos).where(eq(DB_SCHEMA.videos.ytVideoId, ytVideoId)),
+			'Failed to delete video'
+		);
 
 	const markVideosAsPrivate = (ytVideoIds: string[]) =>
 		Effect.gen(function* () {
 			if (ytVideoIds.length === 0) return 0;
 
-			const result = yield* Effect.tryPromise({
-				try: () =>
-					drizzle
-						.update(DB_SCHEMA.videos)
-						.set({ privacyStatus: 'private' })
-						.where(inArray(DB_SCHEMA.videos.ytVideoId, ytVideoIds)),
-				catch: (err) =>
-					new DbError('Failed to mark videos as private', {
-						cause: err
-					})
-			});
+			yield* withDbError(
+				drizzle
+					.update(DB_SCHEMA.videos)
+					.set({ privacyStatus: 'private' })
+					.where(inArray(DB_SCHEMA.videos.ytVideoId, ytVideoIds)),
+				'Failed to mark videos as private'
+			);
 
 			// Mark live streams as completed (they ended and went private)
-			yield* Effect.tryPromise({
-				try: () =>
-					drizzle
-						.update(DB_SCHEMA.videos)
-						.set({ livestreamType: 'completed' })
-						.where(
-							and(
-								inArray(DB_SCHEMA.videos.ytVideoId, ytVideoIds),
-								eq(DB_SCHEMA.videos.livestreamType, 'live')
-							)
-						),
-				catch: (err) =>
-					new DbError('Failed to mark live videos as completed', {
-						cause: err
-					})
-			});
+			yield* withDbError(
+				drizzle
+					.update(DB_SCHEMA.videos)
+					.set({ livestreamType: 'completed' })
+					.where(
+						and(
+							inArray(DB_SCHEMA.videos.ytVideoId, ytVideoIds),
+							eq(DB_SCHEMA.videos.livestreamType, 'live')
+						)
+					),
+				'Failed to mark live videos as completed'
+			);
 
 			// Clear ytLiveVideoId on channels referencing any of these now-private videos
-			yield* Effect.tryPromise({
-				try: () =>
-					drizzle
-						.update(DB_SCHEMA.channels)
-						.set({ ytLiveVideoId: null })
-						.where(inArray(DB_SCHEMA.channels.ytLiveVideoId, ytVideoIds)),
-				catch: (err) =>
-					new DbError('Failed to clear live video refs for private videos', {
-						cause: err
-					})
-			});
+			yield* withDbError(
+				drizzle
+					.update(DB_SCHEMA.channels)
+					.set({ ytLiveVideoId: null })
+					.where(inArray(DB_SCHEMA.channels.ytLiveVideoId, ytVideoIds)),
+				'Failed to clear live video refs for private videos'
+			);
 
-			return result[0].affectedRows ?? 0;
+			return ytVideoIds.length;
 		});
 
 	const cleanupStaleLiveReferences = () =>
 		Effect.gen(function* () {
-			// Find channels with a ytLiveVideoId that no longer points to a valid live video
-			const channelsWithLive = yield* Effect.tryPromise({
-				try: () =>
-					drizzle
-						.select({
-							ytChannelId: DB_SCHEMA.channels.ytChannelId,
-							ytLiveVideoId: DB_SCHEMA.channels.ytLiveVideoId
-						})
-						.from(DB_SCHEMA.channels)
-						.where(isNotNull(DB_SCHEMA.channels.ytLiveVideoId)),
-				catch: (err) => new DbError('Failed to get channels with live videos', { cause: err })
-			});
+			const channelsWithLive = yield* withDbError(
+				drizzle
+					.select({
+						ytChannelId: DB_SCHEMA.channels.ytChannelId,
+						ytLiveVideoId: DB_SCHEMA.channels.ytLiveVideoId
+					})
+					.from(DB_SCHEMA.channels)
+					.where(isNotNull(DB_SCHEMA.channels.ytLiveVideoId)),
+				'Failed to get channels with live videos'
+			);
 
 			if (channelsWithLive.length === 0) return 0;
 
 			const liveVideoIds = channelsWithLive
-				.map((c) => c.ytLiveVideoId)
+				.map((channel) => channel.ytLiveVideoId)
 				.filter((id): id is string => id !== null);
 
-			// Check which of these videos are still valid and live
-			const validLiveVideos = yield* Effect.tryPromise({
-				try: () =>
-					drizzle
-						.select({ ytVideoId: DB_SCHEMA.videos.ytVideoId })
-						.from(DB_SCHEMA.videos)
-						.where(
-							and(
-								inArray(DB_SCHEMA.videos.ytVideoId, liveVideoIds),
-								eq(DB_SCHEMA.videos.livestreamType, 'live'),
-								eq(DB_SCHEMA.videos.privacyStatus, 'public')
-							)
-						),
-				catch: (err) => new DbError('Failed to validate live videos', { cause: err })
-			});
+			const validLiveVideos = yield* withDbError(
+				drizzle
+					.select({ ytVideoId: DB_SCHEMA.videos.ytVideoId })
+					.from(DB_SCHEMA.videos)
+					.where(
+						and(
+							inArray(DB_SCHEMA.videos.ytVideoId, liveVideoIds),
+							eq(DB_SCHEMA.videos.livestreamType, 'live'),
+							eq(DB_SCHEMA.videos.privacyStatus, 'public')
+						)
+					),
+				'Failed to validate live videos'
+			);
 
-			const validLiveVideoIds = new Set(validLiveVideos.map((v) => v.ytVideoId));
-
-			// Find channels whose ytLiveVideoId is stale
+			const validLiveVideoIds = new Set(validLiveVideos.map((video) => video.ytVideoId));
 			const staleChannelIds = channelsWithLive
-				.filter((c) => c.ytLiveVideoId && !validLiveVideoIds.has(c.ytLiveVideoId))
-				.map((c) => c.ytChannelId);
+				.filter((channel) => channel.ytLiveVideoId && !validLiveVideoIds.has(channel.ytLiveVideoId))
+				.map((channel) => channel.ytChannelId);
 
 			if (staleChannelIds.length === 0) return 0;
 
-			yield* Effect.tryPromise({
-				try: () =>
-					drizzle
-						.update(DB_SCHEMA.channels)
-						.set({ ytLiveVideoId: null })
-						.where(inArray(DB_SCHEMA.channels.ytChannelId, staleChannelIds)),
-				catch: (err) => new DbError('Failed to clear stale live video references', { cause: err })
-			});
+			yield* withDbError(
+				drizzle
+					.update(DB_SCHEMA.channels)
+					.set({ ytLiveVideoId: null })
+					.where(inArray(DB_SCHEMA.channels.ytChannelId, staleChannelIds)),
+				'Failed to clear stale live video references'
+			);
 
 			return staleChannelIds.length;
 		});
 
 	const deleteChannel = (ytChannelId: string) =>
-		Effect.tryPromise({
-			try: () =>
-				drizzle.delete(DB_SCHEMA.channels).where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId)),
-			catch: (err) =>
-				new DbError('Failed to delete channel', {
-					cause: err
-				})
-		});
+		withDbError(
+			drizzle.delete(DB_SCHEMA.channels).where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId)),
+			'Failed to delete channel'
+		);
 
 	const deleteAllVideos = () =>
-		Effect.tryPromise({
-			try: () => drizzle.delete(DB_SCHEMA.videos),
-			catch: (err) =>
-				new DbError('Failed to wipe videos table', {
-					cause: err
-				})
-		});
+		withDbError(drizzle.delete(DB_SCHEMA.videos), 'Failed to wipe videos table');
 
 	const deleteAllChannels = () =>
-		Effect.tryPromise({
-			try: () => drizzle.delete(DB_SCHEMA.channels),
-			catch: (err) =>
-				new DbError('Failed to wipe channels table', {
-					cause: err
-				})
-		});
+		withDbError(drizzle.delete(DB_SCHEMA.channels), 'Failed to wipe channels table');
 
 	return {
 		getAllChannels,
@@ -523,6 +444,8 @@ const dbService = Effect.gen(function* () {
 	};
 });
 
-export class DbService extends Effect.Service<DbService>()('DbService', {
-	scoped: dbService
-}) {}
+export class DbService extends Context.Service<DbService>()('DbService', {
+	make: dbService
+}) {
+	static layer = Layer.effect(this)(this.make);
+}

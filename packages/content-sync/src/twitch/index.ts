@@ -1,15 +1,12 @@
 import { AppTokenAuthProvider } from '@twurple/auth';
 import { ApiClient } from '@twurple/api';
-import { Effect } from 'effect';
+import { Context, Effect, Layer } from 'effect';
 import { TaggedError } from 'effect/Data';
 
-class TwitchError extends TaggedError('TwitchError') {
-	constructor(message: string, options?: { cause?: unknown }) {
-		super();
-		this.message = message;
-		this.cause = options?.cause;
-	}
-}
+class TwitchError extends TaggedError('TwitchError')<{
+	message: string;
+	cause?: unknown;
+}> {}
 
 const twitchService = Effect.gen(function* () {
 	const clientId = yield* Effect.sync(() => Bun.env.TWITCH_CLIENT_ID);
@@ -30,7 +27,8 @@ const twitchService = Effect.gen(function* () {
 			const response = yield* Effect.tryPromise({
 				try: () => twitch.streams.getStreamByUserId(userId),
 				catch: (err) =>
-					new TwitchError(`Failed to get stream for user ${userId}`, {
+					new TwitchError({
+						message: `Failed to get stream for user ${userId}`,
 						cause: err
 					})
 			});
@@ -44,7 +42,8 @@ const twitchService = Effect.gen(function* () {
 			const response = yield* Effect.tryPromise({
 				try: () => twitch.streams.getStreams({ userId: user_ids, limit: 100 }),
 				catch: (err) =>
-					new TwitchError(`Failed to get streams for users`, {
+					new TwitchError({
+						message: `Failed to get streams for users`,
 						cause: err
 					})
 			});
@@ -66,6 +65,8 @@ const twitchService = Effect.gen(function* () {
 	};
 });
 
-export class TwitchService extends Effect.Service<TwitchService>()('TwitchService', {
-	effect: twitchService
-}) {}
+export class TwitchService extends Context.Service<TwitchService>()('TwitchService', {
+	make: twitchService
+}) {
+	static layer = Layer.effect(this)(this.make);
+}
