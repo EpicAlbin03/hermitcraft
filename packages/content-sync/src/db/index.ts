@@ -4,7 +4,6 @@ import * as Option from 'effect/Option';
 import * as Effect from 'effect/Effect';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
-import * as Console from 'effect/Console';
 import { and, eq, getColumns, inArray, sql } from 'drizzle-orm';
 
 // TODO: move this
@@ -160,7 +159,7 @@ const dbService = Effect.gen(function* () {
 
 		const isLiveOrUpcoming = data.livestreamType === 'live' || data.livestreamType === 'upcoming';
 		if ((durationSeconds === null || durationSeconds === 0) && !isLiveOrUpcoming) {
-			yield* Console.warn(
+			yield* Effect.logWarning(
 				`\x1b[33mDuration is 0 or invalid for video ${data.ytVideoId}, skipping\x1b[0m`
 			);
 			return { ytVideoId: data.ytVideoId, wasInserted: false, wasSkipped: true };
