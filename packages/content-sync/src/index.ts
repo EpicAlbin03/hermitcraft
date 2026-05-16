@@ -1,0 +1,510 @@
+import { Effect, Console } from 'effect';
+import { DbService } from './db';
+import { YoutubeService } from './youtube';
+import { TaggedError } from 'effect/Data';
+import { DB_SCHEMA, type ChannelLink, type Video } from '@hc/db';
+import { TwitchService } from './twitch';
+
+class SyncVideoError extends TaggedError('SyncVideoError') {
+	constructor(message: string, options?: { cause?: unknown }) {
+		super();
+		this.message = message;
+		this.cause = options?.cause;
+	}
+}
+
+const channelSyncService = Effect.gen(function* () {
+	const db = yield* DbService;
+	const yt = yield* YoutubeService;
+	const twitch = yield* TwitchService;
+
+	const syncChannel = (
+		ytChannelId: string,
+		details?: {
+			twitchUserId?: string;
+			twitchUserLogin?: string;
+			isTwitchLive?: boolean;
+			ytLiveVideoId?: string;
+			links?: ChannelLink[];
+		}
+	) =>
+		Effect.gen(function* () {
+			const channelDetails = yield* yt.getChannelDetails(ytChannelId);
+			// const isTwitchLive =
+			// 	details.isTwitchLive ||
+			// 	(details.twitchUserId ? yield* twitch.isChannelLive(details.twitchUserId) : false);
+
+			yield* db.upsertChannel({
+				ytChannelId: ytChannelId,
+				ytName: channelDetails.ytName,
+				ytHandle: channelDetails.ytHandle,
+				ytDescription: channelDetails.ytDescription,
+				ytAvatarUrl: channelDetails.ytAvatarUrl,
+				ytBannerUrl: channelDetails.ytBannerUrl,
+				ytBannerThumbHash: channelDetails.ytBannerThumbHash,
+				ytViewCount: channelDetails.ytViewCount,
+				ytSubscriberCount: channelDetails.ytSubscriberCount,
+				ytVideoCount: channelDetails.ytVideoCount,
+				ytJoinedAt: channelDetails.ytJoinedAt,
+				twitchUserId: details?.twitchUserId,
+				twitchUserLogin: details?.twitchUserLogin,
+				isTwitchLive: details?.isTwitchLive,
+				ytLiveVideoId: details?.ytLiveVideoId,
+				links: details?.links
+			});
+		}).pipe(
+			Effect.catchTag(
+				'DbError',
+				(err) => new SyncVideoError(`DB ERROR: ${err.message}`, { cause: err.cause })
+			),
+			Effect.catchTag(
+				'YoutubeError',
+				(err) => new SyncVideoError(`YOUTUBE ERROR: ${err.message}`, { cause: err.cause })
+			)
+		);
+
+	const syncVideo = (ytVideoId: string) =>
+		Effect.gen(function* () {
+			const videoDetails = yield* yt.getVideoDetails(ytVideoId);
+			const videoIsShort = yield* yt.isVideoShort(ytVideoId, videoDetails.ytChannelId);
+
+			yield* db.upsertVideo({
+				ytVideoId: ytVideoId,
+				ytChannelId: videoDetails.ytChannelId,
+				title: videoDetails.title,
+				thumbnailUrl: videoDetails.thumbnailUrl,
+				publishedAt: videoDetails.publishedAt,
+				privacyStatus: videoDetails.privacyStatus,
+				uploadStatus: videoDetails.uploadStatus,
+				viewCount: videoDetails.viewCount,
+				likeCount: videoDetails.likeCount,
+				commentCount: videoDetails.commentCount,
+				duration: videoDetails.duration,
+				isShort: videoIsShort,
+				livestreamType: videoDetails.livestreamType,
+				livestreamScheduledStartTime: videoDetails.livestreamScheduledStartTime,
+				livestreamActualStartTime: videoDetails.livestreamActualStartTime,
+				livestreamConcurrentViewers: videoDetails.livestreamConcurrentViewers
+			});
+		}).pipe(
+			Effect.catchTag(
+				'DbError',
+				(err) => new SyncVideoError(`DB ERROR: ${err.message}`, { cause: err.cause })
+			),
+			Effect.catchTag(
+				'YoutubeError',
+				(err) => new SyncVideoError(`YOUTUBE ERROR: ${err.message}`, { cause: err.cause })
+			)
+		);
+
+	const syncChannels = (
+		channels: {
+			ytChannelId: string;
+			twitchUserId?: string;
+			twitchUserLogin?: string;
+			isTwitchLive?: boolean;
+			ytLiveVideoId?: string;
+			links?: ChannelLink[];
+		}[],
+		taskName?: string
+	) =>
+		Effect.gen(function* () {
+			const start = performance.now();
+
+			// const isTwitchLiveMap = yield* twitch.areChannelsLive(
+			// 	channels.map((c) => c.twitchUserId).filter((id) => id !== null && id !== undefined)
+			// );
+
+			let successCount = 0;
+			let errorCount = 0;
+			const fullTaskName = taskName ? `${taskName}: ` : '';
+
+			yield* Console.log(`${fullTaskName}Syncing channels`);
+			yield* Effect.forEach(
+				channels,
+				(channel) =>
+					Effect.gen(function* () {
+						// yield* Console.log(`${fullTaskName}Syncing channel ${channel.ytChannelId}`);
+						const result = yield* syncChannel(channel.ytChannelId, {
+							twitchUserId: channel.twitchUserId,
+							twitchUserLogin: channel.twitchUserLogin,
+							isTwitchLive: channel.isTwitchLive,
+							ytLiveVideoId: channel.ytLiveVideoId,
+							links: channel.links
+						}).pipe(Effect.either);
+
+						if (result._tag === 'Right') {
+							successCount++;
+							// yield* Console.log(`${fullTaskName}Synced channel ${channel.ytChannelId}`);
+						} else {
+							errorCount++;
+							yield* Console.error(`${fullTaskName}Failed to sync channel`, result.left);
+						}
+					}),
+				{ concurrency: 5 }
+			);
+
+			yield* Console.log(
+				`CHANNEL SYNC COMPLETED: ${successCount} channels synced, ${errorCount} channels failed`
+			);
+			yield* Console.log(`CHANNEL SYNC TOOK ${performance.now() - start}ms`);
+		});
+
+	const syncVideos = (
+		ytChannelIds: string[],
+		args: {
+			taskName?: string;
+			backfill?: boolean;
+			maxResults?: number;
+		}
+	) =>
+		Effect.gen(function* () {
+			const start = performance.now();
+
+			let successCount = 0;
+			let errorCount = 0;
+			let skipCount = 0;
+			const fullTaskName = args.taskName ? `${args.taskName}: ` : '';
+
+			// Step 1: Collect all video IDs from all channels
+			const videosByChannel = new Map<string, string[]>();
+			const allVideoIds: string[] = [];
+
+			yield* Effect.forEach(
+				ytChannelIds,
+				(ytChannelId) =>
+					Effect.gen(function* () {
+						const result = yield* Effect.either(
+							args.backfill
+								? yt.getVideoIdsFromUploadsPlaylist(ytChannelId, args.maxResults)
+								: Effect.map(yt.getRSSVideoIds(ytChannelId), (ids) => ids.slice(0, args.maxResults))
+						);
+
+						if (result._tag === 'Left') {
+							yield* Console.error(
+								`${fullTaskName}Failed to get video IDs for ${ytChannelId}`,
+								result.left
+							);
+							return;
+						}
+
+						const videoIds = result.right;
+						videosByChannel.set(ytChannelId, videoIds);
+						allVideoIds.push(...videoIds);
+					}),
+				{ concurrency: 5 }
+			);
+
+			// Step 1.5: Include currently-referenced live video IDs so ended/private streams get re-checked
+			const channelsWithLive = yield* db.getAllChannels({
+				ytChannelId: DB_SCHEMA.channels.ytChannelId,
+				ytLiveVideoId: DB_SCHEMA.channels.ytLiveVideoId
+			});
+			const allVideoIdsSet = new Set(allVideoIds);
+			for (const channel of channelsWithLive) {
+				if (channel.ytLiveVideoId && !allVideoIdsSet.has(channel.ytLiveVideoId)) {
+					allVideoIds.push(channel.ytLiveVideoId);
+					allVideoIdsSet.add(channel.ytLiveVideoId);
+					const channelVideos = videosByChannel.get(channel.ytChannelId) || [];
+					channelVideos.push(channel.ytLiveVideoId);
+					videosByChannel.set(channel.ytChannelId, channelVideos);
+				}
+			}
+
+			// Step 2: Check which videos already exist in DB and get their isShort values
+			const existingVideos = yield* db.getVideos(allVideoIds, {
+				ytVideoId: DB_SCHEMA.videos.ytVideoId,
+				isShort: DB_SCHEMA.videos.isShort
+			});
+			const existingVideoIds = new Set(existingVideos.map((v) => v.ytVideoId));
+			const existingShortsMap = new Map(existingVideos.map((v) => [v.ytVideoId, v.isShort]));
+
+			// Step 3: Batch video IDs into groups of 50 for getBatchVideoDetails
+			const allVideoDetailsMap = new Map<string, Omit<Video, 'isShort'>>();
+			const missingVideoIds: string[] = [];
+
+			for (let i = 0; i < allVideoIds.length; i += 50) {
+				const batch = allVideoIds.slice(i, i + 50);
+				const batchDetails = yield* yt.getBatchVideoDetails(batch);
+				for (const [id, details] of batchDetails.entries()) {
+					allVideoDetailsMap.set(id, details);
+				}
+				// Videos requested but not returned are private/deleted/unlisted
+				for (const id of batch) {
+					if (!batchDetails.has(id) && existingVideoIds.has(id)) {
+						missingVideoIds.push(id);
+					}
+				}
+			}
+
+			// Mark missing videos as private (they were public before but are no longer accessible)
+			if (missingVideoIds.length > 0) {
+				const markedCount = yield* db.markVideosAsPrivate(missingVideoIds);
+				yield* Console.log(
+					`${fullTaskName}Marked ${markedCount} videos as private (no longer accessible via API)`
+				);
+			}
+
+			// Step 4: Get areVideosShorts per channel ONLY for new videos (not in DB)
+			const allShortsMap = new Map<string, boolean>(existingShortsMap);
+			yield* Effect.forEach(
+				ytChannelIds,
+				(ytChannelId) =>
+					Effect.gen(function* () {
+						const videoIds = videosByChannel.get(ytChannelId) || [];
+						const newVideoIds = videoIds.filter((id) => !existingVideoIds.has(id));
+						if (newVideoIds.length === 0) return;
+
+						const shortsMap = yield* yt
+							.areVideosShorts(newVideoIds, ytChannelId, args.maxResults)
+							.pipe(
+								Effect.catchTag('YoutubeError', (err) =>
+									Effect.gen(function* () {
+										yield* Console.warn(
+											`\x1b[33m${fullTaskName}${err.message}, marking all as non-shorts\x1b[0m`
+										);
+										return new Map<string, boolean>();
+									})
+								)
+							);
+						for (const [id, isShort] of shortsMap.entries()) {
+							allShortsMap.set(id, isShort);
+						}
+					}),
+				{ concurrency: 5 }
+			);
+
+			// Step 5: Upsert all videos
+			yield* Console.log(`${fullTaskName}Syncing videos`);
+			yield* Effect.forEach(
+				allVideoDetailsMap.entries(),
+				([ytVideoId, videoDetails]) =>
+					Effect.gen(function* () {
+						const videoIsShort = allShortsMap.get(ytVideoId) || false;
+						// yield* Console.log(`${fullTaskName}Syncing video ${ytVideoId}`);
+						const result = yield* db
+							.upsertVideo({ ...videoDetails, isShort: videoIsShort })
+							.pipe(Effect.either);
+
+						if (result._tag === 'Right') {
+							if (result.right?.wasSkipped) {
+								skipCount++;
+								yield* Console.warn(`\x1b[33m${fullTaskName}Skipped video ${ytVideoId}\x1b[0m`);
+							} else {
+								successCount++;
+								// yield* Console.log(`${fullTaskName}Synced video ${ytVideoId}`);
+							}
+						} else {
+							errorCount++;
+							yield* Console.error(`${fullTaskName}Failed to sync video ${ytVideoId}`, result.left);
+						}
+					}),
+				{ concurrency: 5 }
+			);
+
+			yield* Console.log(
+				`VIDEO SYNC COMPLETED: ${successCount} videos synced, ${errorCount} videos failed, ${skipCount} videos skipped`
+			);
+
+			// Clean up stale ytLiveVideoId references (e.g. ended/private livestreams)
+			const clearedCount = yield* db.cleanupStaleLiveReferences();
+			if (clearedCount > 0) {
+				yield* Console.log(`Cleared ${clearedCount} stale YouTube live reference(s)`);
+			}
+
+			yield* Console.log(`VIDEO SYNC TOOK ${performance.now() - start}ms`);
+		});
+
+	const syncTwitchLive = (taskName?: string) =>
+		Effect.gen(function* () {
+			const start = performance.now();
+			const channels = yield* db.getAllChannels({
+				ytChannelId: DB_SCHEMA.channels.ytChannelId,
+				twitchUserId: DB_SCHEMA.channels.twitchUserId
+			});
+			const twitchUserIds = channels
+				.map((channel) => channel.twitchUserId)
+				.filter((id) => id !== null && id !== undefined);
+
+			const isTwitchLiveMap = yield* twitch.areChannelsLive(twitchUserIds);
+
+			let successCount = 0;
+			let errorCount = 0;
+			const fullTaskName = taskName ? `${taskName}: ` : '';
+
+			yield* Console.log(`${fullTaskName}Syncing channels (twitch)`);
+			yield* Effect.forEach(channels, (channel) =>
+				Effect.gen(function* () {
+					const result = yield* db
+						.updateChannel(channel.ytChannelId, {
+							isTwitchLive: channel.twitchUserId
+								? isTwitchLiveMap.get(channel.twitchUserId) || false
+								: false
+						})
+						.pipe(Effect.either);
+
+					if (result._tag === 'Right') {
+						successCount++;
+						// yield* Console.log(`${fullTaskName}Synced channel (twitch) ${channel.ytChannelId}`);
+					} else {
+						errorCount++;
+						yield* Console.error(
+							`${fullTaskName}Failed to sync channel (twitch) ${channel.ytChannelId}`,
+							result.left
+						);
+					}
+				})
+			);
+
+			yield* Console.log(
+				`TWITCH LIVE SYNC COMPLETED: ${successCount} channels synced, ${errorCount} channels failed`
+			);
+			yield* Console.log(`TWITCH LIVE SYNC TOOK ${performance.now() - start}ms`);
+
+			return isTwitchLiveMap;
+		});
+
+	const syncYoutubeLive = (taskName?: string) =>
+		Effect.gen(function* () {
+			const start = performance.now();
+			const fullTaskName = taskName ? `${taskName}: ` : '';
+
+			const channels = yield* db.getAllChannels({
+				ytChannelId: DB_SCHEMA.channels.ytChannelId
+			});
+
+			yield* Console.log(`${fullTaskName}Syncing YouTube live status`);
+
+			let successCount = 0;
+			let errorCount = 0;
+			let liveCount = 0;
+
+			// Collect all video IDs from livestreams playlists
+			const allVideoIds: string[] = [];
+			const videoToChannelMap = new Map<string, string>();
+
+			yield* Effect.forEach(
+				channels,
+				(channel) =>
+					Effect.gen(function* () {
+						const result = yield* Effect.either(yt.getLiveStreamVideoIds(channel.ytChannelId, 5));
+
+						if (result._tag === 'Left') {
+							yield* Console.warn(
+								`\x1b[33m${fullTaskName}Failed to get livestream video IDs for ${channel.ytChannelId}\x1b[0m`
+							);
+							return;
+						}
+
+						for (const videoId of result.right) {
+							allVideoIds.push(videoId);
+							videoToChannelMap.set(videoId, channel.ytChannelId);
+						}
+					}),
+				{ concurrency: 5 }
+			);
+
+			if (allVideoIds.length === 0) {
+				yield* Console.log(`${fullTaskName}No livestream videos to check`);
+				return;
+			}
+
+			// Get video details in batches of 50
+			const liveVideosByChannel = new Map<string, string | null>();
+			const liveVideoDetails = new Map<string, Omit<Video, 'isShort'>>();
+
+			// Initialize all channels to null (no live video)
+			for (const channel of channels) {
+				liveVideosByChannel.set(channel.ytChannelId, null);
+			}
+
+			for (let i = 0; i < allVideoIds.length; i += 50) {
+				const batch = allVideoIds.slice(i, i + 50);
+				const batchDetails = yield* yt.getBatchVideoDetails(batch);
+
+				for (const [videoId, details] of batchDetails.entries()) {
+					const ytChannelId = videoToChannelMap.get(videoId);
+					if (!ytChannelId) continue;
+
+					if (details.livestreamType === 'live') {
+						liveVideosByChannel.set(ytChannelId, videoId);
+						liveVideoDetails.set(videoId, details);
+						liveCount++;
+					}
+				}
+			}
+
+			// Upsert live videos to database first (to satisfy foreign key constraint)
+			if (liveVideoDetails.size > 0) {
+				yield* Console.log(`${fullTaskName}Upserting ${liveVideoDetails.size} live video(s)`);
+				yield* Effect.forEach(
+					liveVideoDetails.entries(),
+					([videoId, details]) =>
+						Effect.gen(function* () {
+							const result = yield* db
+								.upsertVideo({ ...details, isShort: false })
+								.pipe(Effect.either);
+
+							if (result._tag === 'Left') {
+								yield* Console.error(
+									`${fullTaskName}Failed to upsert live video ${videoId}`,
+									result.left
+								);
+								// Remove from live videos map if upsert failed
+								const ytChannelId = videoToChannelMap.get(videoId);
+								if (ytChannelId) {
+									liveVideosByChannel.set(ytChannelId, null);
+								}
+							}
+						}),
+					{ concurrency: 5 }
+				);
+			}
+
+			// Update channels with live status
+			yield* Effect.forEach(
+				channels,
+				(channel) =>
+					Effect.gen(function* () {
+						const liveVideoId = liveVideosByChannel.get(channel.ytChannelId) ?? null;
+						const result = yield* db
+							.updateChannel(channel.ytChannelId, { ytLiveVideoId: liveVideoId })
+							.pipe(Effect.either);
+
+						if (result._tag === 'Right') {
+							successCount++;
+						} else {
+							errorCount++;
+							yield* Console.error(
+								`${fullTaskName}Failed to update YT live status for ${channel.ytChannelId}`,
+								result.left
+							);
+						}
+					}),
+				{ concurrency: 5 }
+			);
+
+			yield* Console.log(
+				`YOUTUBE LIVE SYNC COMPLETED: ${successCount} channels synced, ${errorCount} failed, ${liveCount} currently live`
+			);
+			yield* Console.log(`YOUTUBE LIVE SYNC TOOK ${performance.now() - start}ms`);
+		});
+
+	return {
+		syncChannel,
+		syncVideo,
+		syncChannels,
+		syncVideos,
+		syncTwitchLive,
+		syncYoutubeLive
+	};
+});
+
+export class ChannelSyncService extends Effect.Service<ChannelSyncService>()('ChannelSyncService', {
+	dependencies: [DbService.Default, YoutubeService.Default, TwitchService.Default],
+	effect: channelSyncService
+}) {}
+
+export * from './db';
+export * from './youtube';
+export * from './twitch';

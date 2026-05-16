@@ -1,0 +1,35 @@
+{
+	"name": "@hc/content-sync",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./youtube/utils": "./src/youtube/utils.ts"
+	},
+	"scripts": {
+		"check": "tsc --noEmit",
+		"format": "prettier --write .",
+		"lint": "prettier --check .",
+		"db:seed": "bun run scripts/seed.ts",
+		"db:wipe": "bun run scripts/wipe.ts",
+		"db:backfill": "bun run scripts/backfill.ts"
+	},
+	"dependencies": {
+		"@effect/cli": "^0.73.2",
+		"@effect/platform-bun": "^0.86.0",
+		"@hc/db": "workspace:*",
+		"@twurple/api": "^8.1.4",
+		"@twurple/auth": "^8.1.4",
+		"effect": "catalog:",
+		"googleapis": "^164.1.0",
+		"jpeg-js": "^0.4.4",
+		"sharp": "^0.34.5",
+		"thumbhash": "^0.1.1",
+		"zod": "^4.4.3"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"prettier": "^3.6.2",
+		"typescript": "catalog:"
+	}
+}
