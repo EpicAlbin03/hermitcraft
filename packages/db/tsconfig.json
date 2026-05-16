@@ -3,5 +3,5 @@
 	"compilerOptions": {
 		"types": ["bun", "pg"]
 	},
-	"exclude": ["node_modules", "dist", "build", "drizzle"]
+	"exclude": ["node_modules", "dist", "build", ".turbo", "drizzle"]
 }

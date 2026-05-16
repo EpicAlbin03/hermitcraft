@@ -1,4 +1,5 @@
 import * as d from 'drizzle-orm/pg-core';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 export type ChannelSchema = typeof channels.$inferSelect;
 export type Channel = Omit<ChannelSchema, 'createdAt' | 'modifiedAt'>;
@@ -41,7 +42,9 @@ export const channels = d.pgTable('channels', {
 	twitchUserLogin: d.varchar('twitch_user_login', { length: 25 }),
 	// twitchUsername: d.varchar('twitch_username', { length: 50 }), // Max 25, but can include non-latin characters
 	isTwitchLive: d.boolean('is_twitch_live').notNull(),
-	ytLiveVideoId: d.varchar('yt_live_video_id', { length: 11 }).references(() => videos.ytVideoId),
+	ytLiveVideoId: d
+		.varchar('yt_live_video_id', { length: 11 })
+		.references((): AnyPgColumn => videos.ytVideoId, { onDelete: 'set null' }),
 	links: d.jsonb('links').$type<ChannelLink[]>().notNull(),
 	createdAt: d.timestamp('created_at').notNull().defaultNow(),
 	modifiedAt: d.timestamp('modified_at').notNull().defaultNow()
@@ -51,7 +54,10 @@ export const videos = d.pgTable(
 	'videos',
 	{
 		ytVideoId: d.varchar('yt_video_id', { length: 11 }).primaryKey(), // 64^11 possibilities
-		ytChannelId: d.varchar('yt_channel_id', { length: 24 }).notNull(),
+		ytChannelId: d
+			.varchar('yt_channel_id', { length: 24 })
+			.notNull()
+			.references((): AnyPgColumn => channels.ytChannelId, { onDelete: 'cascade' }),
 		title: d.varchar('title', { length: 100 }).notNull(),
 		thumbnailUrl: d.varchar('thumbnail_url', { length: 255 }).notNull(),
 		publishedAt: d.timestamp('published_at').notNull(),
