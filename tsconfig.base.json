@@ -1,32 +1,59 @@
 {
-  "$schema": "https://raw.githubusercontent.com/Effect-TS/tsgo/refs/heads/main/schema.json",
-  "compilerOptions": {
-    "lib": ["ESNext"],
-    "target": "ESNext",
-    "module": "preserve",
-    "moduleResolution": "bundler",
-    "moduleDetection": "force",
-    "noEmit": true,
-    "allowImportingTsExtensions": true,
-    "rewriteRelativeImportExtensions": true,
-    "verbatimModuleSyntax": true,
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitOverride": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "incremental": true,
-    "composite": true,
-    "declarationMap": true,
-    "noUnusedLocals": true,
-    "noFallthroughCasesInSwitch": true,
-    "plugins": [
-      {
-        "name": "@effect/language-service"
-      }
-    ]
-  },
-  "exclude": ["node_modules", "dist", "build", ".turbo", "coverage"]
+	"$schema": "https://raw.githubusercontent.com/Effect-TS/tsgo/refs/heads/main/schema.json",
+	"compilerOptions": {
+		"lib": ["ESNext"],
+		"target": "ESNext",
+		"module": "preserve",
+		"moduleResolution": "bundler",
+		"moduleDetection": "force",
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"rewriteRelativeImportExtensions": true,
+		"verbatimModuleSyntax": true,
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"exactOptionalPropertyTypes": true,
+		"noImplicitOverride": true,
+		"forceConsistentCasingInFileNames": true,
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"incremental": true,
+		"composite": true,
+		"declarationMap": true,
+		"noUnusedLocals": true,
+		"noFallthroughCasesInSwitch": true,
+		"plugins": [
+			{
+				"name": "@effect/language-service",
+				"diagnosticSeverity": {
+					"importFromBarrel": "error",
+					"anyUnknownInErrorContext": "error",
+					"unsafeEffectTypeAssertion": "error",
+					"instanceOfSchema": "error",
+					"deterministicKeys": "error",
+					"strictEffectProvide": "off",
+					"missingEffectServiceDependency": "error",
+					"leakingRequirements": "error",
+					"globalErrorInEffectCatch": "error",
+					"globalErrorInEffectFailure": "error",
+					"unknownInEffectCatch": "error",
+					"strictBooleanExpressions": "off",
+					"preferSchemaOverJson": "error",
+					"schemaSyncInEffect": "error",
+					"cryptoRandomUUID": "error",
+					"cryptoRandomUUIDInEffect": "error",
+					"nodeBuiltinImport": "error",
+					"globalDate": "error",
+					"globalDateInEffect": "error",
+					"globalConsole": "error",
+					"globalConsoleInEffect": "error",
+					"globalRandom": "error",
+					"globalRandomInEffect": "error",
+					"globalTimers": "error",
+					"globalTimersInEffect": "error"
+				}
+			}
+		]
+	},
+	"exclude": ["node_modules", "dist", "build", ".turbo", "coverage"]
 }
