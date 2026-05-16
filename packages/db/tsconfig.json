@@ -1,4 +1,7 @@
 {
 	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"types": ["bun", "pg"]
+	},
 	"exclude": ["node_modules", "dist", "build", "drizzle"]
 }
