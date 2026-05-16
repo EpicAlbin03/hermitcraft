@@ -22,6 +22,7 @@
 		"declarationMap": true,
 		"noUnusedLocals": true,
 		"noFallthroughCasesInSwitch": true,
+		"types": ["bun"],
 		"plugins": [
 			{
 				"name": "@effect/language-service",
