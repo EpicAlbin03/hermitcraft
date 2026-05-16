@@ -12,4 +12,3 @@ export type VideoSchema = typeof videos.$inferSelect;
 export type Video = Omit<VideoSchema, 'createdAt' | 'modifiedAt'>;
 
 export * from './connection';
-export * from 'drizzle-orm';
