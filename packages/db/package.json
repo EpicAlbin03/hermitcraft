@@ -14,11 +14,11 @@
 		"lint": "prettier --check ."
 	},
 	"dependencies": {
+		"@effect/sql": "^0.51.1",
 		"@effect/sql-pg": "^0.52.1",
-		"drizzle-orm": "^0.45.2",
-		"effect": "catalog:",
 		"dotenv": "catalog:",
-		"mysql2": "^3.15.3",
+		"drizzle-orm": "^1.0.0-beta.22",
+		"effect": "catalog:",
 		"pg": "^8.20.0"
 	},
 	"devDependencies": {

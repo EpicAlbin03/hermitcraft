@@ -1,12 +1,29 @@
-import { drizzle } from 'drizzle-orm/mysql2';
-import type { MySql2Database } from 'drizzle-orm/mysql2';
-import { createPool, type Pool } from 'mysql2/promise';
+import type { SqlError } from '@effect/sql/SqlError';
+import { PgClient } from '@effect/sql-pg';
+import * as PgDrizzle from 'drizzle-orm/effect-postgres';
+import type { EffectPgDatabase } from 'drizzle-orm/effect-postgres';
+import * as Effect from 'effect/Effect';
+import * as Redacted from 'effect/Redacted';
+import { types } from 'pg';
 import * as mySchema from './schema';
 
-export const getDrizzleInstance = (dbUrl: string) =>
-	drizzle(createPool({ uri: dbUrl, connectionLimit: 10 }), {
-		mode: 'default',
-		schema: mySchema
+const DRIZZLE_DATE_TIME_TYPE_IDS = [1184, 1114, 1082, 1186, 1231, 1115, 1185, 1187, 1182];
+
+export const getPgClientLayer = (dbUrl: string): ReturnType<typeof PgClient.layer> =>
+	PgClient.layer({
+		url: Redacted.make(dbUrl),
+		types: {
+			getTypeParser: (typeId, format) => {
+				if (DRIZZLE_DATE_TIME_TYPE_IDS.includes(typeId)) {
+					return (value: string) => value;
+				}
+
+				return types.getTypeParser(typeId, format);
+			}
+		}
 	});
 
-export type DbConnection = MySql2Database<typeof mySchema> & { $client: Pool };
+export type DbConnection = EffectPgDatabase<typeof mySchema> & { $client: PgClient.PgClient };
+
+export const getDrizzleInstance = (dbUrl: string): Effect.Effect<DbConnection, SqlError> =>
+	PgDrizzle.makeWithDefaults({ schema: mySchema }).pipe(Effect.provide(getPgClientLayer(dbUrl)));
