@@ -25,6 +25,7 @@
 		"plugins": [
 			{
 				"name": "@effect/language-service",
+				"namespaceImportPackages": ["effect"],
 				"diagnosticSeverity": {
 					"importFromBarrel": "error",
 					"anyUnknownInErrorContext": "error",
@@ -51,7 +52,8 @@
 					"globalRandomInEffect": "error",
 					"globalTimers": "error",
 					"globalTimersInEffect": "error"
-				}
+				},
+				"effectFn": ["span", "inferred-span"]
 			}
 		]
 	},
