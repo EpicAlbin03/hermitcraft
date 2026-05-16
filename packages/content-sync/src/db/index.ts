@@ -6,13 +6,9 @@ import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import { eq, getColumns } from 'drizzle-orm';
 
-class DbError extends Data.TaggedError('DbError')<{ message: string; cause?: unknown }> { }
+class DbError extends Data.TaggedError('DbError')<{ message: string; cause?: unknown }> {}
 
-const {
-	createdAt,
-	modifiedAt,
-	...channelColumns
-} = getColumns(DB_SCHEMA.channels);
+const { createdAt, modifiedAt, ...channelColumns } = getColumns(DB_SCHEMA.channels);
 
 const dbService = Effect.gen(function* () {
 	const db = yield* DB;
@@ -54,11 +50,8 @@ const dbService = Effect.gen(function* () {
 	};
 });
 
-
-
-
-type DbServiceShape = Effect.Success<typeof dbService >    ;
+type DbServiceShape = Effect.Success<typeof dbService>;
 
 export class DbService extends Context.Service<DbService, DbServiceShape>()(
-	"@hc/content-sync/db/DbService"
-) { }
+	'@hc/content-sync/db/DbService'
+) {}

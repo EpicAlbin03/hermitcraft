@@ -97,5 +97,5 @@ export const videos = d.pgTable(
 
 export const DB_SCHEMA = {
 	channels,
-	videos,
+	videos
 };
