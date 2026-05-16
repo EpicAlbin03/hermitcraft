@@ -8,5 +8,6 @@ bun.lockb
 # Build outputs
 dist/
 build/
-node_modules/
 
+# Dependencies
+node_modules/
