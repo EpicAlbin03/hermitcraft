@@ -3,6 +3,17 @@
 	"typescript.experimental.useTsgo": true,
 	"js/ts.experimental.useTsgo": true,
 	"typescript.tsdk": "node_modules\\typescript\\lib",
+	"typescript.preferences.autoImportFileExcludePatterns": ["repos/**"],
+	"javascript.preferences.autoImportFileExcludePatterns": ["repos/**"],
+	"files.exclude": {
+		"repos/**": true
+	},
+	"files.watcherExclude": {
+		"repos/**": true
+	},
+	"search.exclude": {
+		"repos/**": true
+	},
 	"editor.formatOnSave": true,
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
 	"[typescript]": {

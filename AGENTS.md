@@ -10,11 +10,20 @@
 - Be extremely concise.
 - NEVER add unit tests. No standard test command.
 - NEVER run `dev` or `build` commands.
+- NEVER run migration commands.
 - Always use `bun add <package>` when installing packages.
 - Always run check/format/lint commands when your done making a change.
 - NEVER write explicit return types unless necessary.
 - `as any` should be an absolute last resort. Always use real type safety. Lean on type inference instead of manually writing new types over and over again.
 
+## Vendored Repositories
+
+- Vendored repositories live under `repos/`.
+- Use vendored repositories as read-only reference material.
+- Do not edit files under `repos/` unless explicitly asked.
+- Do not import from `repos/`.
+
 ## Using Effect v4
 
-The Effect v4 repo is cloned locally at `$HOME\cloned-repos\effect-smol`. Look at this when writing effect code.
+- When writing Effect code, inspect `repos/effect-smol/` for idiomatic usage, tests, module structure, and API design.
+- Prefer patterns from `repos/effect-smol/` over guesses or web search.
