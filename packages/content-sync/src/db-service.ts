@@ -5,21 +5,7 @@ import * as Effect from 'effect/Effect';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import { and, eq, getColumns, inArray, sql } from 'drizzle-orm';
-
-// TODO: move this
-function parseIsoDurationToSeconds(duration: string): number | null {
-	const ISO_DURATION_PATTERN = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/;
-	const match = ISO_DURATION_PATTERN.exec(duration);
-	if (!match) return null;
-
-	const days = Number.parseInt(match[1] ?? '0', 10);
-	const hours = Number.parseInt(match[2] ?? '0', 10);
-	const minutes = Number.parseInt(match[3] ?? '0', 10);
-	const seconds = Number.parseInt(match[4] ?? '0', 10);
-
-	const totalSeconds = ((days * 24 + hours) * 60 + minutes) * 60 + seconds;
-	return Number.isNaN(totalSeconds) ? null : totalSeconds;
-}
+import { parseIsoDurationToSeconds } from './utils';
 
 class DbError extends Data.TaggedError('DbError')<{ message: string; cause?: unknown }> {}
 
@@ -37,8 +23,8 @@ const {
 const dbService = Effect.gen(function* () {
 	const db = yield* DB;
 
-	const getAllChannels = (): Effect.Effect<Channel[], DbError> =>
-		db
+	const getAllChannels = Effect.fn('getAllChannels')(function* () {
+		return yield* db
 			.select(channelColumns)
 			.from(DB_SCHEMA.channels)
 			.pipe(
@@ -50,9 +36,10 @@ const dbService = Effect.gen(function* () {
 						})
 				)
 			);
+	});
 
-	const getChannel = (ytChannelId: string): Effect.Effect<Option.Option<Channel>, DbError> =>
-		db
+	const getChannel = Effect.fn('getChannel')(function* (ytChannelId: string) {
+		return yield* db
 			.select(channelColumns)
 			.from(DB_SCHEMA.channels)
 			.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId))
@@ -67,9 +54,10 @@ const dbService = Effect.gen(function* () {
 						})
 				)
 			);
+	});
 
-	const getVideo = (ytVideoId: string): Effect.Effect<Option.Option<Video>, DbError> =>
-		db
+	const getVideo = Effect.fn('getVideo')(function* (ytVideoId: string) {
+		return yield* db
 			.select(videoColumns)
 			.from(DB_SCHEMA.videos)
 			.where(eq(DB_SCHEMA.videos.ytVideoId, ytVideoId))
@@ -80,11 +68,12 @@ const dbService = Effect.gen(function* () {
 					(cause) => new DbError({ message: `Failed to get video ${ytVideoId}`, cause })
 				)
 			);
+	});
 
-	const getVideos = (ytVideoIds: string[]): Effect.Effect<Video[], DbError> => {
+	const getVideos = Effect.fn('getVideos')(function* (ytVideoIds: string[]) {
 		if (ytVideoIds.length === 0) return Effect.succeed([]);
 
-		return db
+		return yield* db
 			.select(videoColumns)
 			.from(DB_SCHEMA.videos)
 			.where(inArray(DB_SCHEMA.videos.ytVideoId, ytVideoIds))
@@ -93,7 +82,7 @@ const dbService = Effect.gen(function* () {
 					(cause) => new DbError({ message: `Failed to get ${ytVideoIds.length} videos`, cause })
 				)
 			);
-	};
+	});
 
 	type ChannelUpdate = Pick<
 		Channel,
@@ -124,8 +113,11 @@ const dbService = Effect.gen(function* () {
 		links: data.links
 	});
 
-	const updateChannel = (ytChannelId: string, data: ChannelUpdate) =>
-		db
+	const updateChannel = Effect.fn('updateChannel')(function* (
+		ytChannelId: string,
+		data: ChannelUpdate
+	) {
+		return yield* db
 			.update(DB_SCHEMA.channels)
 			.set(data)
 			.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId))
@@ -135,6 +127,7 @@ const dbService = Effect.gen(function* () {
 					(cause) => new DbError({ message: `Failed to update channel ${ytChannelId}`, cause })
 				)
 			);
+	});
 
 	const upsertChannel = Effect.fn('upsertChannel')(function* (data: Channel) {
 		const [result] = yield* db
@@ -216,8 +209,8 @@ const dbService = Effect.gen(function* () {
 		};
 	});
 
-	const deleteVideo = (ytVideoId: string) =>
-		db
+	const deleteVideo = Effect.fn('deleteVideo')(function* (ytVideoId: string) {
+		return yield* db
 			.delete(DB_SCHEMA.videos)
 			.where(eq(DB_SCHEMA.videos.ytVideoId, ytVideoId))
 			.pipe(
@@ -225,6 +218,7 @@ const dbService = Effect.gen(function* () {
 					(cause) => new DbError({ message: `Failed to delete video ${ytVideoId}`, cause })
 				)
 			);
+	});
 
 	const markVideosAsPrivate = Effect.fn('markVideosAsPrivate')(function* (ytVideoIds: string[]) {
 		if (ytVideoIds.length === 0) return 0;
@@ -295,8 +289,8 @@ const dbService = Effect.gen(function* () {
 		return result.length;
 	});
 
-	const deleteChannel = (ytChannelId: string) =>
-		db
+	const deleteChannel = Effect.fn('deleteChannel')(function* (ytChannelId: string) {
+		return yield* db
 			.delete(DB_SCHEMA.channels)
 			.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId))
 			.pipe(
@@ -304,20 +298,23 @@ const dbService = Effect.gen(function* () {
 					(cause) => new DbError({ message: `Failed to delete channel ${ytChannelId}`, cause })
 				)
 			);
+	});
 
-	const deleteAllVideos = () =>
-		db
+	const deleteAllVideos = Effect.fn('deleteAllVideos')(function* () {
+		return yield* db
 			.delete(DB_SCHEMA.videos)
 			.pipe(
 				Effect.mapError((cause) => new DbError({ message: `Failed to delete all videos`, cause }))
 			);
+	});
 
-	const deleteAllChannels = () =>
-		db
+	const deleteAllChannels = Effect.fn('deleteAllChannels')(function* () {
+		return yield* db
 			.delete(DB_SCHEMA.channels)
 			.pipe(
 				Effect.mapError((cause) => new DbError({ message: `Failed to delete all channels`, cause }))
 			);
+	});
 
 	return {
 		getAllChannels,
@@ -339,5 +336,5 @@ const dbService = Effect.gen(function* () {
 type DbServiceShape = Effect.Success<typeof dbService>;
 
 export class DbService extends Context.Service<DbService, DbServiceShape>()(
-	'@hc/content-sync/db/DbService'
+	'@hc/content-sync/db-service/DbService'
 ) {}
