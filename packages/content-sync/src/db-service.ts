@@ -4,7 +4,7 @@ import * as Option from 'effect/Option';
 import * as Effect from 'effect/Effect';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
-import { and, eq, getColumns, inArray, sql } from 'drizzle-orm';
+import { and, eq, getColumns, inArray, isNotNull, notExists, sql } from 'drizzle-orm';
 import { parseIsoDurationToSeconds } from './utils';
 
 class DbError extends Data.TaggedError('DbError')<{ message: string; cause?: unknown }> {}
@@ -71,7 +71,7 @@ const dbService = Effect.gen(function* () {
 	});
 
 	const getVideos = Effect.fn('getVideos')(function* (ytVideoIds: string[]) {
-		if (ytVideoIds.length === 0) return Effect.succeed([]);
+		if (ytVideoIds.length === 0) return [];
 
 		return yield* db
 			.select(videoColumns)
@@ -158,10 +158,10 @@ const dbService = Effect.gen(function* () {
 			return { ytVideoId: data.ytVideoId, wasInserted: false, wasSkipped: true };
 		}
 
-		const [result] = yield* db
+		const result = yield* db
 			.transaction((tx) =>
 				Effect.gen(function* () {
-					const upsertResult = yield* tx
+					const [upsertResult] = yield* tx
 						.insert(DB_SCHEMA.videos)
 						.values(data)
 						.onConflictDoUpdate({
@@ -170,23 +170,41 @@ const dbService = Effect.gen(function* () {
 						})
 						.returning({ wasInserted: sql<boolean>`xmax = 0` });
 
+					const liveVideos = yield* tx
+						.select({
+							ytVideoId: DB_SCHEMA.videos.ytVideoId,
+							livestreamActualStartTime: DB_SCHEMA.videos.livestreamActualStartTime,
+							livestreamScheduledStartTime: DB_SCHEMA.videos.livestreamScheduledStartTime,
+							publishedAt: DB_SCHEMA.videos.publishedAt
+						})
+						.from(DB_SCHEMA.videos)
+						.where(
+							and(
+								eq(DB_SCHEMA.videos.ytChannelId, data.ytChannelId),
+								eq(DB_SCHEMA.videos.livestreamType, 'live'),
+								eq(DB_SCHEMA.videos.privacyStatus, 'public')
+							)
+						);
+
+					const liveVideoId = liveVideos
+						.toSorted(
+							(a, b) =>
+								(
+									b.livestreamActualStartTime ??
+									b.livestreamScheduledStartTime ??
+									b.publishedAt
+								).getTime() -
+								(
+									a.livestreamActualStartTime ??
+									a.livestreamScheduledStartTime ??
+									a.publishedAt
+								).getTime()
+						)
+						.at(0)?.ytVideoId;
+
 					yield* tx
 						.update(DB_SCHEMA.channels)
-						.set({
-							ytLiveVideoId: sql<string | null>`(
-								select ${DB_SCHEMA.videos.ytVideoId}
-								from ${DB_SCHEMA.videos}
-								where ${DB_SCHEMA.videos.ytChannelId} = ${data.ytChannelId}
-									and ${DB_SCHEMA.videos.livestreamType} = 'live'
-									and ${DB_SCHEMA.videos.privacyStatus} = 'public'
-								order by coalesce(
-									${DB_SCHEMA.videos.livestreamActualStartTime},
-									${DB_SCHEMA.videos.livestreamScheduledStartTime},
-									${DB_SCHEMA.videos.publishedAt}
-								) desc
-								limit 1
-							)`
-						})
+						.set({ ytLiveVideoId: liveVideoId ?? null })
 						.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId));
 
 					return upsertResult;
@@ -268,16 +286,21 @@ const dbService = Effect.gen(function* () {
 			.update(DB_SCHEMA.channels)
 			.set({ ytLiveVideoId: null })
 			.where(
-				sql`
-				${DB_SCHEMA.channels.ytLiveVideoId} is not null
-				and not exists (
-					select 1
-					from ${DB_SCHEMA.videos}
-					where ${DB_SCHEMA.videos.ytVideoId} = ${DB_SCHEMA.channels.ytLiveVideoId}
-						and ${DB_SCHEMA.videos.livestreamType} = 'live'
-						and ${DB_SCHEMA.videos.privacyStatus} = 'public'
+				and(
+					isNotNull(DB_SCHEMA.channels.ytLiveVideoId),
+					notExists(
+						db
+							.select({ ytVideoId: DB_SCHEMA.videos.ytVideoId })
+							.from(DB_SCHEMA.videos)
+							.where(
+								and(
+									eq(DB_SCHEMA.videos.ytVideoId, DB_SCHEMA.channels.ytLiveVideoId),
+									eq(DB_SCHEMA.videos.livestreamType, 'live'),
+									eq(DB_SCHEMA.videos.privacyStatus, 'public')
+								)
+							)
+					)
 				)
-			`
 			)
 			.returning({ ytChannelId: DB_SCHEMA.channels.ytChannelId })
 			.pipe(
