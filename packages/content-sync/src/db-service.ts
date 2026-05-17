@@ -95,7 +95,10 @@ const dbService = Effect.gen(function* () {
 		| 'ytViewCount'
 		| 'ytSubscriberCount'
 		| 'ytVideoCount'
+		| 'twitchUserId'
 		| 'twitchUserLogin'
+		| 'isTwitchLive'
+		| 'ytLiveVideoId'
 		| 'links'
 	>;
 
@@ -109,7 +112,10 @@ const dbService = Effect.gen(function* () {
 		ytViewCount: data.ytViewCount,
 		ytSubscriberCount: data.ytSubscriberCount,
 		ytVideoCount: data.ytVideoCount,
+		twitchUserId: data.twitchUserId,
 		twitchUserLogin: data.twitchUserLogin,
+		isTwitchLive: data.isTwitchLive,
+		ytLiveVideoId: data.ytLiveVideoId,
 		links: data.links
 	});
 
