@@ -159,9 +159,7 @@ const dbService = Effect.gen(function* () {
 
 		const isLiveOrUpcoming = data.livestreamType === 'live' || data.livestreamType === 'upcoming';
 		if ((durationSeconds === null || durationSeconds === 0) && !isLiveOrUpcoming) {
-			yield* Effect.logWarning(
-				`\x1b[33mDuration is 0 or invalid for video ${data.ytVideoId}, skipping\x1b[0m`
-			);
+			yield* Effect.logWarning(`Duration is 0 or invalid for video ${data.ytVideoId}, skipping`);
 			return { ytVideoId: data.ytVideoId, wasInserted: false, wasSkipped: true };
 		}
 
@@ -360,7 +358,7 @@ const dbService = Effect.gen(function* () {
 		deleteAllChannels,
 		markVideosAsPrivate,
 		cleanupStaleLiveReferences
-	};
+	} as const;
 });
 
 type DbServiceShape = Effect.Success<typeof dbService>;
@@ -369,5 +367,5 @@ export class DbService extends Context.Service<DbService, DbServiceShape>()(
 	'@hc/content-sync/db-service/DbService',
 	{ make: dbService }
 ) {
-	static layer = Layer.effect(this, this.make);
+	static readonly layer = Layer.effect(this, this.make);
 }

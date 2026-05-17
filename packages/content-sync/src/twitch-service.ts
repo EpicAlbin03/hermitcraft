@@ -10,12 +10,12 @@ class TwitchError extends Data.TaggedError('TwitchError')<{ message: string; cau
 const twitchService = Effect.gen(function* () {
 	const clientId = Bun.env.TWITCH_CLIENT_ID;
 	if (!clientId) {
-		return yield* Effect.die('TWITCH_CLIENT_ID is not set');
+		return yield* new TwitchError({ message: 'TWITCH_CLIENT_ID is not set' });
 	}
 
 	const clientSecret = Bun.env.TWITCH_CLIENT_SECRET;
 	if (!clientSecret) {
-		return yield* Effect.die('TWITCH_CLIENT_SECRET is not set');
+		return yield* new TwitchError({ message: 'TWITCH_CLIENT_SECRET is not set' });
 	}
 
 	const authProvider = new AppTokenAuthProvider(clientId, clientSecret);
@@ -54,7 +54,7 @@ const twitchService = Effect.gen(function* () {
 	return {
 		isChannelLive,
 		areChannelsLive
-	};
+	} as const;
 });
 
 type TwitchServiceShape = Effect.Success<typeof twitchService>;
@@ -63,5 +63,5 @@ export class TwitchService extends Context.Service<TwitchService, TwitchServiceS
 	'@hc/content-sync/twitch-service/TwitchService',
 	{ make: twitchService }
 ) {
-	static layer = Layer.effect(this, this.make);
+	static readonly layer = Layer.effect(this, this.make);
 }

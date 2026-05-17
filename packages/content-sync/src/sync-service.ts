@@ -1,4 +1,4 @@
-import type { ChannelLink, Video } from '@hc/db/schema';
+import type { Channel, ChannelLink, Video } from '@hc/db/schema';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
@@ -32,6 +32,45 @@ type SyncVideosArgs = {
 	maxResults?: number;
 };
 
+type SyncStoredChannel = Pick<
+	Channel,
+	| 'ytName'
+	| 'ytHandle'
+	| 'ytDescription'
+	| 'ytAvatarUrl'
+	| 'ytBannerUrl'
+	| 'ytBannerThumbHash'
+	| 'ytViewCount'
+	| 'ytSubscriberCount'
+	| 'ytVideoCount'
+	| 'twitchUserId'
+	| 'twitchUserLogin'
+	| 'isTwitchLive'
+	| 'ytLiveVideoId'
+	| 'links'
+>;
+
+const toDbSyncChannel = (
+	channel: SyncStoredChannel,
+	overrides?: Partial<Pick<SyncStoredChannel, 'isTwitchLive' | 'ytLiveVideoId'>>
+) => ({
+	ytName: channel.ytName,
+	ytHandle: channel.ytHandle,
+	ytDescription: channel.ytDescription,
+	ytAvatarUrl: channel.ytAvatarUrl,
+	ytBannerUrl: channel.ytBannerUrl,
+	ytBannerThumbHash: channel.ytBannerThumbHash,
+	ytViewCount: channel.ytViewCount,
+	ytSubscriberCount: channel.ytSubscriberCount,
+	ytVideoCount: channel.ytVideoCount,
+	twitchUserId: channel.twitchUserId,
+	twitchUserLogin: channel.twitchUserLogin,
+	isTwitchLive: channel.isTwitchLive,
+	ytLiveVideoId: channel.ytLiveVideoId,
+	links: channel.links,
+	...overrides
+});
+
 const syncService = Effect.gen(function* () {
 	const db = yield* DbService;
 	const yt = yield* YoutubeService;
@@ -63,8 +102,11 @@ const syncService = Effect.gen(function* () {
 		});
 	});
 
-	const syncChannel = (ytChannelId: string, details?: SyncChannelDetails) =>
-		syncChannelBase(ytChannelId, details).pipe(
+	const syncChannel = Effect.fn('syncChannel')(function* (
+		ytChannelId: string,
+		details?: SyncChannelDetails
+	) {
+		return yield* syncChannelBase(ytChannelId, details).pipe(
 			Effect.catchTag(
 				'DbError',
 				(err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
@@ -74,6 +116,7 @@ const syncService = Effect.gen(function* () {
 				(err) => new SyncError({ message: `YOUTUBE ERROR: ${err.message}`, cause: err.cause })
 			)
 		);
+	});
 
 	const syncVideoBase = Effect.fn('syncVideoBase')(function* (ytVideoId: string) {
 		const videoDetails = yield* yt.getVideoDetails(ytVideoId);
@@ -99,8 +142,8 @@ const syncService = Effect.gen(function* () {
 		});
 	});
 
-	const syncVideo = (ytVideoId: string) =>
-		syncVideoBase(ytVideoId).pipe(
+	const syncVideo = Effect.fn('syncVideo')(function* (ytVideoId: string) {
+		return yield* syncVideoBase(ytVideoId).pipe(
 			Effect.catchTag(
 				'DbError',
 				(err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
@@ -110,8 +153,9 @@ const syncService = Effect.gen(function* () {
 				(err) => new SyncError({ message: `YOUTUBE ERROR: ${err.message}`, cause: err.cause })
 			)
 		);
+	});
 
-	const syncChannels = Effect.fn('syncChannels')(function* (
+	const syncChannelsBase = Effect.fn('syncChannelsBase')(function* (
 		channels: SyncChannelInput[],
 		taskName?: string
 	) {
@@ -150,7 +194,14 @@ const syncService = Effect.gen(function* () {
 		yield* Effect.logInfo(`CHANNEL SYNC TOOK ${performance.now() - start}ms`);
 	});
 
-	const syncVideos = Effect.fn('syncVideos')(function* (
+	const syncChannels = Effect.fn('syncChannels')(function* (
+		channels: SyncChannelInput[],
+		taskName?: string
+	) {
+		return yield* syncChannelsBase(channels, taskName);
+	});
+
+	const syncVideosBase = Effect.fn('syncVideosBase')(function* (
 		ytChannelIds: string[],
 		args: SyncVideosArgs
 	) {
@@ -241,9 +292,9 @@ const syncService = Effect.gen(function* () {
 
 				return yt.areVideosShorts(newVideoIds, ytChannelId, args.maxResults).pipe(
 					Effect.catchTag('YoutubeError', (error) =>
-						Effect.logWarning(
-							`\x1b[33m${fullTaskName}${error.message}, marking all as non-shorts\x1b[0m`
-						).pipe(Effect.as(new Map<string, boolean>()))
+						Effect.logWarning(`${fullTaskName}${error.message}, marking all as non-shorts`).pipe(
+							Effect.as(new Map<string, boolean>())
+						)
 					),
 					Effect.tap((shortsMap) =>
 						Effect.sync(() => {
@@ -269,9 +320,7 @@ const syncService = Effect.gen(function* () {
 								return Effect.sync(() => {
 									skipCount++;
 								}).pipe(
-									Effect.andThen(
-										Effect.logWarning(`\x1b[33m${fullTaskName}Skipped video ${ytVideoId}\x1b[0m`)
-									)
+									Effect.andThen(Effect.logWarning(`${fullTaskName}Skipped video ${ytVideoId}`))
 								);
 							}
 
@@ -305,7 +354,23 @@ const syncService = Effect.gen(function* () {
 		yield* Effect.logInfo(`VIDEO SYNC TOOK ${performance.now() - start}ms`);
 	});
 
-	const syncTwitchLive = Effect.fn('syncTwitchLive')(function* (taskName?: string) {
+	const syncVideos = Effect.fn('syncVideos')(function* (
+		ytChannelIds: string[],
+		args: SyncVideosArgs
+	) {
+		return yield* syncVideosBase(ytChannelIds, args).pipe(
+			Effect.catchTag(
+				'DbError',
+				(err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
+			),
+			Effect.catchTag(
+				'YoutubeError',
+				(err) => new SyncError({ message: `YOUTUBE ERROR: ${err.message}`, cause: err.cause })
+			)
+		);
+	});
+
+	const syncTwitchLiveBase = Effect.fn('syncTwitchLiveBase')(function* (taskName?: string) {
 		const start = performance.now();
 		const channels = yield* db.getAllChannels();
 		const twitchUserIds = channels
@@ -323,24 +388,14 @@ const syncService = Effect.gen(function* () {
 			channels,
 			(channel) =>
 				db
-					.updateChannel(channel.ytChannelId, {
-						ytName: channel.ytName,
-						ytHandle: channel.ytHandle,
-						ytDescription: channel.ytDescription,
-						ytAvatarUrl: channel.ytAvatarUrl,
-						ytBannerUrl: channel.ytBannerUrl,
-						ytBannerThumbHash: channel.ytBannerThumbHash,
-						ytViewCount: channel.ytViewCount,
-						ytSubscriberCount: channel.ytSubscriberCount,
-						ytVideoCount: channel.ytVideoCount,
-						twitchUserId: channel.twitchUserId,
-						twitchUserLogin: channel.twitchUserLogin,
-						isTwitchLive: channel.twitchUserId
-							? (isTwitchLiveMap.get(channel.twitchUserId) ?? false)
-							: false,
-						ytLiveVideoId: channel.ytLiveVideoId,
-						links: channel.links
-					})
+					.updateChannel(
+						channel.ytChannelId,
+						toDbSyncChannel(channel, {
+							isTwitchLive: channel.twitchUserId
+								? (isTwitchLiveMap.get(channel.twitchUserId) ?? false)
+								: false
+						})
+					)
 					.pipe(
 						Effect.matchEffect({
 							onSuccess: () => Effect.sync(() => successCount++),
@@ -366,7 +421,20 @@ const syncService = Effect.gen(function* () {
 		yield* Effect.logInfo(`TWITCH LIVE SYNC TOOK ${performance.now() - start}ms`);
 	});
 
-	const syncYoutubeLive = Effect.fn('syncYoutubeLive')(function* (taskName?: string) {
+	const syncTwitchLive = Effect.fn('syncTwitchLive')(function* (taskName?: string) {
+		return yield* syncTwitchLiveBase(taskName).pipe(
+			Effect.catchTag(
+				'DbError',
+				(err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
+			),
+			Effect.catchTag(
+				'TwitchError',
+				(err) => new SyncError({ message: `TWITCH ERROR: ${err.message}`, cause: err.cause })
+			)
+		);
+	});
+
+	const syncYoutubeLiveBase = Effect.fn('syncYoutubeLiveBase')(function* (taskName?: string) {
 		const start = performance.now();
 		const fullTaskName = taskName ? `${taskName}: ` : '';
 		const channels = yield* db.getAllChannels();
@@ -394,7 +462,7 @@ const syncService = Effect.gen(function* () {
 							}),
 						onFailure: () =>
 							Effect.logWarning(
-								`\x1b[33m${fullTaskName}Failed to get livestream video IDs for ${channel.ytChannelId}\x1b[0m`
+								`${fullTaskName}Failed to get livestream video IDs for ${channel.ytChannelId}`
 							)
 					})
 				),
@@ -465,22 +533,12 @@ const syncService = Effect.gen(function* () {
 			channels,
 			(channel) =>
 				db
-					.updateChannel(channel.ytChannelId, {
-						ytName: channel.ytName,
-						ytHandle: channel.ytHandle,
-						ytDescription: channel.ytDescription,
-						ytAvatarUrl: channel.ytAvatarUrl,
-						ytBannerUrl: channel.ytBannerUrl,
-						ytBannerThumbHash: channel.ytBannerThumbHash,
-						ytViewCount: channel.ytViewCount,
-						ytSubscriberCount: channel.ytSubscriberCount,
-						ytVideoCount: channel.ytVideoCount,
-						twitchUserId: channel.twitchUserId,
-						twitchUserLogin: channel.twitchUserLogin,
-						isTwitchLive: channel.isTwitchLive,
-						ytLiveVideoId: liveVideosByChannel.get(channel.ytChannelId) ?? null,
-						links: channel.links
-					})
+					.updateChannel(
+						channel.ytChannelId,
+						toDbSyncChannel(channel, {
+							ytLiveVideoId: liveVideosByChannel.get(channel.ytChannelId) ?? null
+						})
+					)
 					.pipe(
 						Effect.matchEffect({
 							onSuccess: () => Effect.sync(() => successCount++),
@@ -506,6 +564,19 @@ const syncService = Effect.gen(function* () {
 		yield* Effect.logInfo(`YOUTUBE LIVE SYNC TOOK ${performance.now() - start}ms`);
 	});
 
+	const syncYoutubeLive = Effect.fn('syncYoutubeLive')(function* (taskName?: string) {
+		return yield* syncYoutubeLiveBase(taskName).pipe(
+			Effect.catchTag(
+				'DbError',
+				(err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
+			),
+			Effect.catchTag(
+				'YoutubeError',
+				(err) => new SyncError({ message: `YOUTUBE ERROR: ${err.message}`, cause: err.cause })
+			)
+		);
+	});
+
 	return {
 		syncChannel,
 		syncVideo,
@@ -513,25 +584,14 @@ const syncService = Effect.gen(function* () {
 		syncVideos,
 		syncTwitchLive,
 		syncYoutubeLive
-	};
+	} as const;
 });
 
-// type SyncServiceShape = Effect.Success<typeof syncService>;
-type SyncServiceShape = {
-	syncChannel: (
-		ytChannelId: string,
-		details?: SyncChannelDetails
-	) => Effect.Effect<void, SyncError>;
-	syncVideo: (ytVideoId: string) => Effect.Effect<void, SyncError>;
-	syncChannels: (channels: SyncChannelInput[], taskName?: string) => Effect.Effect<void>;
-	syncVideos: (ytChannelIds: string[], args: SyncVideosArgs) => Effect.Effect<void, unknown>;
-	syncTwitchLive: (taskName?: string) => Effect.Effect<void, unknown>;
-	syncYoutubeLive: (taskName?: string) => Effect.Effect<void, unknown>;
-};
+type SyncServiceShape = Effect.Success<typeof syncService>;
 
 export class SyncService extends Context.Service<SyncService, SyncServiceShape>()(
 	'@hc/content-sync/sync-service/SyncService',
 	{ make: syncService }
 ) {
-	static layer = Layer.effect(this, this.make);
+	static readonly layer = Layer.effect(this, this.make);
 }

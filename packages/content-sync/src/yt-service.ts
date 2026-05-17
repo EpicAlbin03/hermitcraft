@@ -29,7 +29,7 @@ const getThumbnailUrl = (item: youtube_v3.Schema$Video | youtube_v3.Schema$Chann
 const youtubeService = Effect.gen(function* () {
 	const youtubeApiKey = Bun.env.YT_API_KEY;
 	if (!youtubeApiKey) {
-		return yield* Effect.die('YT_API_KEY is not set');
+		return yield* new YoutubeError({ message: 'YT_API_KEY is not set' });
 	}
 
 	const youtube = google.youtube({
@@ -177,13 +177,16 @@ const youtubeService = Effect.gen(function* () {
 		yield* Effect.forEach(
 			items,
 			(item) => {
-				if (!item?.id) return Effect.void;
+				const videoId = item?.id;
+				if (!videoId) return Effect.void;
 
-				return setVideoDetails(item, item.id).pipe(
+				return setVideoDetails(item, videoId).pipe(
 					Effect.tap((videoDetails) =>
-						Effect.sync(() => videoDetailsMap.set(item.id!, videoDetails))
+						Effect.sync(() => videoDetailsMap.set(videoId, videoDetails))
 					),
-					Effect.catch(() => Effect.void)
+					Effect.catchTag('YoutubeError', (error) =>
+						Effect.logWarning(`Failed to parse video ${videoId}: ${error.message}`)
+					)
 				);
 			},
 			{ concurrency: 'unbounded' }
@@ -379,7 +382,7 @@ const youtubeService = Effect.gen(function* () {
 		isVideoShort,
 		areVideosShorts,
 		getLiveStreamVideoIds
-	};
+	} as const;
 });
 
 type YoutubeServiceShape = Effect.Success<typeof youtubeService>;
@@ -388,5 +391,5 @@ export class YoutubeService extends Context.Service<YoutubeService, YoutubeServi
 	'@hc/content-sync/yt-service/YoutubeService',
 	{ make: youtubeService }
 ) {
-	static layer = Layer.effect(this, this.make);
+	static readonly layer = Layer.effect(this, this.make);
 }
