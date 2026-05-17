@@ -4,6 +4,7 @@ import * as Option from 'effect/Option';
 import * as Effect from 'effect/Effect';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
+import * as Layer from 'effect/Layer';
 import { and, eq, getColumns, inArray, isNotNull, notExists, sql } from 'drizzle-orm';
 import { parseIsoDurationToSeconds } from './utils';
 
@@ -367,4 +368,6 @@ type DbServiceShape = Effect.Success<typeof dbService>;
 export class DbService extends Context.Service<DbService, DbServiceShape>()(
 	'@hc/content-sync/db-service/DbService',
 	{ make: dbService }
-) {}
+) {
+	static layer = Layer.effect(this, this.make);
+}

@@ -2,6 +2,7 @@ import type { ChannelLink, Video } from '@hc/db/schema';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
+import * as Layer from 'effect/Layer';
 import { DbService } from './db-service';
 import { TwitchService } from './twitch-service';
 import { YoutubeService } from './yt-service';
@@ -531,4 +532,6 @@ type SyncServiceShape = {
 export class SyncService extends Context.Service<SyncService, SyncServiceShape>()(
 	'@hc/content-sync/sync-service/SyncService',
 	{ make: syncService }
-) {}
+) {
+	static layer = Layer.effect(this, this.make);
+}

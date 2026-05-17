@@ -8,6 +8,7 @@ import * as Effect from 'effect/Effect';
 import * as Schedule from 'effect/Schedule';
 import { rgbaToThumbHash, thumbHashToDataURL } from 'thumbhash';
 import { getYtPlaylistId, getVideoLivestreamType, parseYtRSS } from './utils';
+import * as Layer from 'effect/Layer';
 
 class YoutubeError extends Data.TaggedError('YoutubeError')<{ message: string; cause?: unknown }> {}
 
@@ -386,4 +387,6 @@ type YoutubeServiceShape = Effect.Success<typeof youtubeService>;
 export class YoutubeService extends Context.Service<YoutubeService, YoutubeServiceShape>()(
 	'@hc/content-sync/yt-service/YoutubeService',
 	{ make: youtubeService }
-) {}
+) {
+	static layer = Layer.effect(this, this.make);
+}
