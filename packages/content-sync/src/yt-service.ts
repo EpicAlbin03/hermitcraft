@@ -384,5 +384,6 @@ const youtubeService = Effect.gen(function* () {
 type YoutubeServiceShape = Effect.Success<typeof youtubeService>;
 
 export class YoutubeService extends Context.Service<YoutubeService, YoutubeServiceShape>()(
-	'@hc/content-sync/yt-service/YoutubeService'
+	'@hc/content-sync/yt-service/YoutubeService',
+	{ make: youtubeService }
 ) {}

@@ -59,5 +59,6 @@ const twitchService = Effect.gen(function* () {
 type TwitchServiceShape = Effect.Success<typeof twitchService>;
 
 export class TwitchService extends Context.Service<TwitchService, TwitchServiceShape>()(
-	'@hc/content-sync/twitch-service/TwitchService'
+	'@hc/content-sync/twitch-service/TwitchService',
+	{ make: twitchService }
 ) {}

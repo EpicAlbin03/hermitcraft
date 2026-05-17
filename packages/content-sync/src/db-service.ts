@@ -365,5 +365,6 @@ const dbService = Effect.gen(function* () {
 type DbServiceShape = Effect.Success<typeof dbService>;
 
 export class DbService extends Context.Service<DbService, DbServiceShape>()(
-	'@hc/content-sync/db-service/DbService'
+	'@hc/content-sync/db-service/DbService',
+	{ make: dbService }
 ) {}
