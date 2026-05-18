@@ -1,0 +1,50 @@
+# Content Sync
+
+Content Sync reconciles external platform data with the project’s canonical stored records. It exists to turn YouTube and Twitch responses into consistent channel and video updates.
+
+## Language
+
+**Content Sync**:
+The context that fetches platform data and applies it to stored records.
+_Avoid_: Sync, scraper, importer
+
+**Platform Source**:
+An external system that Content Sync reads from to refresh stored records.
+_Avoid_: Provider, upstream, API
+
+**Creator Seed**:
+A bootstrap-only input used to create an initial tracked creator record.
+_Avoid_: Source of truth, canonical creator
+
+**Admin**:
+An operator who may invoke sync or data-management flows outside the public application.
+_Avoid_: User, visitor
+
+**Creator Sync**:
+The operation that refreshes a tracked creator’s primary YouTube channel data and linked Twitch channel data when present, while preserving locally curated external links.
+_Avoid_: Channel sync, channel import, channel update
+
+**Video Sync**:
+The operation that discovers and refreshes stored videos for tracked creators from a platform source.
+_Avoid_: Video import, video update
+
+**Live Status Sync**:
+The operation that refreshes platform-specific livestream state for a tracked creator.
+_Avoid_: Stream check, presence check
+
+## Relationships
+
+- **Content Sync** reads from one or more **Platform Sources**
+- A **Creator Seed** bootstraps a **Creator**
+- A **Creator Sync** refreshes **Creators**
+- A **Video Sync** refreshes **Videos**
+- A **Live Status Sync** refreshes **Twitch Live Status** and **YouTube Live Video** state
+
+## Example dialogue
+
+> **Dev:** "Is **Live Status Sync** the same thing as **Video Sync**?"
+> **Domain expert:** "No — **Video Sync** refreshes video records broadly, while **Live Status Sync** refreshes platform-specific livestream state for a tracked creator."
+
+## Flagged ambiguities
+
+- "channel" was being used to mean both the person aggregate and the YouTube identity anchor — resolved: the canonical aggregate term is **Creator**.
