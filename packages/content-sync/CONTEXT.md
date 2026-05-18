@@ -12,10 +12,6 @@ _Avoid_: Sync, scraper, importer
 An external system that Content Sync reads from to refresh stored records.
 _Avoid_: Provider, upstream, API
 
-**Creator Seed**:
-A bootstrap-only input used to create an initial tracked creator record.
-_Avoid_: Source of truth, canonical creator
-
 **Admin**:
 An operator who may invoke sync or data-management flows outside the public application.
 _Avoid_: User, visitor
@@ -35,7 +31,6 @@ _Avoid_: Stream check, presence check
 ## Relationships
 
 - **Content Sync** reads from one or more **Platform Sources**
-- A **Creator Seed** bootstraps a **Creator**
 - A **Creator Sync** refreshes **Creators**
 - A **Video Sync** refreshes **Videos**
 - A **Live Status Sync** refreshes **Twitch Live Status** and **YouTube Live Video** state
