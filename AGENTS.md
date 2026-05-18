@@ -27,3 +27,17 @@
 
 - When writing Effect code, inspect `repos/effect-smol/` for idiomatic usage, tests, module structure, and API design.
 - Prefer patterns from `repos/effect-smol/` over guesses or web search.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues for this repo via `gh`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical triage roles use the default label strings. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Multi-context monorepo: use root `CONTEXT-MAP.md`, then per app/package `CONTEXT.md` files and relevant ADRs. See `docs/agents/domain.md`.
