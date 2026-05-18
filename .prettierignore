@@ -12,3 +12,6 @@ drizzle/
 
 # Dependencies
 node_modules/
+
+# Vendored repositories
+repos/
