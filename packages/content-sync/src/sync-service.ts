@@ -19,10 +19,10 @@ type SyncChannelDetails = {
 
 type SyncChannelInput = {
 	ytChannelId: string;
-	twitchUserId?: string;
-	twitchUserLogin?: string;
+	twitchUserId?: string | null;
+	twitchUserLogin?: string | null;
 	isTwitchLive?: boolean;
-	ytLiveVideoId?: string;
+	ytLiveVideoId?: string | null;
 	links?: ChannelLink[];
 };
 
@@ -169,10 +169,10 @@ const syncService = Effect.gen(function* () {
 			channels,
 			(channel) =>
 				syncChannel(channel.ytChannelId, {
-					twitchUserId: channel.twitchUserId,
-					twitchUserLogin: channel.twitchUserLogin,
+					twitchUserId: channel.twitchUserId ?? undefined,
+					twitchUserLogin: channel.twitchUserLogin ?? undefined,
 					isTwitchLive: channel.isTwitchLive,
-					ytLiveVideoId: channel.ytLiveVideoId,
+					ytLiveVideoId: channel.ytLiveVideoId ?? undefined,
 					links: channel.links
 				}).pipe(
 					Effect.matchEffect({

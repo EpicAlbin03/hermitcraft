@@ -3,8 +3,10 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts",
-		"./youtube/utils": "./src/youtube/utils.ts"
+		"./db-service": "./src/db-service.ts",
+		"./sync-service": "./src/sync-service.ts",
+		"./twitch-service": "./src/twitch-service.ts",
+		"./yt-service": "./src/yt-service.ts"
 	},
 	"scripts": {
 		"check": "tsc --noEmit",

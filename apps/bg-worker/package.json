@@ -11,7 +11,11 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check ."
 	},
-	"dependencies": {},
+	"dependencies": {
+		"@effect/platform-bun": "4.0.0-beta.68",
+		"@hc/content-sync": "workspace:*",
+		"effect": "catalog:"
+	},
 	"devDependencies": {
 		"@types/bun": "catalog:",
 		"@typescript/native-preview": "catalog:",
