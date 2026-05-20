@@ -6,8 +6,8 @@ import { CreatorSync, type CreatorSyncInput } from './creator-sync';
 import { DbService } from './db-service';
 import { TwitchService } from './twitch-service';
 import { VideoSync, type VideoSyncArgs } from './video-sync';
-import { YoutubeLiveStatusSync } from './youtube-live-status-sync';
-import { YoutubeService } from './yt-service';
+import { YtLiveStatusSync } from './yt-live-status-sync';
+import { YtService } from './yt-service';
 
 class SyncError extends Data.TaggedError('SyncError')<{ message: string; cause?: unknown }> {}
 
@@ -17,11 +17,11 @@ type SyncVideosArgs = VideoSyncArgs;
 
 const syncService = Effect.gen(function* () {
 	const db = yield* DbService;
-	const yt = yield* YoutubeService;
+	const yt = yield* YtService;
 	const twitch = yield* TwitchService;
 	const creatorSync = yield* CreatorSync;
 	const videoSync = yield* VideoSync;
-	const youtubeLiveStatusSync = yield* YoutubeLiveStatusSync;
+	const ytLiveStatusSync = yield* YtLiveStatusSync;
 
 	const syncChannel = Effect.fn('syncChannel')(function* (input: SyncChannelInput) {
 		return yield* creatorSync
@@ -58,18 +58,18 @@ const syncService = Effect.gen(function* () {
 				livestreamConcurrentViewers: videoDetails.livestreamConcurrentViewers
 			});
 
-			yield* youtubeLiveStatusSync.recomputeYoutubeLiveStatus([videoDetails.ytChannelId]);
+			yield* ytLiveStatusSync.recomputeYtLiveStatus([videoDetails.ytChannelId]);
 		}).pipe(
 			Effect.catchTag(
 				'DbError',
 				(err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
 			),
 			Effect.catchTag(
-				'YoutubeError',
-				(err) => new SyncError({ message: `YOUTUBE ERROR: ${err.message}`, cause: err.cause })
+				'YtError',
+				(err) => new SyncError({ message: `YT ERROR: ${err.message}`, cause: err.cause })
 			),
 			Effect.catchTag(
-				'YoutubeLiveStatusSyncError',
+				'YtLiveStatusSyncError',
 				(err) => new SyncError({ message: err.message, cause: err.cause })
 			)
 		);
@@ -151,11 +151,11 @@ const syncService = Effect.gen(function* () {
 		);
 	});
 
-	const syncYoutubeLive = Effect.fn('syncYoutubeLive')(function* (taskName?: string) {
+	const syncYtLive = Effect.fn('syncYtLive')(function* (taskName?: string) {
 		return yield* Effect.gen(function* () {
 			const channels = yield* db.getAllChannels();
 
-			yield* youtubeLiveStatusSync.refreshYoutubeLiveStatus(
+			yield* ytLiveStatusSync.refreshYtLiveStatus(
 				channels.map((channel) => channel.ytChannelId),
 				taskName
 			);
@@ -165,7 +165,7 @@ const syncService = Effect.gen(function* () {
 				(err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
 			),
 			Effect.catchTag(
-				'YoutubeLiveStatusSyncError',
+				'YtLiveStatusSyncError',
 				(err) => new SyncError({ message: err.message, cause: err.cause })
 			)
 		);
@@ -177,7 +177,7 @@ const syncService = Effect.gen(function* () {
 		syncChannels,
 		syncVideos,
 		syncTwitchLive,
-		syncYoutubeLive
+		syncYtLive
 	} as const;
 });
 

@@ -257,7 +257,7 @@ const dbService = Effect.gen(function* () {
 			);
 	});
 
-	const setYoutubeLiveVideos = Effect.fn('setYoutubeLiveVideos')(function* (
+	const setYtLiveVideos = Effect.fn('setYtLiveVideos')(function* (
 		updates: Array<{ ytChannelId: string; ytLiveVideoId: string | null }>
 	) {
 		if (updates.length === 0) return;
@@ -280,7 +280,7 @@ const dbService = Effect.gen(function* () {
 				Effect.mapError(
 					(cause) =>
 						new DbError({
-							message: `Failed to set YouTube live videos for ${updates.length} channels`,
+							message: `Failed to set Yt live videos for ${updates.length} channels`,
 							cause
 						})
 				)
@@ -328,7 +328,7 @@ const dbService = Effect.gen(function* () {
 		deleteAllChannels,
 		markVideosAsPrivate,
 		getPublicLiveVideosByChannels,
-		setYoutubeLiveVideos
+		setYtLiveVideos
 	} as const;
 });
 

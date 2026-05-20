@@ -55,11 +55,11 @@ const syncJobs = Effect.gen(function* () {
 		syncService.syncTwitchLive('BUN_WORKER')
 	);
 
-	// * Disabled due to youtube quota limits
-	// const youtubeLiveSyncJob = runRecurringSyncJob(
-	// 	'youtube live sync',
+	// * Disabled due to yt quota limits
+	// const ytLiveSyncJob = runRecurringSyncJob(
+	// 	'yt live sync',
 	// 	Schedule.spaced('2 minutes'),
-	// 	syncService.syncYoutubeLive('BUN_WORKER')
+	// 	syncService.syncYtLive('BUN_WORKER')
 	// );
 
 	// 25 channels * 15 videos = 375 videos

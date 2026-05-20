@@ -4,8 +4,8 @@ import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
 import { DbService } from './db-service';
-import { YoutubeLiveStatusSync } from './youtube-live-status-sync';
-import { YoutubeService } from './yt-service';
+import { YtLiveStatusSync } from './yt-live-status-sync';
+import { YtService } from './yt-service';
 
 class VideoSyncError extends Data.TaggedError('VideoSyncError')<{
 	message: string;
@@ -20,8 +20,8 @@ export type VideoSyncArgs = {
 
 const videoSync = Effect.gen(function* () {
 	const db = yield* DbService;
-	const yt = yield* YoutubeService;
-	const youtubeLiveStatusSync = yield* YoutubeLiveStatusSync;
+	const yt = yield* YtService;
+	const ytLiveStatusSync = yield* YtLiveStatusSync;
 
 	const discoverVideoIds = Effect.fn('discoverVideoIds')(function* (
 		ytChannelIds: string[],
@@ -110,7 +110,7 @@ const videoSync = Effect.gen(function* () {
 				if (newVideoIds.length === 0) return Effect.void;
 
 				return yt.areVideosShorts(newVideoIds, ytChannelId, args.maxResults).pipe(
-					Effect.catchTag('YoutubeError', (error) =>
+					Effect.catchTag('YtError', (error) =>
 						Effect.logWarning(`${fullTaskName}${error.message}, marking all as non-shorts`).pipe(
 							Effect.as(new Map<string, boolean>())
 						)
@@ -179,7 +179,7 @@ const videoSync = Effect.gen(function* () {
 				{ concurrency: 5 }
 			);
 
-			yield* youtubeLiveStatusSync.recomputeYoutubeLiveStatus(ytChannelIds, args.taskName);
+			yield* ytLiveStatusSync.recomputeYtLiveStatus(ytChannelIds, args.taskName);
 
 			yield* Effect.logInfo(
 				`VIDEO SYNC COMPLETED: ${successCount} videos synced, ${errorCount} videos failed, ${skipCount} videos skipped`
@@ -191,11 +191,11 @@ const videoSync = Effect.gen(function* () {
 				(err) => new VideoSyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
 			),
 			Effect.catchTag(
-				'YoutubeError',
-				(err) => new VideoSyncError({ message: `YOUTUBE ERROR: ${err.message}`, cause: err.cause })
+				'YtError',
+				(err) => new VideoSyncError({ message: `YT ERROR: ${err.message}`, cause: err.cause })
 			),
 			Effect.catchTag(
-				'YoutubeLiveStatusSyncError',
+				'YtLiveStatusSyncError',
 				(err) => new VideoSyncError({ message: err.message, cause: err.cause })
 			)
 		);

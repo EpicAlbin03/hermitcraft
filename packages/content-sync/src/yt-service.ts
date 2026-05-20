@@ -1,5 +1,5 @@
 import type { Video } from '@hc/db/schema';
-import { google, youtube_v3 } from 'googleapis';
+import { google, youtube_v3 as yt_v3 } from 'googleapis';
 import sharp from 'sharp';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
@@ -10,12 +10,12 @@ import { rgbaToThumbHash, thumbHashToDataURL } from 'thumbhash';
 import { getYtPlaylistId, getVideoLivestreamType, parseYtRSS } from './utils';
 import * as Layer from 'effect/Layer';
 
-class YoutubeError extends Data.TaggedError('YoutubeError')<{ message: string; cause?: unknown }> {}
+class YtError extends Data.TaggedError('YtError')<{ message: string; cause?: unknown }> {}
 
 const parseDate = (value: string | null | undefined) =>
 	DateTime.toDate(DateTime.makeUnsafe(value ?? 0));
 
-const getThumbnailUrl = (item: youtube_v3.Schema$Video | youtube_v3.Schema$Channel) => {
+const getThumbnailUrl = (item: yt_v3.Schema$Video | yt_v3.Schema$Channel) => {
 	const thumbnail =
 		item.snippet?.thumbnails?.maxres ||
 		item.snippet?.thumbnails?.standard ||
@@ -26,15 +26,15 @@ const getThumbnailUrl = (item: youtube_v3.Schema$Video | youtube_v3.Schema$Chann
 	return thumbnail?.url || '';
 };
 
-const youtubeService = Effect.gen(function* () {
-	const youtubeApiKey = Bun.env.YT_API_KEY;
-	if (!youtubeApiKey) {
-		return yield* new YoutubeError({ message: 'YT_API_KEY is not set' });
+const ytService = Effect.gen(function* () {
+	const ytApiKey = Bun.env.YT_API_KEY;
+	if (!ytApiKey) {
+		return yield* new YtError({ message: 'YT_API_KEY is not set' });
 	}
 
-	const youtube = google.youtube({
+	const ytApi = google.youtube({
 		version: 'v3',
-		auth: youtubeApiKey
+		auth: ytApiKey
 	});
 
 	const generateBannerThumbHash = Effect.fn('generateBannerThumbHash')(function* (
@@ -42,16 +42,16 @@ const youtubeService = Effect.gen(function* () {
 	) {
 		const res = yield* Effect.tryPromise({
 			try: () => fetch(`${bannerUrl}=w100`),
-			catch: (cause) => new YoutubeError({ message: 'Failed to fetch banner for thumbhash', cause })
+			catch: (cause) => new YtError({ message: 'Failed to fetch banner for thumbhash', cause })
 		});
 		const buffer = yield* Effect.tryPromise({
 			try: () => res.arrayBuffer(),
-			catch: (cause) => new YoutubeError({ message: 'Failed to read banner buffer', cause })
+			catch: (cause) => new YtError({ message: 'Failed to read banner buffer', cause })
 		});
 		const { data, info } = yield* Effect.tryPromise({
 			try: () =>
 				sharp(new Uint8Array(buffer)).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
-			catch: (cause) => new YoutubeError({ message: 'Failed to decode banner image', cause })
+			catch: (cause) => new YtError({ message: 'Failed to decode banner image', cause })
 		});
 		const hash = rgbaToThumbHash(info.width, info.height, data);
 		return thumbHashToDataURL(hash);
@@ -60,12 +60,12 @@ const youtubeService = Effect.gen(function* () {
 	const getChannelDetails = Effect.fn('getChannelDetails')(function* (ytChannelId: string) {
 		const response = yield* Effect.tryPromise({
 			try: () =>
-				youtube.channels.list({
+				ytApi.channels.list({
 					part: ['id', 'snippet', 'statistics', 'brandingSettings'],
 					id: [ytChannelId]
 				}),
 			catch: (cause) =>
-				new YoutubeError({
+				new YtError({
 					message: `Failed to get details for channel ${ytChannelId}`,
 					cause
 				})
@@ -73,7 +73,7 @@ const youtubeService = Effect.gen(function* () {
 
 		const item = response.data.items?.[0];
 		if (!item || !item.id || !item.snippet) {
-			return yield* new YoutubeError({ message: `Channel ${ytChannelId} not found` });
+			return yield* new YtError({ message: `Channel ${ytChannelId} not found` });
 		}
 
 		const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl || '';
@@ -101,11 +101,11 @@ const youtubeService = Effect.gen(function* () {
 	});
 
 	const setVideoDetails = Effect.fn('setVideoDetails')(function* (
-		item: youtube_v3.Schema$Video | undefined,
+		item: yt_v3.Schema$Video | undefined,
 		ytVideoId: string
 	) {
 		if (!item || !item.id || !item.snippet || !item.snippet.channelId) {
-			return yield* new YoutubeError({ message: `Video ${ytVideoId} not found` });
+			return yield* new YtError({ message: `Video ${ytVideoId} not found` });
 		}
 
 		const hasBeenLivestream = item.liveStreamingDetails !== undefined;
@@ -139,12 +139,12 @@ const youtubeService = Effect.gen(function* () {
 	const getVideoDetails = Effect.fn('getVideoDetails')(function* (ytVideoId: string) {
 		const response = yield* Effect.tryPromise({
 			try: () =>
-				youtube.videos.list({
+				ytApi.videos.list({
 					part: ['snippet', 'statistics', 'contentDetails', 'liveStreamingDetails', 'status'],
 					id: [ytVideoId]
 				}),
 			catch: (cause) =>
-				new YoutubeError({
+				new YtError({
 					message: `Failed to get details for video ${ytVideoId}`,
 					cause
 				})
@@ -155,17 +155,17 @@ const youtubeService = Effect.gen(function* () {
 
 	const getBatchVideoDetails = Effect.fn('getBatchVideoDetails')(function* (ytVideoIds: string[]) {
 		if (ytVideoIds.length > 50) {
-			return yield* new YoutubeError({ message: 'Maximum of 50 videos can be fetched at once' });
+			return yield* new YtError({ message: 'Maximum of 50 videos can be fetched at once' });
 		}
 
 		const response = yield* Effect.tryPromise({
 			try: () =>
-				youtube.videos.list({
+				ytApi.videos.list({
 					part: ['snippet', 'statistics', 'contentDetails', 'liveStreamingDetails', 'status'],
 					id: ytVideoIds
 				}),
 			catch: (cause) =>
-				new YoutubeError({
+				new YtError({
 					message: `Failed to get batch video details for ${ytVideoIds}`,
 					cause
 				})
@@ -184,7 +184,7 @@ const youtubeService = Effect.gen(function* () {
 					Effect.tap((videoDetails) =>
 						Effect.sync(() => videoDetailsMap.set(videoId, videoDetails))
 					),
-					Effect.catchTag('YoutubeError', (error) =>
+					Effect.catchTag('YtError', (error) =>
 						Effect.logWarning(`Failed to parse video ${videoId}: ${error.message}`)
 					)
 				);
@@ -201,12 +201,12 @@ const youtubeService = Effect.gen(function* () {
 	) {
 		const playlists = yield* Effect.tryPromise({
 			try: () =>
-				youtube.channels.list({
+				ytApi.channels.list({
 					part: ['contentDetails'],
 					id: [ytChannelId]
 				}),
 			catch: (cause) =>
-				new YoutubeError({
+				new YtError({
 					message: `Failed to get playlists for channel ${ytChannelId}`,
 					cause
 				})
@@ -214,7 +214,7 @@ const youtubeService = Effect.gen(function* () {
 
 		const uploadsPlaylistId = playlists.data.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
 		if (!uploadsPlaylistId) {
-			return yield* new YoutubeError({
+			return yield* new YtError({
 				message: `Could not find uploads playlist for channel ${ytChannelId}`
 			});
 		}
@@ -227,14 +227,14 @@ const youtubeService = Effect.gen(function* () {
 		do {
 			const playlistResponse = yield* Effect.tryPromise({
 				try: () =>
-					youtube.playlistItems.list({
+					ytApi.playlistItems.list({
 						part: ['contentDetails'],
 						playlistId: uploadsPlaylistId,
 						maxResults: 50,
 						...(nextPageToken !== undefined ? { pageToken: nextPageToken } : {})
 					}),
 				catch: (cause) =>
-					new YoutubeError({
+					new YtError({
 						message: `Failed to get playlist items for playlist ${uploadsPlaylistId}`,
 						cause
 					})
@@ -256,21 +256,21 @@ const youtubeService = Effect.gen(function* () {
 			const response = yield* Effect.tryPromise({
 				try: () => fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${ytChannelId}`),
 				catch: (cause) =>
-					new YoutubeError({
+					new YtError({
 						message: `Failed to fetch RSS for channel ${ytChannelId}`,
 						cause
 					})
 			});
 
 			if (!response.ok) {
-				return yield* new YoutubeError({
+				return yield* new YtError({
 					message: `Failed to fetch RSS for channel ${ytChannelId} (HTTP ${response.status})`
 				});
 			}
 
 			const xml = yield* Effect.tryPromise({
 				try: () => response.text(),
-				catch: (cause) => new YoutubeError({ message: 'Failed to read RSS text', cause })
+				catch: (cause) => new YtError({ message: 'Failed to read RSS text', cause })
 			});
 
 			return parseYtRSS(xml);
@@ -288,14 +288,14 @@ const youtubeService = Effect.gen(function* () {
 
 		const response = yield* Effect.tryPromise({
 			try: () =>
-				youtube.playlistItems.list({
+				ytApi.playlistItems.list({
 					part: ['id'],
 					playlistId: shortsPlaylistId,
 					videoId: ytVideoId,
 					maxResults: 1
 				}),
 			catch: (cause) =>
-				new YoutubeError({
+				new YtError({
 					message: `Failed to check if video ${ytVideoId} is a short`,
 					cause
 				})
@@ -318,14 +318,14 @@ const youtubeService = Effect.gen(function* () {
 		do {
 			const playlistResponse = yield* Effect.tryPromise({
 				try: () =>
-					youtube.playlistItems.list({
+					ytApi.playlistItems.list({
 						part: ['contentDetails'],
 						playlistId: shortsPlaylistId,
 						maxResults: 50,
 						...(nextPageToken !== undefined ? { pageToken: nextPageToken } : {})
 					}),
 				catch: (cause) =>
-					new YoutubeError({
+					new YtError({
 						message: `Failed to fetch shorts playlist for ${ytChannelId}`,
 						cause
 					})
@@ -351,13 +351,13 @@ const youtubeService = Effect.gen(function* () {
 
 		const response = yield* Effect.tryPromise({
 			try: () =>
-				youtube.playlistItems.list({
+				ytApi.playlistItems.list({
 					part: ['contentDetails'],
 					playlistId: livestreamsPlaylistId,
 					maxResults
 				}),
 			catch: (cause) =>
-				new YoutubeError({
+				new YtError({
 					message: `Failed to fetch livestreams playlist for ${ytChannelId}`,
 					cause
 				})
@@ -385,11 +385,11 @@ const youtubeService = Effect.gen(function* () {
 	} as const;
 });
 
-type YoutubeServiceShape = Effect.Success<typeof youtubeService>;
+type YtServiceShape = Effect.Success<typeof ytService>;
 
-export class YoutubeService extends Context.Service<YoutubeService, YoutubeServiceShape>()(
-	'@hc/content-sync/yt-service/YoutubeService',
-	{ make: youtubeService }
+export class YtService extends Context.Service<YtService, YtServiceShape>()(
+	'@hc/content-sync/yt-service/YtService',
+	{ make: ytService }
 ) {
 	static readonly layer = Layer.effect(this, this.make);
 }

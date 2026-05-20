@@ -4,9 +4,9 @@ import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
 import { DbService } from './db-service';
-import { YoutubeService } from './yt-service';
+import { YtService } from './yt-service';
 
-class YoutubeLiveStatusSyncError extends Data.TaggedError('YoutubeLiveStatusSyncError')<{
+class YtLiveStatusSyncError extends Data.TaggedError('YtLiveStatusSyncError')<{
 	message: string;
 	cause?: unknown;
 }> {}
@@ -36,11 +36,11 @@ const chooseLiveVideoWinner = (
 		.toSorted((a, b) => getVideoSortTime(b) - getVideoSortTime(a))
 		.at(0) ?? null;
 
-const youtubeLiveStatusSync = Effect.gen(function* () {
+const ytLiveStatusSync = Effect.gen(function* () {
 	const db = yield* DbService;
-	const yt = yield* YoutubeService;
+	const yt = yield* YtService;
 
-	const refreshYoutubeLiveStatus = Effect.fn('refreshYoutubeLiveStatus')(function* (
+	const refreshYtLiveStatus = Effect.fn('refreshYtLiveStatus')(function* (
 		ytChannelIds: string[],
 		taskName?: string
 	) {
@@ -51,7 +51,7 @@ const youtubeLiveStatusSync = Effect.gen(function* () {
 			const allCandidateVideoIds: string[] = [];
 			const allCandidateVideoIdsSet = new Set<string>();
 
-			yield* Effect.logInfo(`${fullTaskName}Syncing YouTube live status`);
+			yield* Effect.logInfo(`${fullTaskName}Syncing Yt live status`);
 
 			yield* Effect.forEach(
 				ytChannelIds,
@@ -123,34 +123,34 @@ const youtubeLiveStatusSync = Effect.gen(function* () {
 				};
 			});
 
-			yield* db.setYoutubeLiveVideos(updates);
+			yield* db.setYtLiveVideos(updates);
 
 			const liveCount = updates.filter((update) => update.ytLiveVideoId !== null).length;
 			yield* Effect.logInfo(
-				`YOUTUBE LIVE SYNC COMPLETED: ${updates.length} channels synced, ${liveCount} currently live`
+				`YT LIVE SYNC COMPLETED: ${updates.length} channels synced, ${liveCount} currently live`
 			);
-			yield* Effect.logInfo(`YOUTUBE LIVE SYNC TOOK ${performance.now() - start}ms`);
+			yield* Effect.logInfo(`YT LIVE SYNC TOOK ${performance.now() - start}ms`);
 		}).pipe(
 			Effect.catchTag(
 				'DbError',
 				(err) =>
-					new YoutubeLiveStatusSyncError({
+					new YtLiveStatusSyncError({
 						message: `DB ERROR: ${err.message}`,
 						cause: err.cause
 					})
 			),
 			Effect.catchTag(
-				'YoutubeError',
+				'YtError',
 				(err) =>
-					new YoutubeLiveStatusSyncError({
-						message: `YOUTUBE ERROR: ${err.message}`,
+					new YtLiveStatusSyncError({
+						message: `YT ERROR: ${err.message}`,
 						cause: err.cause
 					})
 			)
 		);
 	});
 
-	const recomputeYoutubeLiveStatus = Effect.fn('recomputeYoutubeLiveStatus')(function* (
+	const recomputeYtLiveStatus = Effect.fn('recomputeYtLiveStatus')(function* (
 		ytChannelIds: string[],
 		taskName?: string
 	) {
@@ -174,20 +174,18 @@ const youtubeLiveStatusSync = Effect.gen(function* () {
 					chooseLiveVideoWinner(liveVideosByChannel.get(ytChannelId) ?? [])?.ytVideoId ?? null
 			}));
 
-			yield* db.setYoutubeLiveVideos(updates);
+			yield* db.setYtLiveVideos(updates);
 
 			const liveCount = updates.filter((update) => update.ytLiveVideoId !== null).length;
 			yield* Effect.logInfo(
-				`${fullTaskName}Recomputed YouTube live status for ${updates.length} channels, ${liveCount} currently live`
+				`${fullTaskName}Recomputed Yt live status for ${updates.length} channels, ${liveCount} currently live`
 			);
-			yield* Effect.logInfo(
-				`${fullTaskName}YOUTUBE LIVE RECOMPUTE TOOK ${performance.now() - start}ms`
-			);
+			yield* Effect.logInfo(`${fullTaskName}YT LIVE RECOMPUTE TOOK ${performance.now() - start}ms`);
 		}).pipe(
 			Effect.catchTag(
 				'DbError',
 				(err) =>
-					new YoutubeLiveStatusSyncError({
+					new YtLiveStatusSyncError({
 						message: `DB ERROR: ${err.message}`,
 						cause: err.cause
 					})
@@ -196,18 +194,18 @@ const youtubeLiveStatusSync = Effect.gen(function* () {
 	});
 
 	return {
-		refreshYoutubeLiveStatus,
-		recomputeYoutubeLiveStatus
+		refreshYtLiveStatus,
+		recomputeYtLiveStatus
 	} as const;
 });
 
-type YoutubeLiveStatusSyncShape = Effect.Success<typeof youtubeLiveStatusSync>;
+type YtLiveStatusSyncShape = Effect.Success<typeof ytLiveStatusSync>;
 
-export class YoutubeLiveStatusSync extends Context.Service<
-	YoutubeLiveStatusSync,
-	YoutubeLiveStatusSyncShape
->()('@hc/content-sync/youtube-live-status-sync/YoutubeLiveStatusSync', {
-	make: youtubeLiveStatusSync
-}) {
+export class YtLiveStatusSync extends Context.Service<YtLiveStatusSync, YtLiveStatusSyncShape>()(
+	'@hc/content-sync/yt-live-status-sync/YtLiveStatusSync',
+	{
+		make: ytLiveStatusSync
+	}
+) {
 	static readonly layer = Layer.effect(this, this.make);
 }

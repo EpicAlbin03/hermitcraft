@@ -5,7 +5,7 @@ import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
 import * as Option from 'effect/Option';
 import { DbService } from './db-service';
-import { YoutubeService } from './yt-service';
+import { YtService } from './yt-service';
 
 class CreatorSyncError extends Data.TaggedError('CreatorSyncError')<{
 	message: string;
@@ -21,7 +21,7 @@ export type CreatorSyncInput = {
 
 const creatorSync = Effect.gen(function* () {
 	const db = yield* DbService;
-	const yt = yield* YoutubeService;
+	const yt = yield* YtService;
 
 	const syncCreator = Effect.fn('syncCreator')(function* (input: CreatorSyncInput) {
 		return yield* Effect.gen(function* () {
@@ -54,9 +54,8 @@ const creatorSync = Effect.gen(function* () {
 				(err) => new CreatorSyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
 			),
 			Effect.catchTag(
-				'YoutubeError',
-				(err) =>
-					new CreatorSyncError({ message: `YOUTUBE ERROR: ${err.message}`, cause: err.cause })
+				'YtError',
+				(err) => new CreatorSyncError({ message: `YT ERROR: ${err.message}`, cause: err.cause })
 			)
 		);
 	});
