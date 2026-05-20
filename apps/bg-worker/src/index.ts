@@ -3,6 +3,7 @@ import { CreatorSync } from '@hc/content-sync/creator-sync';
 import { DbService } from '@hc/content-sync/db-service';
 import { SyncService } from '@hc/content-sync/sync-service';
 import { TwitchService } from '@hc/content-sync/twitch-service';
+import { VideoSync } from '@hc/content-sync/video-sync';
 import { YoutubeLiveStatusSync } from '@hc/content-sync/youtube-live-status-sync';
 import { YoutubeService } from '@hc/content-sync/yt-service';
 import { PgClientLive } from '@hc/db/connection';
@@ -26,10 +27,13 @@ const sharedLayer = Layer.mergeAll(
 
 const creatorSyncLayer = CreatorSync.layer.pipe(Layer.provide(sharedLayer));
 const youtubeLiveStatusSyncLayer = YoutubeLiveStatusSync.layer.pipe(Layer.provide(sharedLayer));
+const videoSyncDependencies = Layer.merge(sharedLayer, youtubeLiveStatusSyncLayer);
+const videoSyncLayer = VideoSync.layer.pipe(Layer.provide(videoSyncDependencies));
 const syncLayerDependencies = Layer.mergeAll(
 	sharedLayer,
 	creatorSyncLayer,
-	youtubeLiveStatusSyncLayer
+	youtubeLiveStatusSyncLayer,
+	videoSyncLayer
 );
 const appLayer = Layer.merge(
 	syncLayerDependencies,

@@ -7,6 +7,7 @@
 		"./db-service": "./src/db-service.ts",
 		"./sync-service": "./src/sync-service.ts",
 		"./twitch-service": "./src/twitch-service.ts",
+		"./video-sync": "./src/video-sync.ts",
 		"./youtube-live-status-sync": "./src/youtube-live-status-sync.ts",
 		"./yt-service": "./src/yt-service.ts"
 	},

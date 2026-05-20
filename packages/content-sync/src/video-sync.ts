@@ -1,0 +1,221 @@
+import type { Video } from '@hc/db/schema';
+import * as Context from 'effect/Context';
+import * as Data from 'effect/Data';
+import * as Effect from 'effect/Effect';
+import * as Layer from 'effect/Layer';
+import { DbService } from './db-service';
+import { YoutubeLiveStatusSync } from './youtube-live-status-sync';
+import { YoutubeService } from './yt-service';
+
+class VideoSyncError extends Data.TaggedError('VideoSyncError')<{
+	message: string;
+	cause?: unknown;
+}> {}
+
+export type VideoSyncArgs = {
+	taskName?: string;
+	backfill?: boolean;
+	maxResults?: number;
+};
+
+const videoSync = Effect.gen(function* () {
+	const db = yield* DbService;
+	const yt = yield* YoutubeService;
+	const youtubeLiveStatusSync = yield* YoutubeLiveStatusSync;
+
+	const discoverVideoIds = Effect.fn('discoverVideoIds')(function* (
+		ytChannelIds: string[],
+		args: VideoSyncArgs
+	) {
+		const fullTaskName = args.taskName ? `${args.taskName}: ` : '';
+		const videosByChannel = new Map<string, string[]>();
+		const allVideoIds: string[] = [];
+
+		yield* Effect.forEach(
+			ytChannelIds,
+			(ytChannelId) =>
+				(args.backfill
+					? yt.getVideoIdsFromUploadsPlaylist(ytChannelId, args.maxResults)
+					: yt.getRSSVideoIds(ytChannelId).pipe(Effect.map((ids) => ids.slice(0, args.maxResults)))
+				).pipe(
+					Effect.matchEffect({
+						onSuccess: (videoIds) =>
+							Effect.sync(() => {
+								videosByChannel.set(ytChannelId, videoIds);
+								allVideoIds.push(...videoIds);
+							}),
+						onFailure: (error) =>
+							Effect.logError(`${fullTaskName}Failed to get video IDs for ${ytChannelId}`, error)
+					})
+				),
+			{ concurrency: 5 }
+		);
+
+		const channelsWithLive = yield* db.getAllChannels();
+		const allVideoIdsSet = new Set(allVideoIds);
+		for (const channel of channelsWithLive) {
+			if (channel.ytLiveVideoId && !allVideoIdsSet.has(channel.ytLiveVideoId)) {
+				allVideoIds.push(channel.ytLiveVideoId);
+				allVideoIdsSet.add(channel.ytLiveVideoId);
+				const channelVideos = videosByChannel.get(channel.ytChannelId) ?? [];
+				channelVideos.push(channel.ytLiveVideoId);
+				videosByChannel.set(channel.ytChannelId, channelVideos);
+			}
+		}
+
+		return { videosByChannel, allVideoIds } as const;
+	});
+
+	const reconcileObservedVideos = Effect.fn('reconcileObservedVideos')(function* (
+		videosByChannel: Map<string, string[]>,
+		allVideoIds: string[],
+		args: VideoSyncArgs
+	) {
+		const fullTaskName = args.taskName ? `${args.taskName}: ` : '';
+		const existingVideos = yield* db.getVideos(allVideoIds);
+		const existingVideoIds = new Set(existingVideos.map((video) => video.ytVideoId));
+		const existingShortsMap = new Map(
+			existingVideos.map((video) => [video.ytVideoId, video.isShort])
+		);
+		const allVideoDetailsMap = new Map<string, Omit<Video, 'isShort'>>();
+		const missingVideoIds: string[] = [];
+
+		for (let i = 0; i < allVideoIds.length; i += 50) {
+			const batch = allVideoIds.slice(i, i + 50);
+			const batchDetails = yield* yt.getBatchVideoDetails(batch);
+			for (const [id, details] of batchDetails.entries()) {
+				allVideoDetailsMap.set(id, details);
+			}
+			for (const id of batch) {
+				if (!batchDetails.has(id) && existingVideoIds.has(id)) {
+					missingVideoIds.push(id);
+				}
+			}
+		}
+
+		if (missingVideoIds.length > 0) {
+			const markedCount = yield* db.markVideosAsPrivate(missingVideoIds);
+			yield* Effect.logInfo(
+				`${fullTaskName}Marked ${markedCount} videos as private (no longer accessible via API)`
+			);
+		}
+
+		const allShortsMap = new Map<string, boolean>(existingShortsMap);
+		const ytChannelIds = Array.from(videosByChannel.keys());
+		yield* Effect.forEach(
+			ytChannelIds,
+			(ytChannelId) => {
+				const videoIds = videosByChannel.get(ytChannelId) ?? [];
+				const newVideoIds = videoIds.filter((id) => !existingVideoIds.has(id));
+				if (newVideoIds.length === 0) return Effect.void;
+
+				return yt.areVideosShorts(newVideoIds, ytChannelId, args.maxResults).pipe(
+					Effect.catchTag('YoutubeError', (error) =>
+						Effect.logWarning(`${fullTaskName}${error.message}, marking all as non-shorts`).pipe(
+							Effect.as(new Map<string, boolean>())
+						)
+					),
+					Effect.tap((shortsMap) =>
+						Effect.sync(() => {
+							for (const [id, isShort] of shortsMap.entries()) {
+								allShortsMap.set(id, isShort);
+							}
+						})
+					)
+				);
+			},
+			{ concurrency: 5 }
+		);
+
+		return { allVideoDetailsMap, allShortsMap } as const;
+	});
+
+	const syncVideosForChannelsBase = Effect.fn('syncVideosForChannelsBase')(function* (
+		ytChannelIds: string[],
+		args: VideoSyncArgs
+	) {
+		const start = performance.now();
+		let successCount = 0;
+		let errorCount = 0;
+		let skipCount = 0;
+		const fullTaskName = args.taskName ? `${args.taskName}: ` : '';
+		const { videosByChannel, allVideoIds } = yield* discoverVideoIds(ytChannelIds, args);
+		const { allVideoDetailsMap, allShortsMap } = yield* reconcileObservedVideos(
+			videosByChannel,
+			allVideoIds,
+			args
+		);
+
+		yield* Effect.logInfo(`${fullTaskName}Syncing videos`);
+		yield* Effect.forEach(
+			allVideoDetailsMap.entries(),
+			([ytVideoId, videoDetails]) =>
+				db.upsertVideo({ ...videoDetails, isShort: allShortsMap.get(ytVideoId) ?? false }).pipe(
+					Effect.matchEffect({
+						onSuccess: (result) => {
+							if (result.wasSkipped) {
+								return Effect.sync(() => {
+									skipCount++;
+								}).pipe(
+									Effect.andThen(Effect.logWarning(`${fullTaskName}Skipped video ${ytVideoId}`))
+								);
+							}
+
+							return Effect.sync(() => {
+								successCount++;
+							});
+						},
+						onFailure: (error) =>
+							Effect.sync(() => {
+								errorCount++;
+							}).pipe(
+								Effect.andThen(
+									Effect.logError(`${fullTaskName}Failed to sync video ${ytVideoId}`, error)
+								)
+							)
+					})
+				),
+			{ concurrency: 5 }
+		);
+
+		yield* youtubeLiveStatusSync.recomputeYoutubeLiveStatus(ytChannelIds, args.taskName);
+
+		yield* Effect.logInfo(
+			`VIDEO SYNC COMPLETED: ${successCount} videos synced, ${errorCount} videos failed, ${skipCount} videos skipped`
+		);
+		yield* Effect.logInfo(`VIDEO SYNC TOOK ${performance.now() - start}ms`);
+	});
+
+	const syncVideosForChannels = Effect.fn('syncVideosForChannels')(function* (
+		ytChannelIds: string[],
+		args: VideoSyncArgs
+	) {
+		return yield* syncVideosForChannelsBase(ytChannelIds, args).pipe(
+			Effect.catchTag(
+				'DbError',
+				(err) => new VideoSyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
+			),
+			Effect.catchTag(
+				'YoutubeError',
+				(err) => new VideoSyncError({ message: `YOUTUBE ERROR: ${err.message}`, cause: err.cause })
+			),
+			Effect.catchTag(
+				'YoutubeLiveStatusSyncError',
+				(err) => new VideoSyncError({ message: err.message, cause: err.cause })
+			)
+		);
+	});
+
+	return {
+		syncVideosForChannels
+	} as const;
+});
+
+type VideoSyncShape = Effect.Success<typeof videoSync>;
+
+export class VideoSync extends Context.Service<VideoSync, VideoSyncShape>()(
+	'@hc/content-sync/video-sync/VideoSync',
+	{ make: videoSync }
+) {
+	static readonly layer = Layer.effect(this, this.make);
+}
