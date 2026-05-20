@@ -1,8 +1,9 @@
-import type { Channel, ChannelLink, Video } from '@hc/db/schema';
+import type { Video } from '@hc/db/schema';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
+import { CreatorSync, type CreatorSyncInput } from './creator-sync';
 import { DbService } from './db-service';
 import { TwitchService } from './twitch-service';
 import { YoutubeLiveStatusSync } from './youtube-live-status-sync';
@@ -10,22 +11,7 @@ import { YoutubeService } from './yt-service';
 
 class SyncError extends Data.TaggedError('SyncError')<{ message: string; cause?: unknown }> {}
 
-type SyncChannelDetails = {
-	twitchUserId: string | undefined;
-	twitchUserLogin: string | undefined;
-	isTwitchLive: boolean | undefined;
-	ytLiveVideoId: string | undefined;
-	links: ChannelLink[] | undefined;
-};
-
-type SyncChannelInput = {
-	ytChannelId: string;
-	twitchUserId?: string | null;
-	twitchUserLogin?: string | null;
-	isTwitchLive?: boolean;
-	ytLiveVideoId?: string | null;
-	links?: ChannelLink[];
-};
+type SyncChannelInput = CreatorSyncInput;
 
 type SyncVideosArgs = {
 	taskName?: string;
@@ -33,91 +19,22 @@ type SyncVideosArgs = {
 	maxResults?: number;
 };
 
-type SyncStoredChannel = Pick<
-	Channel,
-	| 'ytName'
-	| 'ytHandle'
-	| 'ytDescription'
-	| 'ytAvatarUrl'
-	| 'ytBannerUrl'
-	| 'ytBannerThumbHash'
-	| 'ytViewCount'
-	| 'ytSubscriberCount'
-	| 'ytVideoCount'
-	| 'twitchUserId'
-	| 'twitchUserLogin'
-	| 'isTwitchLive'
-	| 'ytLiveVideoId'
-	| 'links'
->;
-
-const toDbSyncChannel = (
-	channel: SyncStoredChannel,
-	overrides?: Partial<Pick<SyncStoredChannel, 'isTwitchLive' | 'ytLiveVideoId'>>
-) => ({
-	ytName: channel.ytName,
-	ytHandle: channel.ytHandle,
-	ytDescription: channel.ytDescription,
-	ytAvatarUrl: channel.ytAvatarUrl,
-	ytBannerUrl: channel.ytBannerUrl,
-	ytBannerThumbHash: channel.ytBannerThumbHash,
-	ytViewCount: channel.ytViewCount,
-	ytSubscriberCount: channel.ytSubscriberCount,
-	ytVideoCount: channel.ytVideoCount,
-	twitchUserId: channel.twitchUserId,
-	twitchUserLogin: channel.twitchUserLogin,
-	isTwitchLive: channel.isTwitchLive,
-	ytLiveVideoId: channel.ytLiveVideoId,
-	links: channel.links,
-	...overrides
-});
-
 const syncService = Effect.gen(function* () {
 	const db = yield* DbService;
 	const yt = yield* YoutubeService;
 	const twitch = yield* TwitchService;
+	const creatorSync = yield* CreatorSync;
 	const youtubeLiveStatusSync = yield* YoutubeLiveStatusSync;
 
-	const syncChannelBase = Effect.fn('syncChannelBase')(function* (
-		ytChannelId: string,
-		details?: SyncChannelDetails
-	) {
-		const channelDetails = yield* yt.getChannelDetails(ytChannelId);
-
-		yield* db.upsertChannel({
-			ytChannelId,
-			ytName: channelDetails.ytName,
-			ytHandle: channelDetails.ytHandle,
-			ytDescription: channelDetails.ytDescription,
-			ytAvatarUrl: channelDetails.ytAvatarUrl,
-			ytBannerUrl: channelDetails.ytBannerUrl,
-			ytBannerThumbHash: channelDetails.ytBannerThumbHash,
-			ytViewCount: channelDetails.ytViewCount,
-			ytSubscriberCount: channelDetails.ytSubscriberCount,
-			ytVideoCount: channelDetails.ytVideoCount,
-			ytJoinedAt: channelDetails.ytJoinedAt,
-			twitchUserId: details?.twitchUserId ?? null,
-			twitchUserLogin: details?.twitchUserLogin ?? null,
-			isTwitchLive: details?.isTwitchLive ?? false,
-			ytLiveVideoId: details?.ytLiveVideoId ?? null,
-			links: details?.links ?? []
-		});
-	});
-
-	const syncChannel = Effect.fn('syncChannel')(function* (
-		ytChannelId: string,
-		details?: SyncChannelDetails
-	) {
-		return yield* syncChannelBase(ytChannelId, details).pipe(
-			Effect.catchTag(
-				'DbError',
-				(err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
-			),
-			Effect.catchTag(
-				'YoutubeError',
-				(err) => new SyncError({ message: `YOUTUBE ERROR: ${err.message}`, cause: err.cause })
-			)
-		);
+	const syncChannel = Effect.fn('syncChannel')(function* (input: SyncChannelInput) {
+		return yield* creatorSync
+			.syncCreator(input)
+			.pipe(
+				Effect.catchTag(
+					'CreatorSyncError',
+					(err) => new SyncError({ message: err.message, cause: err.cause })
+				)
+			);
 	});
 
 	const syncVideoBase = Effect.fn('syncVideoBase')(function* (ytVideoId: string) {
@@ -167,39 +84,7 @@ const syncService = Effect.gen(function* () {
 		channels: SyncChannelInput[],
 		taskName?: string
 	) {
-		const start = performance.now();
-		let successCount = 0;
-		let errorCount = 0;
-		const fullTaskName = taskName ? `${taskName}: ` : '';
-
-		yield* Effect.logInfo(`${fullTaskName}Syncing channels`);
-		yield* Effect.forEach(
-			channels,
-			(channel) =>
-				syncChannel(channel.ytChannelId, {
-					twitchUserId: channel.twitchUserId ?? undefined,
-					twitchUserLogin: channel.twitchUserLogin ?? undefined,
-					isTwitchLive: channel.isTwitchLive,
-					ytLiveVideoId: channel.ytLiveVideoId ?? undefined,
-					links: channel.links
-				}).pipe(
-					Effect.matchEffect({
-						onSuccess: () => Effect.sync(() => successCount++),
-						onFailure: (error) =>
-							Effect.sync(() => {
-								errorCount++;
-							}).pipe(
-								Effect.andThen(Effect.logError(`${fullTaskName}Failed to sync channel`, error))
-							)
-					})
-				),
-			{ concurrency: 5 }
-		);
-
-		yield* Effect.logInfo(
-			`CHANNEL SYNC COMPLETED: ${successCount} channels synced, ${errorCount} channels failed`
-		);
-		yield* Effect.logInfo(`CHANNEL SYNC TOOK ${performance.now() - start}ms`);
+		yield* creatorSync.syncCreators(channels, taskName);
 	});
 
 	const syncChannels = Effect.fn('syncChannels')(function* (
@@ -391,35 +276,26 @@ const syncService = Effect.gen(function* () {
 		const fullTaskName = taskName ? `${taskName}: ` : '';
 
 		yield* Effect.logInfo(`${fullTaskName}Syncing channels (twitch)`);
-		yield* Effect.forEach(
-			channels,
-			(channel) =>
-				db
-					.updateChannel(
-						channel.ytChannelId,
-						toDbSyncChannel(channel, {
-							isTwitchLive: channel.twitchUserId
-								? (isTwitchLiveMap.get(channel.twitchUserId) ?? false)
-								: false
-						})
-					)
-					.pipe(
-						Effect.matchEffect({
-							onSuccess: () => Effect.sync(() => successCount++),
-							onFailure: (error) =>
-								Effect.sync(() => {
-									errorCount++;
-								}).pipe(
-									Effect.andThen(
-										Effect.logError(
-											`${fullTaskName}Failed to sync channel (twitch) ${channel.ytChannelId}`,
-											error
-										)
-									)
-								)
-						})
-					),
-			{ concurrency: 5 }
+		const updates = channels.map((channel) => ({
+			ytChannelId: channel.ytChannelId,
+			isTwitchLive: channel.twitchUserId
+				? (isTwitchLiveMap.get(channel.twitchUserId) ?? false)
+				: false
+		}));
+
+		yield* db.setTwitchLiveStatuses(updates).pipe(
+			Effect.tap(() =>
+				Effect.sync(() => {
+					successCount = updates.length;
+				})
+			),
+			Effect.catchTag('DbError', (error) =>
+				Effect.sync(() => {
+					errorCount = updates.length;
+				}).pipe(
+					Effect.andThen(Effect.logError(`${fullTaskName}Failed to sync twitch live status`, error))
+				)
+			)
 		);
 
 		yield* Effect.logInfo(

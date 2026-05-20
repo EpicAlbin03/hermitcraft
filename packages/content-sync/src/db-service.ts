@@ -85,53 +85,32 @@ const dbService = Effect.gen(function* () {
 			);
 	});
 
-	type ChannelUpdate = Pick<
-		Channel,
-		| 'ytName'
-		| 'ytHandle'
-		| 'ytDescription'
-		| 'ytAvatarUrl'
-		| 'ytBannerUrl'
-		| 'ytBannerThumbHash'
-		| 'ytViewCount'
-		| 'ytSubscriberCount'
-		| 'ytVideoCount'
-		| 'twitchUserId'
-		| 'twitchUserLogin'
-		| 'isTwitchLive'
-		| 'ytLiveVideoId'
-		| 'links'
-	>;
-
-	const getChannelUpdate = (data: Channel): ChannelUpdate => ({
-		ytName: data.ytName,
-		ytHandle: data.ytHandle,
-		ytDescription: data.ytDescription,
-		ytAvatarUrl: data.ytAvatarUrl,
-		ytBannerUrl: data.ytBannerUrl,
-		ytBannerThumbHash: data.ytBannerThumbHash,
-		ytViewCount: data.ytViewCount,
-		ytSubscriberCount: data.ytSubscriberCount,
-		ytVideoCount: data.ytVideoCount,
-		twitchUserId: data.twitchUserId,
-		twitchUserLogin: data.twitchUserLogin,
-		isTwitchLive: data.isTwitchLive,
-		ytLiveVideoId: data.ytLiveVideoId,
-		links: data.links
-	});
-
-	const updateChannel = Effect.fn('updateChannel')(function* (
-		ytChannelId: string,
-		data: ChannelUpdate
+	const setTwitchLiveStatuses = Effect.fn('setTwitchLiveStatuses')(function* (
+		updates: Array<{ ytChannelId: string; isTwitchLive: boolean }>
 	) {
+		if (updates.length === 0) return;
+
 		return yield* db
-			.update(DB_SCHEMA.channels)
-			.set(data)
-			.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId))
+			.transaction((tx) =>
+				Effect.forEach(
+					updates,
+					(update) =>
+						tx
+							.update(DB_SCHEMA.channels)
+							.set({ isTwitchLive: update.isTwitchLive })
+							.where(eq(DB_SCHEMA.channels.ytChannelId, update.ytChannelId))
+							.pipe(Effect.asVoid),
+					{ concurrency: 'unbounded' }
+				)
+			)
 			.pipe(
 				Effect.asVoid,
 				Effect.mapError(
-					(cause) => new DbError({ message: `Failed to update channel ${ytChannelId}`, cause })
+					(cause) =>
+						new DbError({
+							message: `Failed to set Twitch live statuses for ${updates.length} channels`,
+							cause
+						})
 				)
 			);
 	});
@@ -142,7 +121,22 @@ const dbService = Effect.gen(function* () {
 			.values(data)
 			.onConflictDoUpdate({
 				target: DB_SCHEMA.channels.ytChannelId,
-				set: getChannelUpdate(data)
+				set: {
+					ytName: data.ytName,
+					ytHandle: data.ytHandle,
+					ytDescription: data.ytDescription,
+					ytAvatarUrl: data.ytAvatarUrl,
+					ytBannerUrl: data.ytBannerUrl,
+					ytBannerThumbHash: data.ytBannerThumbHash,
+					ytViewCount: data.ytViewCount,
+					ytSubscriberCount: data.ytSubscriberCount,
+					ytVideoCount: data.ytVideoCount,
+					twitchUserId: data.twitchUserId,
+					twitchUserLogin: data.twitchUserLogin,
+					isTwitchLive: data.isTwitchLive,
+					ytLiveVideoId: data.ytLiveVideoId,
+					links: data.links
+				}
 			})
 			.returning({ wasInserted: sql<boolean>`xmax = 0` })
 			.pipe(
@@ -325,7 +319,7 @@ const dbService = Effect.gen(function* () {
 		getChannel,
 		getVideo,
 		getVideos,
-		updateChannel,
+		setTwitchLiveStatuses,
 		upsertChannel,
 		upsertVideo,
 		deleteVideo,

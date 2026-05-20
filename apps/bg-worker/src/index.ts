@@ -1,4 +1,5 @@
 import { BunRuntime } from '@effect/platform-bun';
+import { CreatorSync } from '@hc/content-sync/creator-sync';
 import { DbService } from '@hc/content-sync/db-service';
 import { SyncService } from '@hc/content-sync/sync-service';
 import { TwitchService } from '@hc/content-sync/twitch-service';
@@ -23,8 +24,13 @@ const sharedLayer = Layer.mergeAll(
 	YoutubeService.layer
 );
 
+const creatorSyncLayer = CreatorSync.layer.pipe(Layer.provide(sharedLayer));
 const youtubeLiveStatusSyncLayer = YoutubeLiveStatusSync.layer.pipe(Layer.provide(sharedLayer));
-const syncLayerDependencies = Layer.merge(sharedLayer, youtubeLiveStatusSyncLayer);
+const syncLayerDependencies = Layer.mergeAll(
+	sharedLayer,
+	creatorSyncLayer,
+	youtubeLiveStatusSyncLayer
+);
 const appLayer = Layer.merge(
 	syncLayerDependencies,
 	SyncService.layer.pipe(Layer.provide(syncLayerDependencies))
