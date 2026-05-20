@@ -5,6 +5,7 @@ import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
 import { DbService } from './db-service';
 import { TwitchService } from './twitch-service';
+import { YoutubeLiveStatusSync } from './youtube-live-status-sync';
 import { YoutubeService } from './yt-service';
 
 class SyncError extends Data.TaggedError('SyncError')<{ message: string; cause?: unknown }> {}
@@ -75,6 +76,7 @@ const syncService = Effect.gen(function* () {
 	const db = yield* DbService;
 	const yt = yield* YoutubeService;
 	const twitch = yield* TwitchService;
+	const youtubeLiveStatusSync = yield* YoutubeLiveStatusSync;
 
 	const syncChannelBase = Effect.fn('syncChannelBase')(function* (
 		ytChannelId: string,
@@ -140,6 +142,8 @@ const syncService = Effect.gen(function* () {
 			livestreamActualStartTime: videoDetails.livestreamActualStartTime,
 			livestreamConcurrentViewers: videoDetails.livestreamConcurrentViewers
 		});
+
+		yield* youtubeLiveStatusSync.recomputeYoutubeLiveStatus([videoDetails.ytChannelId]);
 	});
 
 	const syncVideo = Effect.fn('syncVideo')(function* (ytVideoId: string) {
@@ -151,6 +155,10 @@ const syncService = Effect.gen(function* () {
 			Effect.catchTag(
 				'YoutubeError',
 				(err) => new SyncError({ message: `YOUTUBE ERROR: ${err.message}`, cause: err.cause })
+			),
+			Effect.catchTag(
+				'YoutubeLiveStatusSyncError',
+				(err) => new SyncError({ message: err.message, cause: err.cause })
 			)
 		);
 	});
@@ -341,16 +349,11 @@ const syncService = Effect.gen(function* () {
 			{ concurrency: 5 }
 		);
 
+		yield* youtubeLiveStatusSync.recomputeYoutubeLiveStatus(ytChannelIds, args.taskName);
+
 		yield* Effect.logInfo(
 			`VIDEO SYNC COMPLETED: ${successCount} videos synced, ${errorCount} videos failed, ${skipCount} videos skipped`
 		);
-
-		// Clean up stale ytLiveVideoId references (e.g. ended/private livestreams)
-		const clearedCount = yield* db.cleanupStaleLiveReferences();
-		if (clearedCount > 0) {
-			yield* Effect.logInfo(`Cleared ${clearedCount} stale YouTube live reference(s)`);
-		}
-
 		yield* Effect.logInfo(`VIDEO SYNC TOOK ${performance.now() - start}ms`);
 	});
 
@@ -366,6 +369,10 @@ const syncService = Effect.gen(function* () {
 			Effect.catchTag(
 				'YoutubeError',
 				(err) => new SyncError({ message: `YOUTUBE ERROR: ${err.message}`, cause: err.cause })
+			),
+			Effect.catchTag(
+				'YoutubeLiveStatusSyncError',
+				(err) => new SyncError({ message: err.message, cause: err.cause })
 			)
 		);
 	});
@@ -435,133 +442,12 @@ const syncService = Effect.gen(function* () {
 	});
 
 	const syncYoutubeLiveBase = Effect.fn('syncYoutubeLiveBase')(function* (taskName?: string) {
-		const start = performance.now();
-		const fullTaskName = taskName ? `${taskName}: ` : '';
 		const channels = yield* db.getAllChannels();
 
-		yield* Effect.logInfo(`${fullTaskName}Syncing YouTube live status`);
-
-		let successCount = 0;
-		let errorCount = 0;
-		let liveCount = 0;
-		// Collect all video IDs from livestreams playlists
-		const allVideoIds: string[] = [];
-		const videoToChannelMap = new Map<string, string>();
-
-		yield* Effect.forEach(
-			channels,
-			(channel) =>
-				yt.getLiveStreamVideoIds(channel.ytChannelId, 5).pipe(
-					Effect.matchEffect({
-						onSuccess: (videoIds) =>
-							Effect.sync(() => {
-								for (const videoId of videoIds) {
-									allVideoIds.push(videoId);
-									videoToChannelMap.set(videoId, channel.ytChannelId);
-								}
-							}),
-						onFailure: () =>
-							Effect.logWarning(
-								`${fullTaskName}Failed to get livestream video IDs for ${channel.ytChannelId}`
-							)
-					})
-				),
-			{ concurrency: 5 }
+		yield* youtubeLiveStatusSync.refreshYoutubeLiveStatus(
+			channels.map((channel) => channel.ytChannelId),
+			taskName
 		);
-
-		if (allVideoIds.length === 0) {
-			yield* Effect.logInfo(`${fullTaskName}No livestream videos to check`);
-			return;
-		}
-
-		// Get video details in batches of 50
-		const liveVideosByChannel = new Map<string, string | null>();
-		const liveVideoDetails = new Map<string, Omit<Video, 'isShort'>>();
-
-		// Initialize all channels to null (no live video)
-		for (const channel of channels) {
-			liveVideosByChannel.set(channel.ytChannelId, null);
-		}
-
-		for (let i = 0; i < allVideoIds.length; i += 50) {
-			const batch = allVideoIds.slice(i, i + 50);
-			const batchDetails = yield* yt.getBatchVideoDetails(batch);
-
-			for (const [videoId, details] of batchDetails.entries()) {
-				const ytChannelId = videoToChannelMap.get(videoId);
-				if (!ytChannelId) continue;
-
-				if (details.livestreamType === 'live') {
-					liveVideosByChannel.set(ytChannelId, videoId);
-					liveVideoDetails.set(videoId, details);
-					liveCount++;
-				}
-			}
-		}
-
-		// Upsert live videos to database first (to satisfy foreign key constraint)
-		if (liveVideoDetails.size > 0) {
-			yield* Effect.logInfo(`${fullTaskName}Upserting ${liveVideoDetails.size} live video(s)`);
-			yield* Effect.forEach(
-				liveVideoDetails.entries(),
-				([videoId, details]) =>
-					db.upsertVideo({ ...details, isShort: false }).pipe(
-						Effect.matchEffect({
-							onSuccess: () => Effect.void,
-							onFailure: (error) =>
-								Effect.logError(
-									`${fullTaskName}Failed to upsert live video ${videoId}`,
-									error
-								).pipe(
-									Effect.tap(() =>
-										Effect.sync(() => {
-											const ytChannelId = videoToChannelMap.get(videoId);
-											if (ytChannelId) {
-												liveVideosByChannel.set(ytChannelId, null);
-											}
-										})
-									)
-								)
-						})
-					),
-				{ concurrency: 5 }
-			);
-		}
-
-		// Update channels with live status
-		yield* Effect.forEach(
-			channels,
-			(channel) =>
-				db
-					.updateChannel(
-						channel.ytChannelId,
-						toDbSyncChannel(channel, {
-							ytLiveVideoId: liveVideosByChannel.get(channel.ytChannelId) ?? null
-						})
-					)
-					.pipe(
-						Effect.matchEffect({
-							onSuccess: () => Effect.sync(() => successCount++),
-							onFailure: (error) =>
-								Effect.sync(() => {
-									errorCount++;
-								}).pipe(
-									Effect.andThen(
-										Effect.logError(
-											`${fullTaskName}Failed to update YT live status for ${channel.ytChannelId}`,
-											error
-										)
-									)
-								)
-						})
-					),
-			{ concurrency: 5 }
-		);
-
-		yield* Effect.logInfo(
-			`YOUTUBE LIVE SYNC COMPLETED: ${successCount} channels synced, ${errorCount} failed, ${liveCount} currently live`
-		);
-		yield* Effect.logInfo(`YOUTUBE LIVE SYNC TOOK ${performance.now() - start}ms`);
 	});
 
 	const syncYoutubeLive = Effect.fn('syncYoutubeLive')(function* (taskName?: string) {
@@ -571,8 +457,8 @@ const syncService = Effect.gen(function* () {
 				(err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
 			),
 			Effect.catchTag(
-				'YoutubeError',
-				(err) => new SyncError({ message: `YOUTUBE ERROR: ${err.message}`, cause: err.cause })
+				'YoutubeLiveStatusSyncError',
+				(err) => new SyncError({ message: err.message, cause: err.cause })
 			)
 		);
 	});

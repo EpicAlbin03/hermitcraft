@@ -5,7 +5,7 @@ import * as Effect from 'effect/Effect';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Layer from 'effect/Layer';
-import { and, eq, getColumns, inArray, isNotNull, notExists, sql } from 'drizzle-orm';
+import { and, eq, getColumns, inArray, sql } from 'drizzle-orm';
 import { parseIsoDurationToSeconds } from './utils';
 
 class DbError extends Data.TaggedError('DbError')<{ message: string; cause?: unknown }> {}
@@ -163,58 +163,14 @@ const dbService = Effect.gen(function* () {
 			return { ytVideoId: data.ytVideoId, wasInserted: false, wasSkipped: true };
 		}
 
-		const result = yield* db
-			.transaction((tx) =>
-				Effect.gen(function* () {
-					const [upsertResult] = yield* tx
-						.insert(DB_SCHEMA.videos)
-						.values(data)
-						.onConflictDoUpdate({
-							target: DB_SCHEMA.videos.ytVideoId,
-							set: data
-						})
-						.returning({ wasInserted: sql<boolean>`xmax = 0` });
-
-					const liveVideos = yield* tx
-						.select({
-							ytVideoId: DB_SCHEMA.videos.ytVideoId,
-							livestreamActualStartTime: DB_SCHEMA.videos.livestreamActualStartTime,
-							livestreamScheduledStartTime: DB_SCHEMA.videos.livestreamScheduledStartTime,
-							publishedAt: DB_SCHEMA.videos.publishedAt
-						})
-						.from(DB_SCHEMA.videos)
-						.where(
-							and(
-								eq(DB_SCHEMA.videos.ytChannelId, data.ytChannelId),
-								eq(DB_SCHEMA.videos.livestreamType, 'live'),
-								eq(DB_SCHEMA.videos.privacyStatus, 'public')
-							)
-						);
-
-					const liveVideoId = liveVideos
-						.toSorted(
-							(a, b) =>
-								(
-									b.livestreamActualStartTime ??
-									b.livestreamScheduledStartTime ??
-									b.publishedAt
-								).getTime() -
-								(
-									a.livestreamActualStartTime ??
-									a.livestreamScheduledStartTime ??
-									a.publishedAt
-								).getTime()
-						)
-						.at(0)?.ytVideoId;
-
-					yield* tx
-						.update(DB_SCHEMA.channels)
-						.set({ ytLiveVideoId: liveVideoId ?? null })
-						.where(eq(DB_SCHEMA.channels.ytChannelId, data.ytChannelId));
-
-					return upsertResult;
-				})
-			)
+		const [result] = yield* db
+			.insert(DB_SCHEMA.videos)
+			.values(data)
+			.onConflictDoUpdate({
+				target: DB_SCHEMA.videos.ytVideoId,
+				set: data
+			})
+			.returning({ wasInserted: sql<boolean>`xmax = 0` })
 			.pipe(
 				Effect.mapError(
 					(cause) =>
@@ -265,11 +221,6 @@ const dbService = Effect.gen(function* () {
 							)
 						);
 
-					yield* tx
-						.update(DB_SCHEMA.channels)
-						.set({ ytLiveVideoId: null })
-						.where(inArray(DB_SCHEMA.channels.ytLiveVideoId, ytVideoIds));
-
 					return updatedVideos;
 				})
 			)
@@ -286,35 +237,60 @@ const dbService = Effect.gen(function* () {
 		return result.length;
 	});
 
-	const cleanupStaleLiveReferences = Effect.fn('cleanupStaleLiveReferences')(function* () {
-		const result = yield* db
-			.update(DB_SCHEMA.channels)
-			.set({ ytLiveVideoId: null })
+	const getPublicLiveVideosByChannels = Effect.fn('getPublicLiveVideosByChannels')(function* (
+		ytChannelIds: string[]
+	) {
+		if (ytChannelIds.length === 0) return [];
+
+		return yield* db
+			.select(videoColumns)
+			.from(DB_SCHEMA.videos)
 			.where(
 				and(
-					isNotNull(DB_SCHEMA.channels.ytLiveVideoId),
-					notExists(
-						db
-							.select({ ytVideoId: DB_SCHEMA.videos.ytVideoId })
-							.from(DB_SCHEMA.videos)
-							.where(
-								and(
-									eq(DB_SCHEMA.videos.ytVideoId, DB_SCHEMA.channels.ytLiveVideoId),
-									eq(DB_SCHEMA.videos.livestreamType, 'live'),
-									eq(DB_SCHEMA.videos.privacyStatus, 'public')
-								)
-							)
-					)
+					inArray(DB_SCHEMA.videos.ytChannelId, ytChannelIds),
+					eq(DB_SCHEMA.videos.livestreamType, 'live'),
+					eq(DB_SCHEMA.videos.privacyStatus, 'public')
 				)
 			)
-			.returning({ ytChannelId: DB_SCHEMA.channels.ytChannelId })
 			.pipe(
 				Effect.mapError(
-					(cause) => new DbError({ message: 'Failed to clear stale live video references', cause })
+					(cause) =>
+						new DbError({
+							message: `Failed to get public live videos for ${ytChannelIds.length} channels`,
+							cause
+						})
 				)
 			);
+	});
 
-		return result.length;
+	const setYoutubeLiveVideos = Effect.fn('setYoutubeLiveVideos')(function* (
+		updates: Array<{ ytChannelId: string; ytLiveVideoId: string | null }>
+	) {
+		if (updates.length === 0) return;
+
+		return yield* db
+			.transaction((tx) =>
+				Effect.forEach(
+					updates,
+					(update) =>
+						tx
+							.update(DB_SCHEMA.channels)
+							.set({ ytLiveVideoId: update.ytLiveVideoId })
+							.where(eq(DB_SCHEMA.channels.ytChannelId, update.ytChannelId))
+							.pipe(Effect.asVoid),
+					{ concurrency: 'unbounded' }
+				)
+			)
+			.pipe(
+				Effect.asVoid,
+				Effect.mapError(
+					(cause) =>
+						new DbError({
+							message: `Failed to set YouTube live videos for ${updates.length} channels`,
+							cause
+						})
+				)
+			);
 	});
 
 	const deleteChannel = Effect.fn('deleteChannel')(function* (ytChannelId: string) {
@@ -357,7 +333,8 @@ const dbService = Effect.gen(function* () {
 		deleteAllVideos,
 		deleteAllChannels,
 		markVideosAsPrivate,
-		cleanupStaleLiveReferences
+		getPublicLiveVideosByChannels,
+		setYoutubeLiveVideos
 	} as const;
 });
 

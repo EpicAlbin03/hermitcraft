@@ -17,15 +17,15 @@ An operator who may invoke sync or data-management flows outside the public appl
 _Avoid_: User, visitor
 
 **Creator Sync**:
-The operation that refreshes a tracked creator’s primary YouTube channel data and linked Twitch channel data when present, while preserving locally curated external links.
+The operation that refreshes a creator’s primary YouTube channel data and linked Twitch channel data when present, while preserving locally curated external links.
 _Avoid_: Channel sync, channel import, channel update
 
 **Video Sync**:
-The operation that discovers and refreshes stored videos for tracked creators from a platform source.
+The operation that discovers and refreshes stored videos for creators from a platform source.
 _Avoid_: Video import, video update
 
 **Live Status Sync**:
-The operation that refreshes platform-specific livestream state for a tracked creator.
+The operation that refreshes platform-specific livestream state for a creator.
 _Avoid_: Stream check, presence check
 
 ## Relationships
@@ -38,7 +38,7 @@ _Avoid_: Stream check, presence check
 ## Example dialogue
 
 > **Dev:** "Is **Live Status Sync** the same thing as **Video Sync**?"
-> **Domain expert:** "No — **Video Sync** refreshes video records broadly, while **Live Status Sync** refreshes platform-specific livestream state for a tracked creator."
+> **Domain expert:** "No — **Video Sync** refreshes video records broadly, while **Live Status Sync** refreshes platform-specific livestream state for a creator."
 
 ## Flagged ambiguities
 
