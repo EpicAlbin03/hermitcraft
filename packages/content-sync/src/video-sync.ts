@@ -130,67 +130,62 @@ const videoSync = Effect.gen(function* () {
 		return { allVideoDetailsMap, allShortsMap } as const;
 	});
 
-	const syncVideosForChannelsBase = Effect.fn('syncVideosForChannelsBase')(function* (
-		ytChannelIds: string[],
-		args: VideoSyncArgs
-	) {
-		const start = performance.now();
-		let successCount = 0;
-		let errorCount = 0;
-		let skipCount = 0;
-		const fullTaskName = args.taskName ? `${args.taskName}: ` : '';
-		const { videosByChannel, allVideoIds } = yield* discoverVideoIds(ytChannelIds, args);
-		const { allVideoDetailsMap, allShortsMap } = yield* reconcileObservedVideos(
-			videosByChannel,
-			allVideoIds,
-			args
-		);
-
-		yield* Effect.logInfo(`${fullTaskName}Syncing videos`);
-		yield* Effect.forEach(
-			allVideoDetailsMap.entries(),
-			([ytVideoId, videoDetails]) =>
-				db.upsertVideo({ ...videoDetails, isShort: allShortsMap.get(ytVideoId) ?? false }).pipe(
-					Effect.matchEffect({
-						onSuccess: (result) => {
-							if (result.wasSkipped) {
-								return Effect.sync(() => {
-									skipCount++;
-								}).pipe(
-									Effect.andThen(Effect.logWarning(`${fullTaskName}Skipped video ${ytVideoId}`))
-								);
-							}
-
-							return Effect.sync(() => {
-								successCount++;
-							});
-						},
-						onFailure: (error) =>
-							Effect.sync(() => {
-								errorCount++;
-							}).pipe(
-								Effect.andThen(
-									Effect.logError(`${fullTaskName}Failed to sync video ${ytVideoId}`, error)
-								)
-							)
-					})
-				),
-			{ concurrency: 5 }
-		);
-
-		yield* youtubeLiveStatusSync.recomputeYoutubeLiveStatus(ytChannelIds, args.taskName);
-
-		yield* Effect.logInfo(
-			`VIDEO SYNC COMPLETED: ${successCount} videos synced, ${errorCount} videos failed, ${skipCount} videos skipped`
-		);
-		yield* Effect.logInfo(`VIDEO SYNC TOOK ${performance.now() - start}ms`);
-	});
-
 	const syncVideosForChannels = Effect.fn('syncVideosForChannels')(function* (
 		ytChannelIds: string[],
 		args: VideoSyncArgs
 	) {
-		return yield* syncVideosForChannelsBase(ytChannelIds, args).pipe(
+		return yield* Effect.gen(function* () {
+			const start = performance.now();
+			let successCount = 0;
+			let errorCount = 0;
+			let skipCount = 0;
+			const fullTaskName = args.taskName ? `${args.taskName}: ` : '';
+			const { videosByChannel, allVideoIds } = yield* discoverVideoIds(ytChannelIds, args);
+			const { allVideoDetailsMap, allShortsMap } = yield* reconcileObservedVideos(
+				videosByChannel,
+				allVideoIds,
+				args
+			);
+
+			yield* Effect.logInfo(`${fullTaskName}Syncing videos`);
+			yield* Effect.forEach(
+				allVideoDetailsMap.entries(),
+				([ytVideoId, videoDetails]) =>
+					db.upsertVideo({ ...videoDetails, isShort: allShortsMap.get(ytVideoId) ?? false }).pipe(
+						Effect.matchEffect({
+							onSuccess: (result) => {
+								if (result.wasSkipped) {
+									return Effect.sync(() => {
+										skipCount++;
+									}).pipe(
+										Effect.andThen(Effect.logWarning(`${fullTaskName}Skipped video ${ytVideoId}`))
+									);
+								}
+
+								return Effect.sync(() => {
+									successCount++;
+								});
+							},
+							onFailure: (error) =>
+								Effect.sync(() => {
+									errorCount++;
+								}).pipe(
+									Effect.andThen(
+										Effect.logError(`${fullTaskName}Failed to sync video ${ytVideoId}`, error)
+									)
+								)
+						})
+					),
+				{ concurrency: 5 }
+			);
+
+			yield* youtubeLiveStatusSync.recomputeYoutubeLiveStatus(ytChannelIds, args.taskName);
+
+			yield* Effect.logInfo(
+				`VIDEO SYNC COMPLETED: ${successCount} videos synced, ${errorCount} videos failed, ${skipCount} videos skipped`
+			);
+			yield* Effect.logInfo(`VIDEO SYNC TOOK ${performance.now() - start}ms`);
+		}).pipe(
 			Effect.catchTag(
 				'DbError',
 				(err) => new VideoSyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })

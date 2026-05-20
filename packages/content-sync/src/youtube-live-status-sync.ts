@@ -40,102 +40,97 @@ const youtubeLiveStatusSync = Effect.gen(function* () {
 	const db = yield* DbService;
 	const yt = yield* YoutubeService;
 
-	const refreshYoutubeLiveStatusBase = Effect.fn('refreshYoutubeLiveStatusBase')(function* (
-		ytChannelIds: string[],
-		taskName?: string
-	) {
-		const start = performance.now();
-		const fullTaskName = taskName ? `${taskName}: ` : '';
-		const candidateVideoIdsByChannel = new Map<string, string[]>();
-		const allCandidateVideoIds: string[] = [];
-		const allCandidateVideoIdsSet = new Set<string>();
-
-		yield* Effect.logInfo(`${fullTaskName}Syncing YouTube live status`);
-
-		yield* Effect.forEach(
-			ytChannelIds,
-			(ytChannelId) =>
-				yt.getLiveStreamVideoIds(ytChannelId, 5).pipe(
-					Effect.matchEffect({
-						onSuccess: (videoIds) =>
-							Effect.sync(() => {
-								candidateVideoIdsByChannel.set(ytChannelId, videoIds);
-								for (const videoId of videoIds) {
-									if (allCandidateVideoIdsSet.has(videoId)) continue;
-									allCandidateVideoIds.push(videoId);
-									allCandidateVideoIdsSet.add(videoId);
-								}
-							}),
-						onFailure: (error) =>
-							Effect.logWarning(
-								`${fullTaskName}Failed to get livestream video IDs for ${ytChannelId}`,
-								error
-							).pipe(
-								Effect.andThen(
-									Effect.sync(() => {
-										candidateVideoIdsByChannel.set(ytChannelId, []);
-									})
-								)
-							)
-					})
-				),
-			{ concurrency: 5 }
-		);
-
-		const videoDetailsMap = new Map<string, Omit<Video, 'isShort'>>();
-		for (let i = 0; i < allCandidateVideoIds.length; i += 50) {
-			const batch = allCandidateVideoIds.slice(i, i + 50);
-			const batchDetails = yield* yt.getBatchVideoDetails(batch);
-			for (const [videoId, details] of batchDetails.entries()) {
-				videoDetailsMap.set(videoId, details);
-			}
-		}
-
-		const upsertedVideoIds = new Set<string>();
-		yield* Effect.forEach(
-			videoDetailsMap.entries(),
-			([ytVideoId, videoDetails]) =>
-				db.upsertVideo({ ...videoDetails, isShort: false }).pipe(
-					Effect.matchEffect({
-						onSuccess: () =>
-							Effect.sync(() => {
-								upsertedVideoIds.add(ytVideoId);
-							}),
-						onFailure: (error) =>
-							Effect.logError(`${fullTaskName}Failed to upsert live video ${ytVideoId}`, error)
-					})
-				),
-			{ concurrency: 5 }
-		);
-
-		const updates = ytChannelIds.map((ytChannelId) => {
-			const winner = chooseLiveVideoWinner(
-				(candidateVideoIdsByChannel.get(ytChannelId) ?? [])
-					.filter((videoId) => upsertedVideoIds.has(videoId))
-					.map((videoId) => videoDetailsMap.get(videoId))
-					.filter((video): video is Omit<Video, 'isShort'> => video !== undefined)
-			);
-
-			return {
-				ytChannelId,
-				ytLiveVideoId: winner?.ytVideoId ?? null
-			};
-		});
-
-		yield* db.setYoutubeLiveVideos(updates);
-
-		const liveCount = updates.filter((update) => update.ytLiveVideoId !== null).length;
-		yield* Effect.logInfo(
-			`YOUTUBE LIVE SYNC COMPLETED: ${updates.length} channels synced, ${liveCount} currently live`
-		);
-		yield* Effect.logInfo(`YOUTUBE LIVE SYNC TOOK ${performance.now() - start}ms`);
-	});
-
 	const refreshYoutubeLiveStatus = Effect.fn('refreshYoutubeLiveStatus')(function* (
 		ytChannelIds: string[],
 		taskName?: string
 	) {
-		return yield* refreshYoutubeLiveStatusBase(ytChannelIds, taskName).pipe(
+		return yield* Effect.gen(function* () {
+			const start = performance.now();
+			const fullTaskName = taskName ? `${taskName}: ` : '';
+			const candidateVideoIdsByChannel = new Map<string, string[]>();
+			const allCandidateVideoIds: string[] = [];
+			const allCandidateVideoIdsSet = new Set<string>();
+
+			yield* Effect.logInfo(`${fullTaskName}Syncing YouTube live status`);
+
+			yield* Effect.forEach(
+				ytChannelIds,
+				(ytChannelId) =>
+					yt.getLiveStreamVideoIds(ytChannelId, 5).pipe(
+						Effect.matchEffect({
+							onSuccess: (videoIds) =>
+								Effect.sync(() => {
+									candidateVideoIdsByChannel.set(ytChannelId, videoIds);
+									for (const videoId of videoIds) {
+										if (allCandidateVideoIdsSet.has(videoId)) continue;
+										allCandidateVideoIds.push(videoId);
+										allCandidateVideoIdsSet.add(videoId);
+									}
+								}),
+							onFailure: (error) =>
+								Effect.logWarning(
+									`${fullTaskName}Failed to get livestream video IDs for ${ytChannelId}`,
+									error
+								).pipe(
+									Effect.andThen(
+										Effect.sync(() => {
+											candidateVideoIdsByChannel.set(ytChannelId, []);
+										})
+									)
+								)
+						})
+					),
+				{ concurrency: 5 }
+			);
+
+			const videoDetailsMap = new Map<string, Omit<Video, 'isShort'>>();
+			for (let i = 0; i < allCandidateVideoIds.length; i += 50) {
+				const batch = allCandidateVideoIds.slice(i, i + 50);
+				const batchDetails = yield* yt.getBatchVideoDetails(batch);
+				for (const [videoId, details] of batchDetails.entries()) {
+					videoDetailsMap.set(videoId, details);
+				}
+			}
+
+			const upsertedVideoIds = new Set<string>();
+			yield* Effect.forEach(
+				videoDetailsMap.entries(),
+				([ytVideoId, videoDetails]) =>
+					db.upsertVideo({ ...videoDetails, isShort: false }).pipe(
+						Effect.matchEffect({
+							onSuccess: () =>
+								Effect.sync(() => {
+									upsertedVideoIds.add(ytVideoId);
+								}),
+							onFailure: (error) =>
+								Effect.logError(`${fullTaskName}Failed to upsert live video ${ytVideoId}`, error)
+						})
+					),
+				{ concurrency: 5 }
+			);
+
+			const updates = ytChannelIds.map((ytChannelId) => {
+				const winner = chooseLiveVideoWinner(
+					(candidateVideoIdsByChannel.get(ytChannelId) ?? [])
+						.filter((videoId) => upsertedVideoIds.has(videoId))
+						.map((videoId) => videoDetailsMap.get(videoId))
+						.filter((video): video is Omit<Video, 'isShort'> => video !== undefined)
+				);
+
+				return {
+					ytChannelId,
+					ytLiveVideoId: winner?.ytVideoId ?? null
+				};
+			});
+
+			yield* db.setYoutubeLiveVideos(updates);
+
+			const liveCount = updates.filter((update) => update.ytLiveVideoId !== null).length;
+			yield* Effect.logInfo(
+				`YOUTUBE LIVE SYNC COMPLETED: ${updates.length} channels synced, ${liveCount} currently live`
+			);
+			yield* Effect.logInfo(`YOUTUBE LIVE SYNC TOOK ${performance.now() - start}ms`);
+		}).pipe(
 			Effect.catchTag(
 				'DbError',
 				(err) =>
@@ -155,45 +150,40 @@ const youtubeLiveStatusSync = Effect.gen(function* () {
 		);
 	});
 
-	const recomputeYoutubeLiveStatusBase = Effect.fn('recomputeYoutubeLiveStatusBase')(function* (
-		ytChannelIds: string[],
-		taskName?: string
-	) {
-		if (ytChannelIds.length === 0) return;
-
-		const start = performance.now();
-		const fullTaskName = taskName ? `${taskName}: ` : '';
-		const liveVideos = yield* db.getPublicLiveVideosByChannels(ytChannelIds);
-		const liveVideosByChannel = new Map<string, Video[]>();
-
-		for (const liveVideo of liveVideos) {
-			const existingVideos = liveVideosByChannel.get(liveVideo.ytChannelId) ?? [];
-			existingVideos.push(liveVideo);
-			liveVideosByChannel.set(liveVideo.ytChannelId, existingVideos);
-		}
-
-		const updates = ytChannelIds.map((ytChannelId) => ({
-			ytChannelId,
-			ytLiveVideoId:
-				chooseLiveVideoWinner(liveVideosByChannel.get(ytChannelId) ?? [])?.ytVideoId ?? null
-		}));
-
-		yield* db.setYoutubeLiveVideos(updates);
-
-		const liveCount = updates.filter((update) => update.ytLiveVideoId !== null).length;
-		yield* Effect.logInfo(
-			`${fullTaskName}Recomputed YouTube live status for ${updates.length} channels, ${liveCount} currently live`
-		);
-		yield* Effect.logInfo(
-			`${fullTaskName}YOUTUBE LIVE RECOMPUTE TOOK ${performance.now() - start}ms`
-		);
-	});
-
 	const recomputeYoutubeLiveStatus = Effect.fn('recomputeYoutubeLiveStatus')(function* (
 		ytChannelIds: string[],
 		taskName?: string
 	) {
-		return yield* recomputeYoutubeLiveStatusBase(ytChannelIds, taskName).pipe(
+		return yield* Effect.gen(function* () {
+			if (ytChannelIds.length === 0) return;
+
+			const start = performance.now();
+			const fullTaskName = taskName ? `${taskName}: ` : '';
+			const liveVideos = yield* db.getPublicLiveVideosByChannels(ytChannelIds);
+			const liveVideosByChannel = new Map<string, Video[]>();
+
+			for (const liveVideo of liveVideos) {
+				const existingVideos = liveVideosByChannel.get(liveVideo.ytChannelId) ?? [];
+				existingVideos.push(liveVideo);
+				liveVideosByChannel.set(liveVideo.ytChannelId, existingVideos);
+			}
+
+			const updates = ytChannelIds.map((ytChannelId) => ({
+				ytChannelId,
+				ytLiveVideoId:
+					chooseLiveVideoWinner(liveVideosByChannel.get(ytChannelId) ?? [])?.ytVideoId ?? null
+			}));
+
+			yield* db.setYoutubeLiveVideos(updates);
+
+			const liveCount = updates.filter((update) => update.ytLiveVideoId !== null).length;
+			yield* Effect.logInfo(
+				`${fullTaskName}Recomputed YouTube live status for ${updates.length} channels, ${liveCount} currently live`
+			);
+			yield* Effect.logInfo(
+				`${fullTaskName}YOUTUBE LIVE RECOMPUTE TOOK ${performance.now() - start}ms`
+			);
+		}).pipe(
 			Effect.catchTag(
 				'DbError',
 				(err) =>

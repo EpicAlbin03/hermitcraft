@@ -23,34 +23,32 @@ const creatorSync = Effect.gen(function* () {
 	const db = yield* DbService;
 	const yt = yield* YoutubeService;
 
-	const syncCreatorBase = Effect.fn('syncCreatorBase')(function* (input: CreatorSyncInput) {
-		const existingCreator = yield* db.getChannel(input.ytChannelId);
-		const channelDetails = yield* yt.getChannelDetails(input.ytChannelId);
-
-		const storedCreator = Option.getOrUndefined(existingCreator);
-
-		yield* db.upsertChannel({
-			ytChannelId: input.ytChannelId,
-			ytName: channelDetails.ytName,
-			ytHandle: channelDetails.ytHandle,
-			ytDescription: channelDetails.ytDescription,
-			ytAvatarUrl: channelDetails.ytAvatarUrl,
-			ytBannerUrl: channelDetails.ytBannerUrl,
-			ytBannerThumbHash: channelDetails.ytBannerThumbHash,
-			ytViewCount: channelDetails.ytViewCount,
-			ytSubscriberCount: channelDetails.ytSubscriberCount,
-			ytVideoCount: channelDetails.ytVideoCount,
-			ytJoinedAt: channelDetails.ytJoinedAt,
-			twitchUserId: input.twitchUserId ?? storedCreator?.twitchUserId ?? null,
-			twitchUserLogin: input.twitchUserLogin ?? storedCreator?.twitchUserLogin ?? null,
-			isTwitchLive: storedCreator?.isTwitchLive ?? false,
-			ytLiveVideoId: storedCreator?.ytLiveVideoId ?? null,
-			links: input.links ?? storedCreator?.links ?? []
-		});
-	});
-
 	const syncCreator = Effect.fn('syncCreator')(function* (input: CreatorSyncInput) {
-		return yield* syncCreatorBase(input).pipe(
+		return yield* Effect.gen(function* () {
+			const existingCreator = yield* db.getChannel(input.ytChannelId);
+			const channelDetails = yield* yt.getChannelDetails(input.ytChannelId);
+
+			const storedCreator = Option.getOrUndefined(existingCreator);
+
+			yield* db.upsertChannel({
+				ytChannelId: input.ytChannelId,
+				ytName: channelDetails.ytName,
+				ytHandle: channelDetails.ytHandle,
+				ytDescription: channelDetails.ytDescription,
+				ytAvatarUrl: channelDetails.ytAvatarUrl,
+				ytBannerUrl: channelDetails.ytBannerUrl,
+				ytBannerThumbHash: channelDetails.ytBannerThumbHash,
+				ytViewCount: channelDetails.ytViewCount,
+				ytSubscriberCount: channelDetails.ytSubscriberCount,
+				ytVideoCount: channelDetails.ytVideoCount,
+				ytJoinedAt: channelDetails.ytJoinedAt,
+				twitchUserId: input.twitchUserId ?? storedCreator?.twitchUserId ?? null,
+				twitchUserLogin: input.twitchUserLogin ?? storedCreator?.twitchUserLogin ?? null,
+				isTwitchLive: storedCreator?.isTwitchLive ?? false,
+				ytLiveVideoId: storedCreator?.ytLiveVideoId ?? null,
+				links: input.links ?? storedCreator?.links ?? []
+			});
+		}).pipe(
 			Effect.catchTag(
 				'DbError',
 				(err) => new CreatorSyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
