@@ -7,6 +7,7 @@ import * as Data from 'effect/Data';
 import * as DateTime from 'effect/DateTime';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
+import * as Redacted from 'effect/Redacted';
 import * as Schedule from 'effect/Schedule';
 import { rgbaToThumbHash, thumbHashToDataURL } from 'thumbhash';
 import { getYtPlaylistId, getVideoLivestreamType, parseYtRSS } from './utils';
@@ -28,7 +29,7 @@ const getThumbnailUrl = (item: yt_v3.Schema$Video | yt_v3.Schema$Channel) => {
 };
 
 const ytService = Effect.gen(function* () {
-	const ytApiKey = yield* Config.string('YT_API_KEY');
+	const ytApiKey = Redacted.value(yield* Config.redacted('YT_API_KEY'));
 
 	const ytApi = google.youtube({
 		version: 'v3',

@@ -34,7 +34,7 @@ const syncJobs = Effect.gen(function* () {
 		}).pipe(
 			Effect.annotateLogs({ jobName }),
 			Effect.withSpan(`SyncJobs.${jobName}`),
-			Effect.catchCause((cause) => Effect.logError(`BUN_WORKER: ${jobName} failed`, cause)),
+			Effect.catchCause((cause) => Effect.logError('BUN_WORKER sync job failed', cause)),
 			Effect.schedule(schedule)
 		);
 

@@ -10,7 +10,7 @@ import * as Redacted from 'effect/Redacted';
 class TwitchError extends Data.TaggedError('TwitchError')<{ message: string; cause?: unknown }> {}
 
 const twitchService = Effect.gen(function* () {
-	const clientId = yield* Config.string('TWITCH_CLIENT_ID');
+	const clientId = Redacted.value(yield* Config.redacted('TWITCH_CLIENT_ID'));
 	const clientSecret = Redacted.value(yield* Config.redacted('TWITCH_CLIENT_SECRET'));
 
 	const authProvider = new AppTokenAuthProvider(clientId, clientSecret);

@@ -69,10 +69,7 @@ const ytLiveStatusSync = Effect.gen(function* () {
 									}
 								}),
 							onFailure: (error) =>
-								Effect.logWarning(
-									`${fullTaskName}Failed to get livestream video IDs for ${ytChannelId}`,
-									error
-								).pipe(
+								Effect.logWarning(`${fullTaskName}Failed to get livestream video IDs`, error).pipe(
 									Effect.annotateLogs({ ytChannelId }),
 									Effect.andThen(
 										Effect.sync(() => {
@@ -105,10 +102,9 @@ const ytLiveStatusSync = Effect.gen(function* () {
 									upsertedVideoIds.add(ytVideoId);
 								}),
 							onFailure: (error) =>
-								Effect.logError(
-									`${fullTaskName}Failed to upsert live video ${ytVideoId}`,
-									error
-								).pipe(Effect.annotateLogs({ ytVideoId }))
+								Effect.logError(`${fullTaskName}Failed to upsert live video`, error).pipe(
+									Effect.annotateLogs({ ytVideoId })
+								)
 						})
 					),
 				{ concurrency: 5 }

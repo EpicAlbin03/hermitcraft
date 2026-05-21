@@ -47,7 +47,9 @@ const videoSync = Effect.gen(function* () {
 								allVideoIds.push(...videoIds);
 							}),
 						onFailure: (error) =>
-							Effect.logError(`${fullTaskName}Failed to get video IDs for ${ytChannelId}`, error)
+							Effect.logError(`${fullTaskName}Failed to get video IDs`, error).pipe(
+								Effect.annotateLogs({ ytChannelId })
+							)
 					})
 				),
 			{ concurrency: 5 }
@@ -161,7 +163,7 @@ const videoSync = Effect.gen(function* () {
 										skipCount: skipCount + 1
 									})).pipe(
 										Effect.andThen(
-											Effect.logWarning(`${fullTaskName}Skipped video ${ytVideoId}`).pipe(
+											Effect.logWarning(`${fullTaskName}Skipped video`).pipe(
 												Effect.annotateLogs({ ytVideoId })
 											)
 										)
@@ -181,7 +183,7 @@ const videoSync = Effect.gen(function* () {
 									skipCount
 								})).pipe(
 									Effect.andThen(
-										Effect.logError(`${fullTaskName}Failed to sync video ${ytVideoId}`, error).pipe(
+										Effect.logError(`${fullTaskName}Failed to sync video`, error).pipe(
 											Effect.annotateLogs({ ytVideoId })
 										)
 									)
