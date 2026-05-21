@@ -1,22 +1,17 @@
 import { ApiClient } from '@twurple/api';
 import { AppTokenAuthProvider } from '@twurple/auth';
+import * as Config from 'effect/Config';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
+import * as Redacted from 'effect/Redacted';
 
 class TwitchError extends Data.TaggedError('TwitchError')<{ message: string; cause?: unknown }> {}
 
 const twitchService = Effect.gen(function* () {
-	const clientId = Bun.env.TWITCH_CLIENT_ID;
-	if (!clientId) {
-		return yield* new TwitchError({ message: 'TWITCH_CLIENT_ID is not set' });
-	}
-
-	const clientSecret = Bun.env.TWITCH_CLIENT_SECRET;
-	if (!clientSecret) {
-		return yield* new TwitchError({ message: 'TWITCH_CLIENT_SECRET is not set' });
-	}
+	const clientId = yield* Config.string('TWITCH_CLIENT_ID');
+	const clientSecret = Redacted.value(yield* Config.redacted('TWITCH_CLIENT_SECRET'));
 
 	const authProvider = new AppTokenAuthProvider(clientId, clientSecret);
 	const twitch = new ApiClient({ authProvider });

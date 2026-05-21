@@ -1,14 +1,15 @@
 import type { Video } from '@hc/db/schema';
 import { google, youtube_v3 as yt_v3 } from 'googleapis';
 import sharp from 'sharp';
+import * as Config from 'effect/Config';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as DateTime from 'effect/DateTime';
 import * as Effect from 'effect/Effect';
+import * as Layer from 'effect/Layer';
 import * as Schedule from 'effect/Schedule';
 import { rgbaToThumbHash, thumbHashToDataURL } from 'thumbhash';
 import { getYtPlaylistId, getVideoLivestreamType, parseYtRSS } from './utils';
-import * as Layer from 'effect/Layer';
 
 class YtError extends Data.TaggedError('YtError')<{ message: string; cause?: unknown }> {}
 
@@ -27,10 +28,7 @@ const getThumbnailUrl = (item: yt_v3.Schema$Video | yt_v3.Schema$Channel) => {
 };
 
 const ytService = Effect.gen(function* () {
-	const ytApiKey = Bun.env.YT_API_KEY;
-	if (!ytApiKey) {
-		return yield* new YtError({ message: 'YT_API_KEY is not set' });
-	}
+	const ytApiKey = yield* Config.string('YT_API_KEY');
 
 	const ytApi = google.youtube({
 		version: 'v3',
@@ -248,6 +246,7 @@ const ytService = Effect.gen(function* () {
 			nextPageToken = playlistResponse.data.nextPageToken || undefined;
 		} while (nextPageToken && (maxResults === undefined || videoIds.length < maxResults));
 
+		// Remove first 15 videos to not conflict with RSS feed / videoSyncProgram
 		return videoIds.slice(15);
 	});
 

@@ -1,7 +1,9 @@
+import * as Clock from 'effect/Clock';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
+import * as Ref from 'effect/Ref';
 import { CreatorSync, type CreatorSyncInput } from './creator-sync';
 import { DbService } from './db-service';
 import { TwitchService } from './twitch-service';
@@ -24,14 +26,13 @@ const syncService = Effect.gen(function* () {
 	const ytLiveStatusSync = yield* YtLiveStatusSync;
 
 	const syncChannel = Effect.fn('syncChannel')(function* (input: SyncChannelInput) {
-		return yield* creatorSync
-			.syncCreator(input)
-			.pipe(
-				Effect.catchTag(
-					'CreatorSyncError',
-					(err) => new SyncError({ message: err.message, cause: err.cause })
-				)
-			);
+		return yield* creatorSync.syncCreator(input).pipe(
+			Effect.catchTags({
+				CreatorSyncError: (err) => new SyncError({ message: err.message, cause: err.cause })
+			}),
+			Effect.annotateLogs({ ytChannelId: input.ytChannelId }),
+			Effect.withSpan('SyncService.syncChannel')
+		);
 	});
 
 	const syncVideo = Effect.fn('syncVideo')(function* (ytVideoId: string) {
@@ -60,18 +61,13 @@ const syncService = Effect.gen(function* () {
 
 			yield* ytLiveStatusSync.recomputeYtLiveStatus([videoDetails.ytChannelId]);
 		}).pipe(
-			Effect.catchTag(
-				'DbError',
-				(err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
-			),
-			Effect.catchTag(
-				'YtError',
-				(err) => new SyncError({ message: `YT ERROR: ${err.message}`, cause: err.cause })
-			),
-			Effect.catchTag(
-				'YtLiveStatusSyncError',
-				(err) => new SyncError({ message: err.message, cause: err.cause })
-			)
+			Effect.catchTags({
+				DbError: (err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause }),
+				YtError: (err) => new SyncError({ message: `YT ERROR: ${err.message}`, cause: err.cause }),
+				YtLiveStatusSyncError: (err) => new SyncError({ message: err.message, cause: err.cause })
+			}),
+			Effect.annotateLogs({ ytVideoId }),
+			Effect.withSpan('SyncService.syncVideo')
 		);
 	});
 
@@ -86,28 +82,27 @@ const syncService = Effect.gen(function* () {
 		ytChannelIds: string[],
 		args: SyncVideosArgs
 	) {
-		return yield* videoSync
-			.syncVideosForChannels(ytChannelIds, args)
-			.pipe(
-				Effect.catchTag(
-					'VideoSyncError',
-					(err) => new SyncError({ message: err.message, cause: err.cause })
-				)
-			);
+		return yield* videoSync.syncVideosForChannels(ytChannelIds, args).pipe(
+			Effect.catchTags({
+				VideoSyncError: (err) => new SyncError({ message: err.message, cause: err.cause })
+			}),
+			Effect.annotateLogs({
+				ytChannelCount: ytChannelIds.length,
+				...(args.taskName ? { taskName: args.taskName } : {})
+			}),
+			Effect.withSpan('SyncService.syncVideos')
+		);
 	});
 
 	const syncTwitchLive = Effect.fn('syncTwitchLive')(function* (taskName?: string) {
 		return yield* Effect.gen(function* () {
-			const start = performance.now();
+			const start = yield* Clock.currentTimeMillis;
+			const counts = yield* Ref.make({ successCount: 0, errorCount: 0 });
 			const channels = yield* db.getAllChannels();
 			const twitchUserIds = channels
 				.map((channel) => channel.twitchUserId)
 				.filter((id) => id !== null && id !== undefined);
-
 			const isTwitchLiveMap = yield* twitch.areChannelsLive(twitchUserIds);
-
-			let successCount = 0;
-			let errorCount = 0;
 			const fullTaskName = taskName ? `${taskName}: ` : '';
 
 			yield* Effect.logInfo(`${fullTaskName}Syncing channels (twitch)`);
@@ -120,14 +115,10 @@ const syncService = Effect.gen(function* () {
 
 			yield* db.setTwitchLiveStatuses(updates).pipe(
 				Effect.tap(() =>
-					Effect.sync(() => {
-						successCount = updates.length;
-					})
+					Ref.update(counts, () => ({ successCount: updates.length, errorCount: 0 }))
 				),
 				Effect.catchTag('DbError', (error) =>
-					Effect.sync(() => {
-						errorCount = updates.length;
-					}).pipe(
+					Ref.update(counts, () => ({ successCount: 0, errorCount: updates.length })).pipe(
 						Effect.andThen(
 							Effect.logError(`${fullTaskName}Failed to sync twitch live status`, error)
 						)
@@ -135,19 +126,20 @@ const syncService = Effect.gen(function* () {
 				)
 			);
 
+			const { successCount, errorCount } = yield* Ref.get(counts);
+			const end = yield* Clock.currentTimeMillis;
 			yield* Effect.logInfo(
 				`TWITCH LIVE SYNC COMPLETED: ${successCount} channels synced, ${errorCount} channels failed`
 			);
-			yield* Effect.logInfo(`TWITCH LIVE SYNC TOOK ${performance.now() - start}ms`);
+			yield* Effect.logInfo(`TWITCH LIVE SYNC TOOK ${end - start}ms`);
 		}).pipe(
-			Effect.catchTag(
-				'DbError',
-				(err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
-			),
-			Effect.catchTag(
-				'TwitchError',
-				(err) => new SyncError({ message: `TWITCH ERROR: ${err.message}`, cause: err.cause })
-			)
+			Effect.catchTags({
+				DbError: (err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause }),
+				TwitchError: (err) =>
+					new SyncError({ message: `TWITCH ERROR: ${err.message}`, cause: err.cause })
+			}),
+			Effect.annotateLogs(taskName ? { taskName } : {}),
+			Effect.withSpan('SyncService.syncTwitchLive')
 		);
 	});
 
@@ -160,14 +152,12 @@ const syncService = Effect.gen(function* () {
 				taskName
 			);
 		}).pipe(
-			Effect.catchTag(
-				'DbError',
-				(err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
-			),
-			Effect.catchTag(
-				'YtLiveStatusSyncError',
-				(err) => new SyncError({ message: err.message, cause: err.cause })
-			)
+			Effect.catchTags({
+				DbError: (err) => new SyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause }),
+				YtLiveStatusSyncError: (err) => new SyncError({ message: err.message, cause: err.cause })
+			}),
+			Effect.annotateLogs(taskName ? { taskName } : {}),
+			Effect.withSpan('SyncService.syncYtLive')
 		);
 	});
 

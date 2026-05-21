@@ -1,4 +1,5 @@
 import type { Video } from '@hc/db/schema';
+import * as Clock from 'effect/Clock';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
@@ -45,7 +46,7 @@ const ytLiveStatusSync = Effect.gen(function* () {
 		taskName?: string
 	) {
 		return yield* Effect.gen(function* () {
-			const start = performance.now();
+			const start = yield* Clock.currentTimeMillis;
 			const fullTaskName = taskName ? `${taskName}: ` : '';
 			const candidateVideoIdsByChannel = new Map<string, string[]>();
 			const allCandidateVideoIds: string[] = [];
@@ -72,6 +73,7 @@ const ytLiveStatusSync = Effect.gen(function* () {
 									`${fullTaskName}Failed to get livestream video IDs for ${ytChannelId}`,
 									error
 								).pipe(
+									Effect.annotateLogs({ ytChannelId }),
 									Effect.andThen(
 										Effect.sync(() => {
 											candidateVideoIdsByChannel.set(ytChannelId, []);
@@ -103,7 +105,10 @@ const ytLiveStatusSync = Effect.gen(function* () {
 									upsertedVideoIds.add(ytVideoId);
 								}),
 							onFailure: (error) =>
-								Effect.logError(`${fullTaskName}Failed to upsert live video ${ytVideoId}`, error)
+								Effect.logError(
+									`${fullTaskName}Failed to upsert live video ${ytVideoId}`,
+									error
+								).pipe(Effect.annotateLogs({ ytVideoId }))
 						})
 					),
 				{ concurrency: 5 }
@@ -126,27 +131,29 @@ const ytLiveStatusSync = Effect.gen(function* () {
 			yield* db.setYtLiveVideos(updates);
 
 			const liveCount = updates.filter((update) => update.ytLiveVideoId !== null).length;
+			const end = yield* Clock.currentTimeMillis;
 			yield* Effect.logInfo(
 				`YT LIVE SYNC COMPLETED: ${updates.length} channels synced, ${liveCount} currently live`
 			);
-			yield* Effect.logInfo(`YT LIVE SYNC TOOK ${performance.now() - start}ms`);
+			yield* Effect.logInfo(`YT LIVE SYNC TOOK ${end - start}ms`);
 		}).pipe(
-			Effect.catchTag(
-				'DbError',
-				(err) =>
+			Effect.catchTags({
+				DbError: (err) =>
 					new YtLiveStatusSyncError({
 						message: `DB ERROR: ${err.message}`,
 						cause: err.cause
-					})
-			),
-			Effect.catchTag(
-				'YtError',
-				(err) =>
+					}),
+				YtError: (err) =>
 					new YtLiveStatusSyncError({
 						message: `YT ERROR: ${err.message}`,
 						cause: err.cause
 					})
-			)
+			}),
+			Effect.annotateLogs({
+				ytChannelCount: ytChannelIds.length,
+				...(taskName ? { taskName } : {})
+			}),
+			Effect.withSpan('YtLiveStatusSync.refreshYtLiveStatus')
 		);
 	});
 
@@ -157,7 +164,7 @@ const ytLiveStatusSync = Effect.gen(function* () {
 		return yield* Effect.gen(function* () {
 			if (ytChannelIds.length === 0) return;
 
-			const start = performance.now();
+			const start = yield* Clock.currentTimeMillis;
 			const fullTaskName = taskName ? `${taskName}: ` : '';
 			const liveVideos = yield* db.getPublicLiveVideosByChannels(ytChannelIds);
 			const liveVideosByChannel = new Map<string, Video[]>();
@@ -177,19 +184,24 @@ const ytLiveStatusSync = Effect.gen(function* () {
 			yield* db.setYtLiveVideos(updates);
 
 			const liveCount = updates.filter((update) => update.ytLiveVideoId !== null).length;
+			const end = yield* Clock.currentTimeMillis;
 			yield* Effect.logInfo(
 				`${fullTaskName}Recomputed Yt live status for ${updates.length} channels, ${liveCount} currently live`
 			);
-			yield* Effect.logInfo(`${fullTaskName}YT LIVE RECOMPUTE TOOK ${performance.now() - start}ms`);
+			yield* Effect.logInfo(`${fullTaskName}YT LIVE RECOMPUTE TOOK ${end - start}ms`);
 		}).pipe(
-			Effect.catchTag(
-				'DbError',
-				(err) =>
+			Effect.catchTags({
+				DbError: (err) =>
 					new YtLiveStatusSyncError({
 						message: `DB ERROR: ${err.message}`,
 						cause: err.cause
 					})
-			)
+			}),
+			Effect.annotateLogs({
+				ytChannelCount: ytChannelIds.length,
+				...(taskName ? { taskName } : {})
+			}),
+			Effect.withSpan('YtLiveStatusSync.recomputeYtLiveStatus')
 		);
 	});
 

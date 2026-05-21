@@ -32,6 +32,8 @@ const syncJobs = Effect.gen(function* () {
 			yield* run;
 			yield* Effect.log(`BUN_WORKER: finished ${jobName}`);
 		}).pipe(
+			Effect.annotateLogs({ jobName }),
+			Effect.withSpan(`SyncJobs.${jobName}`),
 			Effect.catchCause((cause) => Effect.logError(`BUN_WORKER: ${jobName} failed`, cause)),
 			Effect.schedule(schedule)
 		);
@@ -100,9 +102,9 @@ const syncJobs = Effect.gen(function* () {
 	);
 
 	const runAll = Effect.fn('runAll')(function* () {
-		yield* Effect.all([channelSyncJob, twitchSyncJob, videoSyncJob, backfillSyncJob], {
+		return yield* Effect.all([channelSyncJob, twitchSyncJob, videoSyncJob, backfillSyncJob], {
 			concurrency: 5
-		});
+		}).pipe(Effect.withSpan('SyncJobs.runAll'));
 	});
 
 	return {

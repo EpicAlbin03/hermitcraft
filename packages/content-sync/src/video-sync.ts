@@ -1,8 +1,10 @@
 import type { Video } from '@hc/db/schema';
+import * as Clock from 'effect/Clock';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
+import * as Ref from 'effect/Ref';
 import { DbService } from './db-service';
 import { YtLiveStatusSync } from './yt-live-status-sync';
 import { YtService } from './yt-service';
@@ -135,10 +137,8 @@ const videoSync = Effect.gen(function* () {
 		args: VideoSyncArgs
 	) {
 		return yield* Effect.gen(function* () {
-			const start = performance.now();
-			let successCount = 0;
-			let errorCount = 0;
-			let skipCount = 0;
+			const start = yield* Clock.currentTimeMillis;
+			const counts = yield* Ref.make({ successCount: 0, errorCount: 0, skipCount: 0 });
 			const fullTaskName = args.taskName ? `${args.taskName}: ` : '';
 			const { videosByChannel, allVideoIds } = yield* discoverVideoIds(ytChannelIds, args);
 			const { allVideoDetailsMap, allShortsMap } = yield* reconcileObservedVideos(
@@ -155,23 +155,35 @@ const videoSync = Effect.gen(function* () {
 						Effect.matchEffect({
 							onSuccess: (result) => {
 								if (result.wasSkipped) {
-									return Effect.sync(() => {
-										skipCount++;
-									}).pipe(
-										Effect.andThen(Effect.logWarning(`${fullTaskName}Skipped video ${ytVideoId}`))
+									return Ref.update(counts, ({ successCount, errorCount, skipCount }) => ({
+										successCount,
+										errorCount,
+										skipCount: skipCount + 1
+									})).pipe(
+										Effect.andThen(
+											Effect.logWarning(`${fullTaskName}Skipped video ${ytVideoId}`).pipe(
+												Effect.annotateLogs({ ytVideoId })
+											)
+										)
 									);
 								}
 
-								return Effect.sync(() => {
-									successCount++;
-								});
+								return Ref.update(counts, ({ successCount, errorCount, skipCount }) => ({
+									successCount: successCount + 1,
+									errorCount,
+									skipCount
+								}));
 							},
 							onFailure: (error) =>
-								Effect.sync(() => {
-									errorCount++;
-								}).pipe(
+								Ref.update(counts, ({ successCount, errorCount, skipCount }) => ({
+									successCount,
+									errorCount: errorCount + 1,
+									skipCount
+								})).pipe(
 									Effect.andThen(
-										Effect.logError(`${fullTaskName}Failed to sync video ${ytVideoId}`, error)
+										Effect.logError(`${fullTaskName}Failed to sync video ${ytVideoId}`, error).pipe(
+											Effect.annotateLogs({ ytVideoId })
+										)
 									)
 								)
 						})
@@ -181,23 +193,26 @@ const videoSync = Effect.gen(function* () {
 
 			yield* ytLiveStatusSync.recomputeYtLiveStatus(ytChannelIds, args.taskName);
 
+			const { successCount, errorCount, skipCount } = yield* Ref.get(counts);
+			const end = yield* Clock.currentTimeMillis;
 			yield* Effect.logInfo(
 				`VIDEO SYNC COMPLETED: ${successCount} videos synced, ${errorCount} videos failed, ${skipCount} videos skipped`
 			);
-			yield* Effect.logInfo(`VIDEO SYNC TOOK ${performance.now() - start}ms`);
+			yield* Effect.logInfo(`VIDEO SYNC TOOK ${end - start}ms`);
 		}).pipe(
-			Effect.catchTag(
-				'DbError',
-				(err) => new VideoSyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
-			),
-			Effect.catchTag(
-				'YtError',
-				(err) => new VideoSyncError({ message: `YT ERROR: ${err.message}`, cause: err.cause })
-			),
-			Effect.catchTag(
-				'YtLiveStatusSyncError',
-				(err) => new VideoSyncError({ message: err.message, cause: err.cause })
-			)
+			Effect.catchTags({
+				DbError: (err) =>
+					new VideoSyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause }),
+				YtError: (err) =>
+					new VideoSyncError({ message: `YT ERROR: ${err.message}`, cause: err.cause }),
+				YtLiveStatusSyncError: (err) =>
+					new VideoSyncError({ message: err.message, cause: err.cause })
+			}),
+			Effect.annotateLogs({
+				ytChannelCount: ytChannelIds.length,
+				...(args.taskName ? { taskName: args.taskName } : {})
+			}),
+			Effect.withSpan('VideoSync.syncVideosForChannels')
 		);
 	});
 

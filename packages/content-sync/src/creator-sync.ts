@@ -1,9 +1,11 @@
 import type { ChannelLink } from '@hc/db/schema';
+import * as Clock from 'effect/Clock';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
 import * as Option from 'effect/Option';
+import * as Ref from 'effect/Ref';
 import { DbService } from './db-service';
 import { YtService } from './yt-service';
 
@@ -27,7 +29,6 @@ const creatorSync = Effect.gen(function* () {
 		return yield* Effect.gen(function* () {
 			const existingCreator = yield* db.getChannel(input.ytChannelId);
 			const channelDetails = yield* yt.getChannelDetails(input.ytChannelId);
-
 			const storedCreator = Option.getOrUndefined(existingCreator);
 
 			yield* db.upsertChannel({
@@ -49,14 +50,14 @@ const creatorSync = Effect.gen(function* () {
 				links: input.links ?? storedCreator?.links ?? []
 			});
 		}).pipe(
-			Effect.catchTag(
-				'DbError',
-				(err) => new CreatorSyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
-			),
-			Effect.catchTag(
-				'YtError',
-				(err) => new CreatorSyncError({ message: `YT ERROR: ${err.message}`, cause: err.cause })
-			)
+			Effect.catchTags({
+				DbError: (err) =>
+					new CreatorSyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause }),
+				YtError: (err) =>
+					new CreatorSyncError({ message: `YT ERROR: ${err.message}`, cause: err.cause })
+			}),
+			Effect.annotateLogs({ ytChannelId: input.ytChannelId }),
+			Effect.withSpan('CreatorSync.syncCreator')
 		);
 	});
 
@@ -64,33 +65,48 @@ const creatorSync = Effect.gen(function* () {
 		inputs: CreatorSyncInput[],
 		taskName?: string
 	) {
-		const start = performance.now();
-		let successCount = 0;
-		let errorCount = 0;
-		const fullTaskName = taskName ? `${taskName}: ` : '';
+		return yield* Effect.gen(function* () {
+			const start = yield* Clock.currentTimeMillis;
+			const counts = yield* Ref.make({ successCount: 0, errorCount: 0 });
+			const fullTaskName = taskName ? `${taskName}: ` : '';
 
-		yield* Effect.logInfo(`${fullTaskName}Syncing channels`);
-		yield* Effect.forEach(
-			inputs,
-			(input) =>
-				syncCreator(input).pipe(
-					Effect.matchEffect({
-						onSuccess: () => Effect.sync(() => successCount++),
-						onFailure: (error) =>
-							Effect.sync(() => {
-								errorCount++;
-							}).pipe(
-								Effect.andThen(Effect.logError(`${fullTaskName}Failed to sync channel`, error))
-							)
-					})
-				),
-			{ concurrency: 5 }
-		);
+			yield* Effect.logInfo(`${fullTaskName}Syncing channels`);
+			yield* Effect.forEach(
+				inputs,
+				(input) =>
+					syncCreator(input).pipe(
+						Effect.matchEffect({
+							onSuccess: () =>
+								Ref.update(counts, ({ successCount, errorCount }) => ({
+									successCount: successCount + 1,
+									errorCount
+								})),
+							onFailure: (error) =>
+								Ref.update(counts, ({ successCount, errorCount }) => ({
+									successCount,
+									errorCount: errorCount + 1
+								})).pipe(
+									Effect.andThen(
+										Effect.logError(`${fullTaskName}Failed to sync channel`, error).pipe(
+											Effect.annotateLogs({ ytChannelId: input.ytChannelId })
+										)
+									)
+								)
+						})
+					),
+				{ concurrency: 5 }
+			);
 
-		yield* Effect.logInfo(
-			`CHANNEL SYNC COMPLETED: ${successCount} channels synced, ${errorCount} channels failed`
+			const { successCount, errorCount } = yield* Ref.get(counts);
+			const end = yield* Clock.currentTimeMillis;
+			yield* Effect.logInfo(
+				`CHANNEL SYNC COMPLETED: ${successCount} channels synced, ${errorCount} channels failed`
+			);
+			yield* Effect.logInfo(`CHANNEL SYNC TOOK ${end - start}ms`);
+		}).pipe(
+			Effect.annotateLogs(taskName ? { taskName } : {}),
+			Effect.withSpan('CreatorSync.syncCreators')
 		);
-		yield* Effect.logInfo(`CHANNEL SYNC TOOK ${performance.now() - start}ms`);
 	});
 
 	return {

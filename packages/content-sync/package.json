@@ -5,6 +5,7 @@
 	"exports": {
 		"./creator-sync": "./src/creator-sync.ts",
 		"./db-service": "./src/db-service.ts",
+		"./layer": "./src/layer.ts",
 		"./sync-service": "./src/sync-service.ts",
 		"./twitch-service": "./src/twitch-service.ts",
 		"./video-sync": "./src/video-sync.ts",
