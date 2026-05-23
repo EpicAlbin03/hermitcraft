@@ -7,7 +7,6 @@ import { RecurringContentSync } from './recurring-content-sync';
 import { TwitchLiveStatusSync } from './twitch-live-status-sync';
 import { TwitchService } from './twitch-service';
 import { VideoSync } from './video-sync';
-import { YtObservedVideos } from './yt-observed-videos';
 import { YtService } from './yt-service';
 
 export const sharedLayer = Layer.mergeAll(
@@ -22,14 +21,12 @@ export const creatorSyncLayer = CreatorSync.layer.pipe(
 	Layer.provide(Layer.merge(sharedLayer, creatorCatalogLayer))
 );
 
-export const ytObservedVideosLayer = YtObservedVideos.layer.pipe(Layer.provide(sharedLayer));
-
 export const twitchLiveStatusSyncLayer = TwitchLiveStatusSync.layer.pipe(
 	Layer.provide(Layer.merge(sharedLayer, creatorCatalogLayer))
 );
 
 export const videoSyncLayer = VideoSync.layer.pipe(
-	Layer.provide(Layer.mergeAll(sharedLayer, creatorCatalogLayer, ytObservedVideosLayer))
+	Layer.provide(Layer.merge(sharedLayer, creatorCatalogLayer))
 );
 
 export const recurringContentSyncLayer = RecurringContentSync.layer.pipe(
@@ -38,7 +35,6 @@ export const recurringContentSyncLayer = RecurringContentSync.layer.pipe(
 			sharedLayer,
 			creatorCatalogLayer,
 			creatorSyncLayer,
-			ytObservedVideosLayer,
 			twitchLiveStatusSyncLayer,
 			videoSyncLayer
 		)
@@ -49,7 +45,6 @@ export const contentSyncLayer = Layer.mergeAll(
 	sharedLayer,
 	creatorCatalogLayer,
 	creatorSyncLayer,
-	ytObservedVideosLayer,
 	twitchLiveStatusSyncLayer,
 	videoSyncLayer,
 	recurringContentSyncLayer
