@@ -4,6 +4,7 @@ import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
+import { CreatorCatalog } from './creator-catalog';
 import { DbService } from './db-service';
 import { YtService } from './yt-service';
 
@@ -38,6 +39,7 @@ const chooseLiveVideoWinner = (
 		.at(0) ?? null;
 
 const ytLiveStatusSync = Effect.gen(function* () {
+	const creatorCatalog = yield* CreatorCatalog;
 	const db = yield* DbService;
 	const yt = yield* YtService;
 
@@ -52,7 +54,7 @@ const ytLiveStatusSync = Effect.gen(function* () {
 			const allCandidateVideoIds: string[] = [];
 			const allCandidateVideoIdsSet = new Set<string>();
 
-			yield* Effect.logInfo(`${fullTaskName}Syncing Yt live status`);
+			yield* Effect.logInfo(`${fullTaskName}Refreshing YouTube Live Video`);
 
 			yield* Effect.forEach(
 				ytChannelIds,
@@ -82,24 +84,24 @@ const ytLiveStatusSync = Effect.gen(function* () {
 				{ concurrency: 5 }
 			);
 
-			const videoDetailsMap = new Map<string, Omit<Video, 'isShort'>>();
+			const candidateVideoDetails = new Map<string, Omit<Video, 'isShort'>>();
 			for (let i = 0; i < allCandidateVideoIds.length; i += 50) {
 				const batch = allCandidateVideoIds.slice(i, i + 50);
 				const batchDetails = yield* yt.getBatchVideoDetails(batch);
 				for (const [videoId, details] of batchDetails.entries()) {
-					videoDetailsMap.set(videoId, details);
+					candidateVideoDetails.set(videoId, details);
 				}
 			}
 
-			const upsertedVideoIds = new Set<string>();
+			const storedCandidateVideoIds = new Set<string>();
 			yield* Effect.forEach(
-				videoDetailsMap.entries(),
+				candidateVideoDetails.entries(),
 				([ytVideoId, videoDetails]) =>
 					db.upsertVideo({ ...videoDetails, isShort: false }).pipe(
 						Effect.matchEffect({
 							onSuccess: () =>
 								Effect.sync(() => {
-									upsertedVideoIds.add(ytVideoId);
+									storedCandidateVideoIds.add(ytVideoId);
 								}),
 							onFailure: (error) =>
 								Effect.logError(`${fullTaskName}Failed to upsert live video`, error).pipe(
@@ -113,8 +115,8 @@ const ytLiveStatusSync = Effect.gen(function* () {
 			const updates = ytChannelIds.map((ytChannelId) => {
 				const winner = chooseLiveVideoWinner(
 					(candidateVideoIdsByChannel.get(ytChannelId) ?? [])
-						.filter((videoId) => upsertedVideoIds.has(videoId))
-						.map((videoId) => videoDetailsMap.get(videoId))
+						.filter((videoId) => storedCandidateVideoIds.has(videoId))
+						.map((videoId) => candidateVideoDetails.get(videoId))
 						.filter((video): video is Omit<Video, 'isShort'> => video !== undefined)
 				);
 
@@ -124,21 +126,18 @@ const ytLiveStatusSync = Effect.gen(function* () {
 				};
 			});
 
-			yield* db.setYtLiveVideos(updates);
+			yield* creatorCatalog.setTrackedCreatorYtLiveVideos(updates);
 
 			const liveCount = updates.filter((update) => update.ytLiveVideoId !== null).length;
 			const end = yield* Clock.currentTimeMillis;
 			yield* Effect.logInfo(
-				`YT LIVE SYNC COMPLETED: ${updates.length} channels synced, ${liveCount} currently live`
+				`YOUTUBE LIVE VIDEO REFRESH COMPLETED: ${updates.length} creators synced, ${liveCount} currently live`
 			);
-			yield* Effect.logInfo(`YT LIVE SYNC TOOK ${end - start}ms`);
+			yield* Effect.logInfo(`YOUTUBE LIVE VIDEO REFRESH TOOK ${end - start}ms`);
 		}).pipe(
 			Effect.catchTags({
-				DbError: (err) =>
-					new YtLiveStatusSyncError({
-						message: `DB ERROR: ${err.message}`,
-						cause: err.cause
-					}),
+				CreatorCatalogError: (err) =>
+					new YtLiveStatusSyncError({ message: err.message, cause: err.cause }),
 				YtError: (err) =>
 					new YtLiveStatusSyncError({
 						message: `YT ERROR: ${err.message}`,
@@ -177,16 +176,18 @@ const ytLiveStatusSync = Effect.gen(function* () {
 					chooseLiveVideoWinner(liveVideosByChannel.get(ytChannelId) ?? [])?.ytVideoId ?? null
 			}));
 
-			yield* db.setYtLiveVideos(updates);
+			yield* creatorCatalog.setTrackedCreatorYtLiveVideos(updates);
 
 			const liveCount = updates.filter((update) => update.ytLiveVideoId !== null).length;
 			const end = yield* Clock.currentTimeMillis;
 			yield* Effect.logInfo(
-				`${fullTaskName}Recomputed Yt live status for ${updates.length} channels, ${liveCount} currently live`
+				`${fullTaskName}Recomputed YouTube Live Video for ${updates.length} creators, ${liveCount} currently live`
 			);
-			yield* Effect.logInfo(`${fullTaskName}YT LIVE RECOMPUTE TOOK ${end - start}ms`);
+			yield* Effect.logInfo(`${fullTaskName}YOUTUBE LIVE VIDEO RECOMPUTE TOOK ${end - start}ms`);
 		}).pipe(
 			Effect.catchTags({
+				CreatorCatalogError: (err) =>
+					new YtLiveStatusSyncError({ message: err.message, cause: err.cause }),
 				DbError: (err) =>
 					new YtLiveStatusSyncError({
 						message: `DB ERROR: ${err.message}`,

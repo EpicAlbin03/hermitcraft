@@ -57,6 +57,24 @@ const dbService = Effect.gen(function* () {
 			);
 	});
 
+	const getChannels = Effect.fn('getChannels')(function* (ytChannelIds: string[]) {
+		if (ytChannelIds.length === 0) return [];
+
+		return yield* db
+			.select(channelColumns)
+			.from(DB_SCHEMA.channels)
+			.where(inArray(DB_SCHEMA.channels.ytChannelId, ytChannelIds))
+			.pipe(
+				Effect.mapError(
+					(cause) =>
+						new DbError({
+							message: `Failed to get ${ytChannelIds.length} channels`,
+							cause
+						})
+				)
+			);
+	});
+
 	const getVideo = Effect.fn('getVideo')(function* (ytVideoId: string) {
 		return yield* db
 			.select(videoColumns)
@@ -317,6 +335,7 @@ const dbService = Effect.gen(function* () {
 	return {
 		getAllChannels,
 		getChannel,
+		getChannels,
 		getVideo,
 		getVideos,
 		setTwitchLiveStatuses,

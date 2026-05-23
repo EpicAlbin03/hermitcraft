@@ -3,6 +3,7 @@
 	"private": true,
 	"type": "module",
 	"exports": {
+		"./creator-catalog": "./src/creator-catalog.ts",
 		"./creator-sync": "./src/creator-sync.ts",
 		"./db-service": "./src/db-service.ts",
 		"./layer": "./src/layer.ts",

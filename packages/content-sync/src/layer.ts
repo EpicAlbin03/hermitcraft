@@ -1,5 +1,6 @@
 import { PgClientLive } from '@hc/db/connection';
 import * as Layer from 'effect/Layer';
+import { CreatorCatalog } from './creator-catalog';
 import { CreatorSync } from './creator-sync';
 import { DbService } from './db-service';
 import { SyncService } from './sync-service';
@@ -14,22 +15,35 @@ export const sharedLayer = Layer.mergeAll(
 	YtService.layer
 );
 
-export const creatorSyncLayer = CreatorSync.layer.pipe(Layer.provide(sharedLayer));
+export const creatorCatalogLayer = CreatorCatalog.layer.pipe(Layer.provide(sharedLayer));
 
-export const ytLiveStatusSyncLayer = YtLiveStatusSync.layer.pipe(Layer.provide(sharedLayer));
+export const creatorSyncLayer = CreatorSync.layer.pipe(
+	Layer.provide(Layer.merge(sharedLayer, creatorCatalogLayer))
+);
+
+export const ytLiveStatusSyncLayer = YtLiveStatusSync.layer.pipe(
+	Layer.provide(Layer.merge(sharedLayer, creatorCatalogLayer))
+);
 
 export const videoSyncLayer = VideoSync.layer.pipe(
-	Layer.provide(Layer.merge(sharedLayer, ytLiveStatusSyncLayer))
+	Layer.provide(Layer.mergeAll(sharedLayer, creatorCatalogLayer, ytLiveStatusSyncLayer))
 );
 
 export const contentSyncLayer = Layer.mergeAll(
 	sharedLayer,
+	creatorCatalogLayer,
 	creatorSyncLayer,
 	ytLiveStatusSyncLayer,
 	videoSyncLayer,
 	SyncService.layer.pipe(
 		Layer.provide(
-			Layer.mergeAll(sharedLayer, creatorSyncLayer, ytLiveStatusSyncLayer, videoSyncLayer)
+			Layer.mergeAll(
+				sharedLayer,
+				creatorCatalogLayer,
+				creatorSyncLayer,
+				ytLiveStatusSyncLayer,
+				videoSyncLayer
+			)
 		)
 	)
 );

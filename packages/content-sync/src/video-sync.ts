@@ -5,6 +5,7 @@ import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
 import * as Ref from 'effect/Ref';
+import { CreatorCatalog } from './creator-catalog';
 import { DbService } from './db-service';
 import { YtLiveStatusSync } from './yt-live-status-sync';
 import { YtService } from './yt-service';
@@ -21,17 +22,18 @@ export type VideoSyncArgs = {
 };
 
 const videoSync = Effect.gen(function* () {
+	const creatorCatalog = yield* CreatorCatalog;
 	const db = yield* DbService;
 	const yt = yield* YtService;
 	const ytLiveStatusSync = yield* YtLiveStatusSync;
 
-	const discoverVideoIds = Effect.fn('discoverVideoIds')(function* (
+	const discoverObservedVideos = Effect.fn('discoverObservedVideos')(function* (
 		ytChannelIds: string[],
 		args: VideoSyncArgs
 	) {
 		const fullTaskName = args.taskName ? `${args.taskName}: ` : '';
-		const videosByChannel = new Map<string, string[]>();
-		const allVideoIds: string[] = [];
+		const videoIdsByCreator = new Map<string, string[]>();
+		const observedVideoIds: string[] = [];
 
 		yield* Effect.forEach(
 			ytChannelIds,
@@ -43,8 +45,8 @@ const videoSync = Effect.gen(function* () {
 					Effect.matchEffect({
 						onSuccess: (videoIds) =>
 							Effect.sync(() => {
-								videosByChannel.set(ytChannelId, videoIds);
-								allVideoIds.push(...videoIds);
+								videoIdsByCreator.set(ytChannelId, videoIds);
+								observedVideoIds.push(...videoIds);
 							}),
 						onFailure: (error) =>
 							Effect.logError(`${fullTaskName}Failed to get video IDs`, error).pipe(
@@ -55,40 +57,40 @@ const videoSync = Effect.gen(function* () {
 			{ concurrency: 5 }
 		);
 
-		const channelsWithLive = yield* db.getAllChannels();
-		const allVideoIdsSet = new Set(allVideoIds);
-		for (const channel of channelsWithLive) {
-			if (channel.ytLiveVideoId && !allVideoIdsSet.has(channel.ytLiveVideoId)) {
-				allVideoIds.push(channel.ytLiveVideoId);
-				allVideoIdsSet.add(channel.ytLiveVideoId);
-				const channelVideos = videosByChannel.get(channel.ytChannelId) ?? [];
-				channelVideos.push(channel.ytLiveVideoId);
-				videosByChannel.set(channel.ytChannelId, channelVideos);
+		const creators = yield* creatorCatalog.listTrackedCreatorsByIds(ytChannelIds);
+		const observedVideoIdsSet = new Set(observedVideoIds);
+		for (const creator of creators) {
+			if (creator.ytLiveVideoId && !observedVideoIdsSet.has(creator.ytLiveVideoId)) {
+				observedVideoIds.push(creator.ytLiveVideoId);
+				observedVideoIdsSet.add(creator.ytLiveVideoId);
+				const creatorVideos = videoIdsByCreator.get(creator.ytChannelId) ?? [];
+				creatorVideos.push(creator.ytLiveVideoId);
+				videoIdsByCreator.set(creator.ytChannelId, creatorVideos);
 			}
 		}
 
-		return { videosByChannel, allVideoIds } as const;
+		return { videoIdsByCreator, observedVideoIds } as const;
 	});
 
 	const reconcileObservedVideos = Effect.fn('reconcileObservedVideos')(function* (
-		videosByChannel: Map<string, string[]>,
-		allVideoIds: string[],
+		videoIdsByCreator: Map<string, string[]>,
+		observedVideoIds: string[],
 		args: VideoSyncArgs
 	) {
 		const fullTaskName = args.taskName ? `${args.taskName}: ` : '';
-		const existingVideos = yield* db.getVideos(allVideoIds);
+		const existingVideos = yield* db.getVideos(observedVideoIds);
 		const existingVideoIds = new Set(existingVideos.map((video) => video.ytVideoId));
 		const existingShortsMap = new Map(
 			existingVideos.map((video) => [video.ytVideoId, video.isShort])
 		);
-		const allVideoDetailsMap = new Map<string, Omit<Video, 'isShort'>>();
+		const observedVideoDetails = new Map<string, Omit<Video, 'isShort'>>();
 		const missingVideoIds: string[] = [];
 
-		for (let i = 0; i < allVideoIds.length; i += 50) {
-			const batch = allVideoIds.slice(i, i + 50);
+		for (let i = 0; i < observedVideoIds.length; i += 50) {
+			const batch = observedVideoIds.slice(i, i + 50);
 			const batchDetails = yield* yt.getBatchVideoDetails(batch);
 			for (const [id, details] of batchDetails.entries()) {
-				allVideoDetailsMap.set(id, details);
+				observedVideoDetails.set(id, details);
 			}
 			for (const id of batch) {
 				if (!batchDetails.has(id) && existingVideoIds.has(id)) {
@@ -104,12 +106,12 @@ const videoSync = Effect.gen(function* () {
 			);
 		}
 
-		const allShortsMap = new Map<string, boolean>(existingShortsMap);
-		const ytChannelIds = Array.from(videosByChannel.keys());
+		const observedShortsMap = new Map<string, boolean>(existingShortsMap);
+		const ytChannelIds = Array.from(videoIdsByCreator.keys());
 		yield* Effect.forEach(
 			ytChannelIds,
 			(ytChannelId) => {
-				const videoIds = videosByChannel.get(ytChannelId) ?? [];
+				const videoIds = videoIdsByCreator.get(ytChannelId) ?? [];
 				const newVideoIds = videoIds.filter((id) => !existingVideoIds.has(id));
 				if (newVideoIds.length === 0) return Effect.void;
 
@@ -122,7 +124,7 @@ const videoSync = Effect.gen(function* () {
 					Effect.tap((shortsMap) =>
 						Effect.sync(() => {
 							for (const [id, isShort] of shortsMap.entries()) {
-								allShortsMap.set(id, isShort);
+								observedShortsMap.set(id, isShort);
 							}
 						})
 					)
@@ -131,7 +133,7 @@ const videoSync = Effect.gen(function* () {
 			{ concurrency: 5 }
 		);
 
-		return { allVideoDetailsMap, allShortsMap } as const;
+		return { observedVideoDetails, observedShortsMap } as const;
 	});
 
 	const syncVideosForChannels = Effect.fn('syncVideosForChannels')(function* (
@@ -142,54 +144,62 @@ const videoSync = Effect.gen(function* () {
 			const start = yield* Clock.currentTimeMillis;
 			const counts = yield* Ref.make({ successCount: 0, errorCount: 0, skipCount: 0 });
 			const fullTaskName = args.taskName ? `${args.taskName}: ` : '';
-			const { videosByChannel, allVideoIds } = yield* discoverVideoIds(ytChannelIds, args);
-			const { allVideoDetailsMap, allShortsMap } = yield* reconcileObservedVideos(
-				videosByChannel,
-				allVideoIds,
+			const { videoIdsByCreator, observedVideoIds } = yield* discoverObservedVideos(
+				ytChannelIds,
+				args
+			);
+			const { observedVideoDetails, observedShortsMap } = yield* reconcileObservedVideos(
+				videoIdsByCreator,
+				observedVideoIds,
 				args
 			);
 
 			yield* Effect.logInfo(`${fullTaskName}Syncing videos`);
 			yield* Effect.forEach(
-				allVideoDetailsMap.entries(),
+				observedVideoDetails.entries(),
 				([ytVideoId, videoDetails]) =>
-					db.upsertVideo({ ...videoDetails, isShort: allShortsMap.get(ytVideoId) ?? false }).pipe(
-						Effect.matchEffect({
-							onSuccess: (result) => {
-								if (result.wasSkipped) {
+					db
+						.upsertVideo({
+							...videoDetails,
+							isShort: observedShortsMap.get(ytVideoId) ?? false
+						})
+						.pipe(
+							Effect.matchEffect({
+								onSuccess: (result) => {
+									if (result.wasSkipped) {
+										return Ref.update(counts, ({ successCount, errorCount, skipCount }) => ({
+											successCount,
+											errorCount,
+											skipCount: skipCount + 1
+										})).pipe(
+											Effect.andThen(
+												Effect.logWarning(`${fullTaskName}Skipped video`).pipe(
+													Effect.annotateLogs({ ytVideoId })
+												)
+											)
+										);
+									}
+
 									return Ref.update(counts, ({ successCount, errorCount, skipCount }) => ({
-										successCount,
+										successCount: successCount + 1,
 										errorCount,
-										skipCount: skipCount + 1
+										skipCount
+									}));
+								},
+								onFailure: (error) =>
+									Ref.update(counts, ({ successCount, errorCount, skipCount }) => ({
+										successCount,
+										errorCount: errorCount + 1,
+										skipCount
 									})).pipe(
 										Effect.andThen(
-											Effect.logWarning(`${fullTaskName}Skipped video`).pipe(
+											Effect.logError(`${fullTaskName}Failed to sync video`, error).pipe(
 												Effect.annotateLogs({ ytVideoId })
 											)
 										)
-									);
-								}
-
-								return Ref.update(counts, ({ successCount, errorCount, skipCount }) => ({
-									successCount: successCount + 1,
-									errorCount,
-									skipCount
-								}));
-							},
-							onFailure: (error) =>
-								Ref.update(counts, ({ successCount, errorCount, skipCount }) => ({
-									successCount,
-									errorCount: errorCount + 1,
-									skipCount
-								})).pipe(
-									Effect.andThen(
-										Effect.logError(`${fullTaskName}Failed to sync video`, error).pipe(
-											Effect.annotateLogs({ ytVideoId })
-										)
 									)
-								)
-						})
-					),
+							})
+						),
 				{ concurrency: 5 }
 			);
 
@@ -203,6 +213,8 @@ const videoSync = Effect.gen(function* () {
 			yield* Effect.logInfo(`VIDEO SYNC TOOK ${end - start}ms`);
 		}).pipe(
 			Effect.catchTags({
+				CreatorCatalogError: (err) =>
+					new VideoSyncError({ message: err.message, cause: err.cause }),
 				DbError: (err) =>
 					new VideoSyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause }),
 				YtError: (err) =>

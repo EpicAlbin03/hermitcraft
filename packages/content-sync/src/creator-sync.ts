@@ -1,12 +1,10 @@
-import type { ChannelLink } from '@hc/db/schema';
 import * as Clock from 'effect/Clock';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
-import * as Option from 'effect/Option';
 import * as Ref from 'effect/Ref';
-import { DbService } from './db-service';
+import { CreatorCatalog, type CreatorCatalogSyncInput } from './creator-catalog';
 import { YtService } from './yt-service';
 
 class CreatorSyncError extends Data.TaggedError('CreatorSyncError')<{
@@ -14,45 +12,21 @@ class CreatorSyncError extends Data.TaggedError('CreatorSyncError')<{
 	cause?: unknown;
 }> {}
 
-export type CreatorSyncInput = {
-	ytChannelId: string;
-	twitchUserId?: string | null;
-	twitchUserLogin?: string | null;
-	links?: ChannelLink[];
-};
+export type CreatorSyncInput = CreatorCatalogSyncInput;
 
 const creatorSync = Effect.gen(function* () {
-	const db = yield* DbService;
+	const creatorCatalog = yield* CreatorCatalog;
 	const yt = yield* YtService;
 
 	const syncCreator = Effect.fn('syncCreator')(function* (input: CreatorSyncInput) {
 		return yield* Effect.gen(function* () {
-			const existingCreator = yield* db.getChannel(input.ytChannelId);
-			const channelDetails = yield* yt.getChannelDetails(input.ytChannelId);
-			const storedCreator = Option.getOrUndefined(existingCreator);
+			const creatorSnapshot = yield* yt.getChannelDetails(input.ytChannelId);
 
-			yield* db.upsertChannel({
-				ytChannelId: input.ytChannelId,
-				ytName: channelDetails.ytName,
-				ytHandle: channelDetails.ytHandle,
-				ytDescription: channelDetails.ytDescription,
-				ytAvatarUrl: channelDetails.ytAvatarUrl,
-				ytBannerUrl: channelDetails.ytBannerUrl,
-				ytBannerThumbHash: channelDetails.ytBannerThumbHash,
-				ytViewCount: channelDetails.ytViewCount,
-				ytSubscriberCount: channelDetails.ytSubscriberCount,
-				ytVideoCount: channelDetails.ytVideoCount,
-				ytJoinedAt: channelDetails.ytJoinedAt,
-				twitchUserId: input.twitchUserId ?? storedCreator?.twitchUserId ?? null,
-				twitchUserLogin: input.twitchUserLogin ?? storedCreator?.twitchUserLogin ?? null,
-				isTwitchLive: storedCreator?.isTwitchLive ?? false,
-				ytLiveVideoId: storedCreator?.ytLiveVideoId ?? null,
-				links: input.links ?? storedCreator?.links ?? []
-			});
+			yield* creatorCatalog.upsertTrackedCreatorFromSnapshot(input, creatorSnapshot);
 		}).pipe(
 			Effect.catchTags({
-				DbError: (err) =>
-					new CreatorSyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause }),
+				CreatorCatalogError: (err) =>
+					new CreatorSyncError({ message: err.message, cause: err.cause }),
 				YtError: (err) =>
 					new CreatorSyncError({ message: `YT ERROR: ${err.message}`, cause: err.cause })
 			}),
@@ -70,7 +44,7 @@ const creatorSync = Effect.gen(function* () {
 			const counts = yield* Ref.make({ successCount: 0, errorCount: 0 });
 			const fullTaskName = taskName ? `${taskName}: ` : '';
 
-			yield* Effect.logInfo(`${fullTaskName}Syncing channels`);
+			yield* Effect.logInfo(`${fullTaskName}Syncing creators`);
 			yield* Effect.forEach(
 				inputs,
 				(input) =>
@@ -87,7 +61,7 @@ const creatorSync = Effect.gen(function* () {
 									errorCount: errorCount + 1
 								})).pipe(
 									Effect.andThen(
-										Effect.logError(`${fullTaskName}Failed to sync channel`, error).pipe(
+										Effect.logError(`${fullTaskName}Failed to sync creator`, error).pipe(
 											Effect.annotateLogs({ ytChannelId: input.ytChannelId })
 										)
 									)
@@ -100,9 +74,9 @@ const creatorSync = Effect.gen(function* () {
 			const { successCount, errorCount } = yield* Ref.get(counts);
 			const end = yield* Clock.currentTimeMillis;
 			yield* Effect.logInfo(
-				`CHANNEL SYNC COMPLETED: ${successCount} channels synced, ${errorCount} channels failed`
+				`CREATOR SYNC COMPLETED: ${successCount} creators synced, ${errorCount} creators failed`
 			);
-			yield* Effect.logInfo(`CHANNEL SYNC TOOK ${end - start}ms`);
+			yield* Effect.logInfo(`CREATOR SYNC TOOK ${end - start}ms`);
 		}).pipe(
 			Effect.annotateLogs(taskName ? { taskName } : {}),
 			Effect.withSpan('CreatorSync.syncCreators')

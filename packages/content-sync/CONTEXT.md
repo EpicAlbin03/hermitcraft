@@ -16,6 +16,10 @@ _Avoid_: Provider, upstream, API
 An operator who may invoke sync or data-management flows outside the public application.
 _Avoid_: User, visitor
 
+**Creator Catalog**:
+The locally stored set of tracked creators and curated fields that Content Sync reads before refresh and updates after reconciliation.
+_Avoid_: Channel table, creator cache
+
 **Creator Sync**:
 The operation that refreshes a creator’s primary YouTube channel data and linked Twitch channel data when present, while preserving locally curated external links.
 _Avoid_: Channel sync, channel import, channel update
@@ -31,6 +35,7 @@ _Avoid_: Stream check, presence check
 ## Relationships
 
 - **Content Sync** reads from one or more **Platform Sources**
+- **Content Sync** reads and updates the **Creator Catalog**
 - A **Creator Sync** refreshes **Creators**
 - A **Video Sync** refreshes **Videos**
 - A **Live Status Sync** refreshes **Twitch Live Status** and **YouTube Live Video** state
