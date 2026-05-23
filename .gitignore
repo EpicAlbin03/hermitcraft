@@ -3,7 +3,7 @@ node_modules
 .pnp
 .pnp.js
 
-# Local env files
+# Env
 .env
 .env.local
 .env.development.local
@@ -22,14 +22,21 @@ out
 build
 dist
 *.tgz
+.output
+.vercel
+.netlify
+.wrangler
 
 # Debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Misc
+# OS
 .DS_Store
+Thumbs.db
+
+# Misc
 .idea
 *.pem
 
@@ -42,3 +49,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .eslintcache
 .cache
 *.tsbuildinfo
+
+# Svelte
+.svelte-kit
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
