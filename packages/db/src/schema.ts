@@ -41,9 +41,6 @@ export const channels = d.pgTable('channels', {
 	twitchUserLogin: d.varchar('twitch_user_login', { length: 25 }),
 	// twitchUsername: d.varchar('twitch_username', { length: 50 }), // Max 25, but can include non-latin characters
 	isTwitchLive: d.boolean('is_twitch_live').notNull(),
-	ytLiveVideoId: d
-		.varchar('yt_live_video_id', { length: 11 })
-		.references((): d.PgColumn => videos.ytVideoId, { onDelete: 'set null' }),
 	links: d.jsonb('links').$type<ChannelLink[]>().notNull(),
 	createdAt: d.timestamp('created_at').notNull().defaultNow(),
 	modifiedAt: d.timestamp('modified_at').notNull().defaultNow()
@@ -65,7 +62,7 @@ export const videos = d.pgTable(
 		viewCount: d.integer('view_count').notNull(),
 		likeCount: d.integer('like_count').notNull(),
 		commentCount: d.integer('comment_count').notNull(),
-		duration: d.varchar('duration', { length: 30 }).notNull(),
+		durationSeconds: d.integer('duration_seconds'),
 		isShort: d.boolean('is_short').notNull(),
 		livestreamType: livestreamTypeEnum('livestream_type').notNull().default('none'),
 		livestreamScheduledStartTime: d.timestamp('livestream_scheduled_start_time'),

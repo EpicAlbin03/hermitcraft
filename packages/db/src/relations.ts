@@ -8,11 +8,6 @@ export const relations: DbRelations = defineRelations(DB_SCHEMA, (r) => ({
 		videos: r.many.videos({
 			from: r.channels.ytChannelId,
 			to: r.videos.ytChannelId
-		}),
-		liveVideo: r.one.videos({
-			from: r.channels.ytLiveVideoId,
-			to: r.videos.ytVideoId,
-			optional: true
 		})
 	},
 	videos: {

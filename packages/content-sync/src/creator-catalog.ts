@@ -88,7 +88,6 @@ const creatorCatalog = Effect.gen(function* () {
 				twitchUserId: input.twitchUserId ?? storedCreator?.twitchUserId ?? null,
 				twitchUserLogin: input.twitchUserLogin ?? storedCreator?.twitchUserLogin ?? null,
 				isTwitchLive: storedCreator?.isTwitchLive ?? false,
-				ytLiveVideoId: storedCreator?.ytLiveVideoId ?? null,
 				links: input.links ?? storedCreator?.links ?? []
 			})
 			.pipe(
@@ -110,26 +109,13 @@ const creatorCatalog = Effect.gen(function* () {
 		}
 	);
 
-	const setTrackedCreatorYtLiveVideos = Effect.fn('setTrackedCreatorYtLiveVideos')(function* (
-		updates: Array<{ ytChannelId: string; ytLiveVideoId: string | null }>
-	) {
-		return yield* db
-			.setYtLiveVideos(updates)
-			.pipe(
-				Effect.mapError(
-					(err) => new CreatorCatalogError({ message: err.message, cause: err.cause })
-				)
-			);
-	});
-
 	return {
 		listTrackedCreators,
 		listTrackedCreatorsByIds,
 		listTrackedCreatorIds,
 		getTrackedCreator,
 		upsertTrackedCreatorFromSnapshot,
-		setTrackedCreatorTwitchLiveStatuses,
-		setTrackedCreatorYtLiveVideos
+		setTrackedCreatorTwitchLiveStatuses
 	} as const;
 });
 

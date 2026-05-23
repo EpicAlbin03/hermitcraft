@@ -10,7 +10,12 @@ import * as Layer from 'effect/Layer';
 import * as Redacted from 'effect/Redacted';
 import * as Schedule from 'effect/Schedule';
 import { rgbaToThumbHash, thumbHashToDataURL } from 'thumbhash';
-import { getYtPlaylistId, getVideoLivestreamType, parseYtRSS } from './utils';
+import {
+	getYtPlaylistId,
+	getVideoLivestreamType,
+	parseIsoDurationToSeconds,
+	parseYtRSS
+} from './utils';
 
 export class YtError extends Data.TaggedError('YtError')<{ message: string; cause?: unknown }> {}
 
@@ -123,7 +128,7 @@ const ytService = Effect.gen(function* () {
 			viewCount: parseInt(item.statistics?.viewCount || '0', 10),
 			likeCount: parseInt(item.statistics?.likeCount || '0', 10),
 			commentCount: parseInt(item.statistics?.commentCount || '0', 10),
-			duration: item.contentDetails?.duration || '',
+			durationSeconds: parseIsoDurationToSeconds(item.contentDetails?.duration || ''),
 			livestreamType: getVideoLivestreamType(liveBroadcastContent, hasBeenLivestream),
 			livestreamScheduledStartTime: item.liveStreamingDetails?.scheduledStartTime
 				? parseDate(item.liveStreamingDetails.scheduledStartTime)

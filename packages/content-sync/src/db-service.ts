@@ -7,6 +7,27 @@ import * as Data from 'effect/Data';
 import * as Layer from 'effect/Layer';
 import { and, eq, getColumns, inArray, sql } from 'drizzle-orm';
 
+const getCurrentYtLiveVideoSortTime = (
+	video: Pick<Video, 'livestreamActualStartTime' | 'livestreamScheduledStartTime' | 'publishedAt'>
+) =>
+	(
+		video.livestreamActualStartTime ??
+		video.livestreamScheduledStartTime ??
+		video.publishedAt
+	).getTime();
+
+const chooseCurrentYtLiveVideoWinner = <
+	T extends Pick<
+		Video,
+		'livestreamActualStartTime' | 'livestreamScheduledStartTime' | 'publishedAt'
+	>
+>(
+	videos: T[]
+) =>
+	videos
+		.toSorted((a, b) => getCurrentYtLiveVideoSortTime(b) - getCurrentYtLiveVideoSortTime(a))
+		.at(0) ?? null;
+
 export class DbError extends Data.TaggedError('DbError')<{ message: string; cause?: unknown }> {}
 
 const {
@@ -151,7 +172,6 @@ const dbService = Effect.gen(function* () {
 					twitchUserId: data.twitchUserId,
 					twitchUserLogin: data.twitchUserLogin,
 					isTwitchLive: data.isTwitchLive,
-					ytLiveVideoId: data.ytLiveVideoId,
 					links: data.links
 				}
 			})
@@ -239,12 +259,12 @@ const dbService = Effect.gen(function* () {
 		return result.length;
 	});
 
-	const getPublicLiveVideosByChannels = Effect.fn('getPublicLiveVideosByChannels')(function* (
+	const getCurrentYtLiveVideosByChannels = Effect.fn('getCurrentYtLiveVideosByChannels')(function* (
 		ytChannelIds: string[]
 	) {
 		if (ytChannelIds.length === 0) return [];
 
-		return yield* db
+		const liveVideos = yield* db
 			.select(videoColumns)
 			.from(DB_SCHEMA.videos)
 			.where(
@@ -258,41 +278,24 @@ const dbService = Effect.gen(function* () {
 				Effect.mapError(
 					(cause) =>
 						new DbError({
-							message: `Failed to get public live videos for ${ytChannelIds.length} channels`,
+							message: `Failed to get current YT live videos for ${ytChannelIds.length} channels`,
 							cause
 						})
 				)
 			);
-	});
 
-	const setYtLiveVideos = Effect.fn('setYtLiveVideos')(function* (
-		updates: Array<{ ytChannelId: string; ytLiveVideoId: string | null }>
-	) {
-		if (updates.length === 0) return;
+		const liveVideosByChannel = new Map<string, Video[]>();
 
-		return yield* db
-			.transaction((tx) =>
-				Effect.forEach(
-					updates,
-					(update) =>
-						tx
-							.update(DB_SCHEMA.channels)
-							.set({ ytLiveVideoId: update.ytLiveVideoId })
-							.where(eq(DB_SCHEMA.channels.ytChannelId, update.ytChannelId))
-							.pipe(Effect.asVoid),
-					{ concurrency: 'unbounded' }
-				)
-			)
-			.pipe(
-				Effect.asVoid,
-				Effect.mapError(
-					(cause) =>
-						new DbError({
-							message: `Failed to set Yt live videos for ${updates.length} channels`,
-							cause
-						})
-				)
-			);
+		for (const liveVideo of liveVideos) {
+			const existingVideos = liveVideosByChannel.get(liveVideo.ytChannelId) ?? [];
+			existingVideos.push(liveVideo);
+			liveVideosByChannel.set(liveVideo.ytChannelId, existingVideos);
+		}
+
+		return ytChannelIds.flatMap((ytChannelId) => {
+			const winner = chooseCurrentYtLiveVideoWinner(liveVideosByChannel.get(ytChannelId) ?? []);
+			return winner ? [winner] : [];
+		});
 	});
 
 	const deleteChannel = Effect.fn('deleteChannel')(function* (ytChannelId: string) {
@@ -336,8 +339,7 @@ const dbService = Effect.gen(function* () {
 		deleteAllVideos,
 		deleteAllChannels,
 		markVideosAsPrivate,
-		getPublicLiveVideosByChannels,
-		setYtLiveVideos
+		getCurrentYtLiveVideosByChannels
 	} as const;
 });
 
