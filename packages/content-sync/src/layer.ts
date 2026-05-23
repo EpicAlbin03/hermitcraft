@@ -3,10 +3,11 @@ import * as Layer from 'effect/Layer';
 import { CreatorCatalog } from './creator-catalog';
 import { CreatorSync } from './creator-sync';
 import { DbService } from './db-service';
-import { SyncService } from './sync-service';
+import { RecurringContentSync } from './recurring-content-sync';
+import { TwitchLiveStatusSync } from './twitch-live-status-sync';
 import { TwitchService } from './twitch-service';
 import { VideoSync } from './video-sync';
-import { YtLiveStatusSync } from './yt-live-status-sync';
+import { YtObservedVideos } from './yt-observed-videos';
 import { YtService } from './yt-service';
 
 export const sharedLayer = Layer.mergeAll(
@@ -21,29 +22,35 @@ export const creatorSyncLayer = CreatorSync.layer.pipe(
 	Layer.provide(Layer.merge(sharedLayer, creatorCatalogLayer))
 );
 
-export const ytLiveStatusSyncLayer = YtLiveStatusSync.layer.pipe(
+export const ytObservedVideosLayer = YtObservedVideos.layer.pipe(Layer.provide(sharedLayer));
+
+export const twitchLiveStatusSyncLayer = TwitchLiveStatusSync.layer.pipe(
 	Layer.provide(Layer.merge(sharedLayer, creatorCatalogLayer))
 );
 
 export const videoSyncLayer = VideoSync.layer.pipe(
-	Layer.provide(Layer.mergeAll(sharedLayer, creatorCatalogLayer, ytLiveStatusSyncLayer))
+	Layer.provide(Layer.mergeAll(sharedLayer, creatorCatalogLayer, ytObservedVideosLayer))
+);
+
+export const recurringContentSyncLayer = RecurringContentSync.layer.pipe(
+	Layer.provide(
+		Layer.mergeAll(
+			sharedLayer,
+			creatorCatalogLayer,
+			creatorSyncLayer,
+			ytObservedVideosLayer,
+			twitchLiveStatusSyncLayer,
+			videoSyncLayer
+		)
+	)
 );
 
 export const contentSyncLayer = Layer.mergeAll(
 	sharedLayer,
 	creatorCatalogLayer,
 	creatorSyncLayer,
-	ytLiveStatusSyncLayer,
+	ytObservedVideosLayer,
+	twitchLiveStatusSyncLayer,
 	videoSyncLayer,
-	SyncService.layer.pipe(
-		Layer.provide(
-			Layer.mergeAll(
-				sharedLayer,
-				creatorCatalogLayer,
-				creatorSyncLayer,
-				ytLiveStatusSyncLayer,
-				videoSyncLayer
-			)
-		)
-	)
+	recurringContentSyncLayer
 );

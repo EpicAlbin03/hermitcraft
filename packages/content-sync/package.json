@@ -7,10 +7,11 @@
 		"./creator-sync": "./src/creator-sync.ts",
 		"./db-service": "./src/db-service.ts",
 		"./layer": "./src/layer.ts",
-		"./sync-service": "./src/sync-service.ts",
+		"./recurring-content-sync": "./src/recurring-content-sync.ts",
+		"./twitch-live-status-sync": "./src/twitch-live-status-sync.ts",
 		"./twitch-service": "./src/twitch-service.ts",
 		"./video-sync": "./src/video-sync.ts",
-		"./yt-live-status-sync": "./src/yt-live-status-sync.ts",
+		"./yt-observed-videos": "./src/yt-observed-videos.ts",
 		"./yt-service": "./src/yt-service.ts"
 	},
 	"scripts": {

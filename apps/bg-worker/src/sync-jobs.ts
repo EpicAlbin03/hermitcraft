@@ -3,7 +3,7 @@ import * as Context from 'effect/Context';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
 import * as Schedule from 'effect/Schedule';
-import { SyncService } from '@hc/content-sync/sync-service';
+import { RecurringContentSync } from '@hc/content-sync/recurring-content-sync';
 
 // 06:00 UTC
 // 01:00 ET (US Eastern)
@@ -13,7 +13,7 @@ import { SyncService } from '@hc/content-sync/sync-service';
 const dailyCron = Schedule.cron(Cron.parseUnsafe('0 0 6 * * *', 'UTC'));
 
 const syncJobs = Effect.gen(function* () {
-	const syncService = yield* SyncService;
+	const recurringContentSync = yield* RecurringContentSync;
 
 	const runRecurringSyncJob = <Out, ScheduleError, ScheduleEnv, RunError>(
 		jobName: string,
@@ -34,21 +34,16 @@ const syncJobs = Effect.gen(function* () {
 	const creatorSyncJob = runRecurringSyncJob(
 		'creator sync',
 		dailyCron,
-		syncService.runCreatorSync('BUN_WORKER')
+		recurringContentSync.runCreatorSync('BUN_WORKER')
 	);
 
 	const twitchLiveStatusSyncJob = runRecurringSyncJob(
 		'twitch live status sync',
 		Schedule.spaced('2 minutes'),
-		syncService.runTwitchLiveStatusSync('BUN_WORKER')
+		recurringContentSync.runTwitchLiveStatusSync('BUN_WORKER')
 	);
 
 	// * Disabled due to yt quota limits
-	// const ytLiveStatusSyncJob = runRecurringSyncJob(
-	// 	'youtube live video sync',
-	// 	Schedule.spaced('2 minutes'),
-	// 	syncService.runYtLiveStatusSync('BUN_WORKER')
-	// );
 
 	// 25 creators * 15 videos = 375 videos
 	// 1 quota per 50 videos (375 / 50 = 7.5 = 8 batches) + (1 quota per creator for new videos checking isVideoShort)
@@ -60,7 +55,7 @@ const syncJobs = Effect.gen(function* () {
 	const videoSyncJob = runRecurringSyncJob(
 		'video sync',
 		Schedule.spaced('2 minutes'),
-		syncService.runVideoSync({ taskName: 'BUN_WORKER', maxResults: 50 })
+		recurringContentSync.runVideoSync({ taskName: 'BUN_WORKER', maxResults: 50 })
 	);
 
 	// Example backfill 100 videos per creator (using uploads playlist):
@@ -74,7 +69,7 @@ const syncJobs = Effect.gen(function* () {
 	const backfillSyncJob = runRecurringSyncJob(
 		'backfill sync',
 		dailyCron,
-		syncService.runVideoBackfill('BUN_WORKER')
+		recurringContentSync.runVideoBackfill('BUN_WORKER')
 	);
 
 	const runAll = Effect.fn('runAll')(function* () {

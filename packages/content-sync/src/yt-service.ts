@@ -12,7 +12,7 @@ import * as Schedule from 'effect/Schedule';
 import { rgbaToThumbHash, thumbHashToDataURL } from 'thumbhash';
 import { getYtPlaylistId, getVideoLivestreamType, parseYtRSS } from './utils';
 
-class YtError extends Data.TaggedError('YtError')<{ message: string; cause?: unknown }> {}
+export class YtError extends Data.TaggedError('YtError')<{ message: string; cause?: unknown }> {}
 
 const parseDate = (value: string | null | undefined) =>
 	DateTime.toDate(DateTime.makeUnsafe(value ?? 0));

@@ -6,9 +6,8 @@ import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Layer from 'effect/Layer';
 import { and, eq, getColumns, inArray, sql } from 'drizzle-orm';
-import { parseIsoDurationToSeconds } from './utils';
 
-class DbError extends Data.TaggedError('DbError')<{ message: string; cause?: unknown }> {}
+export class DbError extends Data.TaggedError('DbError')<{ message: string; cause?: unknown }> {}
 
 const {
 	createdAt: channelCreatedAt,
@@ -167,14 +166,6 @@ const dbService = Effect.gen(function* () {
 	});
 
 	const upsertVideo = Effect.fn('upsertVideo')(function* (data: Video) {
-		const durationSeconds = parseIsoDurationToSeconds(data.duration);
-
-		const isLiveOrUpcoming = data.livestreamType === 'live' || data.livestreamType === 'upcoming';
-		if ((durationSeconds === null || durationSeconds === 0) && !isLiveOrUpcoming) {
-			yield* Effect.logWarning(`Duration is 0 or invalid for video ${data.ytVideoId}, skipping`);
-			return { ytVideoId: data.ytVideoId, wasInserted: false, wasSkipped: true };
-		}
-
 		const [result] = yield* db
 			.insert(DB_SCHEMA.videos)
 			.values(data)
@@ -195,8 +186,7 @@ const dbService = Effect.gen(function* () {
 
 		return {
 			ytVideoId: data.ytVideoId,
-			wasInserted: result?.wasInserted ?? false,
-			wasSkipped: false
+			wasInserted: result?.wasInserted ?? false
 		};
 	});
 
