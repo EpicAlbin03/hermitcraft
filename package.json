@@ -15,7 +15,7 @@
 			"drizzle-orm": "1.0.0-rc.2",
 			"effect": "4.0.0-beta.66",
 			"prettier": "^3.8.3",
-			"typescript": "npm:@typescript/typescript6@^6.0.0"
+			"typescript": "npm:@typescript/typescript6@^6.0.1"
 		}
 	},
 	"scripts": {
@@ -23,7 +23,8 @@
 		"lint": "turbo run lint",
 		"format": "prettier --write .",
 		"check-types": "turbo run check-types",
-		"prepare": "effect-tsgo patch",
+		"typescript-patch": "bun scripts/ts-patch.ts",
+		"prepare": "effect-tsgo patch && bun run typescript-patch",
 		"clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules .turbo apps/*/.turbo packages/*/.turbo"
 	},
 	"devDependencies": {

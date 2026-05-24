@@ -115,7 +115,7 @@
     "drizzle-orm": "1.0.0-rc.2",
     "effect": "4.0.0-beta.66",
     "prettier": "^3.8.3",
-    "typescript": "npm:@typescript/typescript6@^6.0.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.1",
   },
   "packages": {
     "@d-fischer/cache-decorators": ["@d-fischer/cache-decorators@4.0.1", "", { "dependencies": { "@d-fischer/shared-utils": "^3.6.3", "tslib": "^2.6.2" } }, "sha512-HNYLBLWs/t28GFZZeqdIBqq8f37mqDIFO6xNPof94VjpKvuP6ROqCZGafx88dk5zZUlBfViV9jD8iNNlXfc4CA=="],
