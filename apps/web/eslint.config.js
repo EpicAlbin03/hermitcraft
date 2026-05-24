@@ -36,10 +36,10 @@ export default defineConfig(
 		// Override or add rule settings here, such as:
 		// 'svelte/button-has-type': 'error'
 		rules: {
-			"@typescript-eslint/ban-ts-comment": "off"
+			'@typescript-eslint/ban-ts-comment': 'off'
 		}
 	},
 	{
-		ignores: ['node_modules', 'dist', 'build', '.svelte-kit', '.turbo', 'repos', '.fast-check']
+		ignores: ['node_modules', 'dist', 'build', '.svelte-kit', '.turbo', '.fast-check']
 	}
 );

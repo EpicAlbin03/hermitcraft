@@ -16,6 +16,10 @@ node_modules
 # Vendored repositories
 repos
 
+# Misc
+.agents
+.turbo
+
 # Svelte
 static
 .svelte-kit
