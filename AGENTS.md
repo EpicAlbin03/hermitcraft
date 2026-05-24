@@ -16,6 +16,7 @@
 - NEVER write explicit return types unless necessary.
 - `as any` should be an absolute last resort. Always use real type safety. Lean on type inference instead of manually writing new types over and over again.
 - NEVER generate a temporary html file as response, give a short summary instead.
+- NEVER remove comments in the code.
 
 ## Vendored Repositories
 

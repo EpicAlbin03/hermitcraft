@@ -2,7 +2,11 @@
 // for information about these interfaces
 declare global {
 	namespace App {
-		// interface Error {}
+		interface Error {
+			type: 'rate_limit' | 'db' | 'unknown';
+			message: string;
+			cause: string;
+		}
 		// interface Locals {}
 		// interface PageData {}
 		// interface PageState {}
