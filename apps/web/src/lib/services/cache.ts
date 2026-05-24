@@ -75,7 +75,7 @@ const cacheService = Effect.gen(function* () {
 	const redisUrl = yield* Effect.sync(() => env.REDIS_URL);
 
 	if (!redisUrl) {
-		Effect.logError('REDIS_URL is not set, caching disabled');
+		yield* Effect.logError('REDIS_URL is not set, caching disabled');
 		return createNoOpCache();
 	}
 
@@ -88,7 +88,7 @@ const cacheService = Effect.gen(function* () {
 	).pipe(Effect.catchTag('CacheError', () => Effect.succeed(null)));
 
 	if (!client) {
-		Effect.logError('Failed to get Redis client, caching disabled');
+		yield* Effect.logError('Failed to get Redis client, caching disabled');
 		return createNoOpCache();
 	}
 
