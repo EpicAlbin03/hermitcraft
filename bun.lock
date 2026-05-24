@@ -10,6 +10,8 @@
         "@types/bun": "catalog:",
         "@typescript/native-preview": "catalog:",
         "prettier": "catalog:",
+        "prettier-plugin-svelte": "^4.0.1",
+        "prettier-plugin-tailwindcss": "^0.8.0",
         "turbo": "^2.9.14",
         "typescript": "catalog:",
       },

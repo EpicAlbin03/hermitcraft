@@ -177,13 +177,11 @@ const cacheService = Effect.gen(function* () {
 
 				const remaining = Math.max(0, config.limit - count);
 				if (count > config.limit) {
-					return yield* Effect.fail(
-						new RateLimitError({
-							message: `Rate limit exceeded for ${endpoint}. Try again in ${ttl} seconds.`,
-							remaining,
-							resetIn: ttl
-						})
-					);
+					return yield* new RateLimitError({
+						message: `Rate limit exceeded for ${endpoint}. Try again in ${ttl} seconds.`,
+						remaining,
+						resetIn: ttl
+					});
 				}
 
 				return { limited: false as const, remaining, resetIn: ttl };
@@ -201,7 +199,7 @@ const cacheService = Effect.gen(function* () {
 				const count = countStr ? parseInt(countStr, 10) : 0;
 				const remaining = Math.max(0, config.limit - count);
 				return { count, remaining, limit: config.limit };
-			}).pipe(Effect.catch(() => Effect.succeed({ count: 0, remaining: 999, limit: 999 })))
+			})
 	};
 });
 
