@@ -1,10 +1,10 @@
 import { env } from '$env/dynamic/private';
-import { DB_SCHEMA } from '@hc/db/schema';
+import { DB_SCHEMA, type Video } from '@hc/db/schema';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
-import { and, asc, desc, eq, inArray, like, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, like } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { CacheService } from './cache';
@@ -26,6 +26,15 @@ const CACHE_TTL = {
 
 export type VideoFilter = 'videos' | 'shorts' | 'livestreams';
 export type VideoSort = 'latest' | 'most_viewed' | 'most_liked' | 'oldest';
+
+const getCurrentYtLiveVideoSortTime = (
+	video: Pick<Video, 'livestreamActualStartTime' | 'livestreamScheduledStartTime' | 'publishedAt'>
+) =>
+	(
+		video.livestreamActualStartTime ??
+		video.livestreamScheduledStartTime ??
+		video.publishedAt
+	).getTime();
 
 const dbService = Effect.gen(function* () {
 	const dbUrl = yield* Effect.sync(() => env.MYSQL_URL);
@@ -59,6 +68,49 @@ const dbService = Effect.gen(function* () {
 		)
 	);
 
+	const getCurrentYtLiveVideoIdsByChannelId = async (ytChannelIds: string[]) => {
+		if (ytChannelIds.length === 0) {
+			return new Map<string, string>();
+		}
+
+		const liveVideos = await drizzleDb
+			.select({
+				ytChannelId: DB_SCHEMA.videos.ytChannelId,
+				ytVideoId: DB_SCHEMA.videos.ytVideoId,
+				publishedAt: DB_SCHEMA.videos.publishedAt,
+				livestreamScheduledStartTime: DB_SCHEMA.videos.livestreamScheduledStartTime,
+				livestreamActualStartTime: DB_SCHEMA.videos.livestreamActualStartTime
+			})
+			.from(DB_SCHEMA.videos)
+			.where(
+				and(
+					inArray(DB_SCHEMA.videos.ytChannelId, ytChannelIds),
+					eq(DB_SCHEMA.videos.livestreamType, 'live'),
+					eq(DB_SCHEMA.videos.privacyStatus, 'public'),
+					inArray(DB_SCHEMA.videos.uploadStatus, ['uploaded', 'processed'])
+				)
+			);
+
+		const winnersByChannelId = new Map<string, (typeof liveVideos)[number]>();
+
+		for (const liveVideo of liveVideos) {
+			const currentWinner = winnersByChannelId.get(liveVideo.ytChannelId);
+			if (
+				!currentWinner ||
+				getCurrentYtLiveVideoSortTime(liveVideo) > getCurrentYtLiveVideoSortTime(currentWinner)
+			) {
+				winnersByChannelId.set(liveVideo.ytChannelId, liveVideo);
+			}
+		}
+
+		return new Map(
+			Array.from(winnersByChannelId.entries(), ([ytChannelId, liveVideo]) => [
+				ytChannelId,
+				liveVideo.ytVideoId
+			])
+		);
+	};
+
 	const getSidebarChannels = () =>
 		cache.getOrSet(
 			'sidebar:channels',
@@ -87,18 +139,24 @@ const dbService = Effect.gen(function* () {
 			'live:status',
 			Effect.tryPromise({
 				try: async () => {
-					const liveData = await drizzleDb
+					const channels = await drizzleDb
 						.select({
+							ytChannelId: DB_SCHEMA.channels.ytChannelId,
 							ytHandle: DB_SCHEMA.channels.ytHandle,
-							isTwitchLive: DB_SCHEMA.channels.isTwitchLive,
-							ytLiveVideoId: sql<string | null>`null`
+							isTwitchLive: DB_SCHEMA.channels.isTwitchLive
 						})
 						.from(DB_SCHEMA.channels);
+					const ytLiveVideoIdsByChannelId = await getCurrentYtLiveVideoIdsByChannelId(
+						channels.map((channel) => channel.ytChannelId)
+					);
 
 					return Object.fromEntries(
-						liveData.map((c) => [
-							c.ytHandle,
-							{ isTwitchLive: c.isTwitchLive, ytLiveVideoId: c.ytLiveVideoId }
+						channels.map((channel) => [
+							channel.ytHandle,
+							{
+								isTwitchLive: channel.isTwitchLive,
+								ytLiveVideoId: ytLiveVideoIdsByChannelId.get(channel.ytChannelId) ?? null
+							}
 						])
 					);
 				},
@@ -130,21 +188,28 @@ const dbService = Effect.gen(function* () {
 							ytVideoCount: DB_SCHEMA.channels.ytVideoCount,
 							twitchUserLogin: DB_SCHEMA.channels.twitchUserLogin,
 							isTwitchLive: DB_SCHEMA.channels.isTwitchLive,
-							ytLiveVideoId: sql<string | null>`null`,
 							links: DB_SCHEMA.channels.links
 						})
 						.from(DB_SCHEMA.channels)
 						.where(eq(DB_SCHEMA.channels.ytHandle, handle))
 						.limit(1);
 
-					if (!channels[0]) {
+					const channel = channels[0];
+					if (!channel) {
 						throw new DbError({
 							message: 'Channel not found',
 							cause: new Error('Channel not found')
 						});
 					}
 
-					return channels[0];
+					const ytLiveVideoIdsByChannelId = await getCurrentYtLiveVideoIdsByChannelId([
+						channel.ytChannelId
+					]);
+
+					return {
+						...channel,
+						ytLiveVideoId: ytLiveVideoIdsByChannelId.get(channel.ytChannelId) ?? null
+					};
 				},
 				catch: (cause) =>
 					cause instanceof DbError
