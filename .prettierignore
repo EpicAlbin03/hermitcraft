@@ -6,15 +6,19 @@ bun.lock
 bun.lockb
 
 # Build outputs
-dist/
-build/
-drizzle/
+dist
+build
+drizzle
 
 # Dependencies
-node_modules/
+node_modules
 
 # Vendored repositories
-repos/
+repos
 
 # Svelte
-static/
+static
+.svelte-kit
+.fast-check
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*

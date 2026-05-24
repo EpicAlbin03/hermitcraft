@@ -52,5 +52,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Svelte
 .svelte-kit
+.fast-check
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
