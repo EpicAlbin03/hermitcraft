@@ -8,8 +8,8 @@
 	},
 	"scripts": {
 		"check": "tsgo --noEmit",
-		"format": "prettier --write .",
-		"lint": "prettier --check .",
+		"format": "prettier --ignore-path ../../.prettierignore --write .",
+		"lint": "prettier --ignore-path ../../.prettierignore --check .",
 		"db:seed": "bun run scripts/seed.ts",
 		"db:wipe": "bun run scripts/wipe.ts",
 		"db:backfill": "bun run scripts/backfill.ts"

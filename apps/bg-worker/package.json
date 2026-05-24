@@ -8,8 +8,8 @@
 		"build": "bun build src/index.ts --compile --outfile build/bg-worker",
 		"start": "./build/bg-worker",
 		"check": "tsgo --noEmit",
-		"format": "prettier --write .",
-		"lint": "prettier --check ."
+		"format": "prettier --ignore-path ../../.prettierignore --write .",
+		"lint": "prettier --ignore-path ../../.prettierignore --check ."
 	},
 	"dependencies": {
 		"@effect/platform-bun": "4.0.0-beta.68",

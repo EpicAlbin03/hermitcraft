@@ -40,6 +40,6 @@ export default defineConfig(
 		}
 	},
 	{
-		ignores: ['node_modules', 'dist', 'build', '.svelte-kit', '.turbo', 'repos']
+		ignores: ['node_modules', 'dist', 'build', '.svelte-kit', '.turbo', 'repos', '.fast-check']
 	}
 );
