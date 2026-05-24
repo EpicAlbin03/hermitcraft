@@ -8,8 +8,7 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"check": "svelte-kit sync && svelte-fast-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-fast-check --tsconfig ./tsconfig.json --watch",
+		"check": "svelte-kit sync && bun --bun svelte-fast-check --incremental && tsgo --noEmit",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write ."
 	},
@@ -38,6 +37,7 @@
 		"prettier": "catalog:",
 		"shadcn-svelte": "^1.2.7",
 		"svelte": "^5.55.2",
+		"svelte-check": "^4.4.8",
 		"svelte-fast-check": "^0.4.5",
 		"tailwind-merge": "^3.5.0",
 		"tailwind-variants": "^3.2.2",

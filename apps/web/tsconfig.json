@@ -10,7 +10,7 @@
 		"skipLibCheck": true,
 		"sourceMap": true,
 		"strict": true,
-		"moduleResolution": "bundler",
-		"exclude": ["node_modules", "dist", "build", ".turbo", ".svelte-kit", ".fast-check"]
-	}
+		"moduleResolution": "bundler"
+	},
+	"exclude": ["node_modules", "dist", "build", ".turbo"]
 }

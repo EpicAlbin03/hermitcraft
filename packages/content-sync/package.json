@@ -7,7 +7,7 @@
 		"./recurring-content-sync": "./src/recurring-content-sync.ts"
 	},
 	"scripts": {
-		"check": "tsc --noEmit",
+		"check": "tsgo --noEmit",
 		"format": "prettier --write .",
 		"lint": "prettier --check .",
 		"db:seed": "bun run scripts/seed.ts",
