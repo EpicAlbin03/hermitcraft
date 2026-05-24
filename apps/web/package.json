@@ -40,6 +40,7 @@
 		"mdsvex": "^0.12.7",
 		"pg": "^8.21.0",
 		"prettier": "catalog:",
+		"runed": "^0.37.1",
 		"shadcn-svelte": "^1.2.7",
 		"svelte": "^5.55.2",
 		"svelte-check": "^4.4.8",
