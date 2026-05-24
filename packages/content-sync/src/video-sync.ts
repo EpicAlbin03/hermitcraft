@@ -325,14 +325,12 @@ const videoSync = Effect.gen(function* () {
 			);
 			yield* Effect.logInfo(`VIDEO SYNC TOOK ${end - start}ms`);
 		}).pipe(
-			Effect.catchTag(
-				'DbError',
-				(err) => new VideoSyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause })
-			),
-			Effect.catchTag(
-				'YtError',
-				(err) => new VideoSyncError({ message: `YT ERROR: ${err.message}`, cause: err.cause })
-			),
+			Effect.catchTags({
+				DbError: (err) =>
+					new VideoSyncError({ message: `DB ERROR: ${err.message}`, cause: err.cause }),
+				YtError: (err) =>
+					new VideoSyncError({ message: `YT ERROR: ${err.message}`, cause: err.cause })
+			}),
 			Effect.annotateLogs({
 				ytChannelCount: ytChannelIds.length,
 				...(args.taskName ? { taskName: args.taskName } : {})
