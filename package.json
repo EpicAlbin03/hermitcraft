@@ -23,9 +23,11 @@
 		"lint": "turbo run lint",
 		"format": "prettier --write .",
 		"check-types": "turbo run check-types",
-		"typescript-patch": "bun scripts/ts-patch.ts",
-		"prepare": "effect-tsgo patch && bun run typescript-patch",
+		"prepare": "effect-tsgo patch",
 		"clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules .turbo apps/*/.turbo packages/*/.turbo"
+	},
+	"patchedDependencies": {
+		"@typescript/typescript6@6.0.1": "patches/@typescript%2Ftypescript6@6.0.1.patch"
 	},
 	"devDependencies": {
 		"@effect/language-service": "catalog:",

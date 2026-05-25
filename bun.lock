@@ -113,6 +113,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "@typescript/typescript6@6.0.1": "patches/@typescript%2Ftypescript6@6.0.1.patch",
+  },
   "catalog": {
     "@effect/language-service": "^0.86.1",
     "@types/bun": "^1.3.14",

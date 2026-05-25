@@ -1,0 +1,37 @@
+diff --git a/lib/typescript.js b/lib/typescript.js
+index 5370f4a73798c26d32f853cf2d58d25f080d4b05..8d62718067cb22b80778b84cffb355b5b9bbaaa3 100644
+--- a/lib/typescript.js
++++ b/lib/typescript.js
+@@ -1 +1 @@
+-module.exports = require("typescript");
++module.exports = require("../../../../../typescript@6.0.3/node_modules/typescript");
+diff --git a/lib/typescript.d.ts b/lib/typescript.d.ts
+index 6cc36ac0ae4f30f46c69cab2995708e4bdf8ee8b..b95679c635a4f17c0eb8a91b91fdbdb88af91c69 100644
+--- a/lib/typescript.d.ts
++++ b/lib/typescript.d.ts
+@@ -1,2 +1,2 @@
+-import ts = require("typescript");
++import ts = require("../../../../../typescript@6.0.3/node_modules/typescript");
+ export = ts;
+diff --git a/lib/tsserverlibrary.js b/lib/tsserverlibrary.js
+index 5370f4a73798c26d32f853cf2d58d25f080d4b05..a064cc5e8f7766153ff8be99e96604ac8b0f8ab9 100644
+--- a/lib/tsserverlibrary.js
++++ b/lib/tsserverlibrary.js
+@@ -1 +1 @@
+-module.exports = require("typescript");
++module.exports = require("../../../../../typescript@6.0.3/node_modules/typescript/lib/tsserverlibrary");
+diff --git a/lib/tsserverlibrary.d.ts b/lib/tsserverlibrary.d.ts
+index 6cc36ac0ae4f30f46c69cab2995708e4bdf8ee8b..65bffc232a1eb0d5ce96bf8b664d8b6fce29ea26 100644
+--- a/lib/tsserverlibrary.d.ts
++++ b/lib/tsserverlibrary.d.ts
+@@ -1,2 +1,2 @@
+-import ts = require("typescript");
++import ts = require("../../../../../typescript@6.0.3/node_modules/typescript/lib/tsserverlibrary");
+ export = ts;
+diff --git a/lib/tsc.js b/lib/tsc.js
+index 01dca95314d6be154c910c80ea3b8c8bc74fbb1b..55efdf06fd3139ee42991a43e060b906b56d177b 100644
+--- a/lib/tsc.js
++++ b/lib/tsc.js
+@@ -1 +1 @@
+-require("typescript/lib/tsc.js");
++require("../../../../../typescript@6.0.3/node_modules/typescript/lib/tsc.js");
