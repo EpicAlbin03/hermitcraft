@@ -22,10 +22,7 @@ export const remoteGetSidebarChannels = query(async () => {
 	return DbRemoteRunner(
 		Effect.gen(function* () {
 			const db = yield* Effect.service(DbService);
-			const [channels, liveStatus] = yield* Effect.all([
-				db.getSidebarChannels(),
-				db.getLiveStatus()
-			]);
+			const [channels, liveStatus] = yield* Effect.all([db.getSidebarChannels, db.getLiveStatus]);
 			return channels.map((channel) => ({
 				...channel,
 				...liveStatus[channel.ytHandle]
@@ -40,7 +37,7 @@ export type SidebarChannel = Awaited<ReturnType<typeof remoteGetSidebarChannels>
 export const remoteGetLiveStatus = query(async () => {
 	const rateLimit = getRateLimit('live');
 	return DbRemoteRunner(
-		Effect.service(DbService).pipe(Effect.flatMap((db) => db.getLiveStatus())),
+		Effect.service(DbService).pipe(Effect.flatMap((db) => db.getLiveStatus)),
 		rateLimit
 	);
 });

@@ -111,63 +111,61 @@ const dbService = Effect.gen(function* () {
 		);
 	};
 
-	const getSidebarChannels = () =>
-		cache.getOrSet(
-			'sidebar:channels',
-			Effect.tryPromise({
-				try: () =>
-					drizzleDb
-						.select({
-							ytName: DB_SCHEMA.channels.ytName,
-							ytHandle: DB_SCHEMA.channels.ytHandle,
-							ytAvatarUrl: DB_SCHEMA.channels.ytAvatarUrl,
-							twitchUserLogin: DB_SCHEMA.channels.twitchUserLogin
-						})
-						.from(DB_SCHEMA.channels)
-						.orderBy(DB_SCHEMA.channels.ytName),
-				catch: (cause) =>
-					new DbError({
-						message: 'Failed to get sidebar channels',
-						cause
+	const getSidebarChannels = cache.getOrSet(
+		'sidebar:channels',
+		Effect.tryPromise({
+			try: () =>
+				drizzleDb
+					.select({
+						ytName: DB_SCHEMA.channels.ytName,
+						ytHandle: DB_SCHEMA.channels.ytHandle,
+						ytAvatarUrl: DB_SCHEMA.channels.ytAvatarUrl,
+						twitchUserLogin: DB_SCHEMA.channels.twitchUserLogin
 					})
-			}).pipe(Effect.orDie),
-			CACHE_TTL.SIDEBAR_CHANNELS
-		);
+					.from(DB_SCHEMA.channels)
+					.orderBy(DB_SCHEMA.channels.ytName),
+			catch: (cause) =>
+				new DbError({
+					message: 'Failed to get sidebar channels',
+					cause
+				})
+		}).pipe(Effect.orDie),
+		CACHE_TTL.SIDEBAR_CHANNELS
+	);
 
-	const getLiveStatus = () =>
-		cache.getOrSet(
-			'live:status',
-			Effect.tryPromise({
-				try: async () => {
-					const channels = await drizzleDb
-						.select({
-							ytChannelId: DB_SCHEMA.channels.ytChannelId,
-							ytHandle: DB_SCHEMA.channels.ytHandle,
-							isTwitchLive: DB_SCHEMA.channels.isTwitchLive
-						})
-						.from(DB_SCHEMA.channels);
-					const ytLiveVideoIdsByChannelId = await getCurrentYtLiveVideoIdsByChannelId(
-						channels.map((channel) => channel.ytChannelId)
-					);
-
-					return Object.fromEntries(
-						channels.map((channel) => [
-							channel.ytHandle,
-							{
-								isTwitchLive: channel.isTwitchLive,
-								ytLiveVideoId: ytLiveVideoIdsByChannelId.get(channel.ytChannelId) ?? null
-							}
-						])
-					);
-				},
-				catch: (cause) =>
-					new DbError({
-						message: 'Failed to get live status',
-						cause
+	const getLiveStatus = cache.getOrSet(
+		'live:status',
+		Effect.tryPromise({
+			try: async () => {
+				const channels = await drizzleDb
+					.select({
+						ytChannelId: DB_SCHEMA.channels.ytChannelId,
+						ytHandle: DB_SCHEMA.channels.ytHandle,
+						isTwitchLive: DB_SCHEMA.channels.isTwitchLive
 					})
-			}).pipe(Effect.orDie),
-			CACHE_TTL.LIVE_STATUS
-		);
+					.from(DB_SCHEMA.channels);
+				const ytLiveVideoIdsByChannelId = await getCurrentYtLiveVideoIdsByChannelId(
+					channels.map((channel) => channel.ytChannelId)
+				);
+
+				return Object.fromEntries(
+					channels.map((channel) => [
+						channel.ytHandle,
+						{
+							isTwitchLive: channel.isTwitchLive,
+							ytLiveVideoId: ytLiveVideoIdsByChannelId.get(channel.ytChannelId) ?? null
+						}
+					])
+				);
+			},
+			catch: (cause) =>
+				new DbError({
+					message: 'Failed to get live status',
+					cause
+				})
+		}).pipe(Effect.orDie),
+		CACHE_TTL.LIVE_STATUS
+	);
 
 	const getChannelByHandle = (handle: string) =>
 		cache.getOrSet(
