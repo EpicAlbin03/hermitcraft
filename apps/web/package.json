@@ -38,6 +38,7 @@
 		"eslint-plugin-svelte": "^3.17.0",
 		"globals": "^17.4.0",
 		"mdsvex": "^0.12.7",
+		"mode-watcher": "^1.1.0",
 		"pg": "^8.21.0",
 		"prettier": "catalog:",
 		"runed": "^0.37.1",
