@@ -2,6 +2,7 @@ import { getRequestEvent, query } from '$app/server';
 import { DbRemoteRunner, getClientIp } from '$lib/remote/helpers';
 import type { RateLimitKey } from '$lib/services/cache';
 import { DbService } from '$lib/services/db';
+import type { VideoFilter, VideoSort } from '$lib/services/db';
 import { Effect } from 'effect';
 import { z } from 'zod';
 
@@ -53,6 +54,18 @@ export const remoteGetChannelDetails = query(z.string(), async (handle) => {
 });
 
 export type ChannelDetails = Awaited<ReturnType<typeof remoteGetChannelDetails>>;
+
+export type VideoQueryParams = {
+	limit: number;
+	offset: number;
+	filter: VideoFilter;
+	sort: VideoSort;
+	onlyHermitCraft: boolean;
+};
+
+export type ChannelVideoQueryParams = VideoQueryParams & {
+	ytChannelId: string;
+};
 
 const paginationSchema = z.object({
 	limit: z.number().min(1).max(48),

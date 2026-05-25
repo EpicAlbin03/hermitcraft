@@ -1,5 +1,9 @@
 <script lang="ts">
-	import { remoteGetChannelDetails, remoteGetChannelVideos } from '$lib/remote/channels.remote';
+	import {
+		remoteGetChannelDetails,
+		remoteGetChannelVideos,
+		type VideoQueryParams
+	} from '$lib/remote/channels.remote';
 	import ChannelHeader from '$lib/components/channel-header.svelte';
 	import VideoGrid from '$lib/components/video-grid.svelte';
 	import MetaData from '$lib/components/metadata.svelte';
@@ -20,7 +24,7 @@
 			{#key channel.ytChannelId}
 				<ChannelHeader {channel} {handle} />
 				<VideoGrid
-					fetchVideos={({ limit, offset, filter, sort, onlyHermitCraft }) =>
+					fetchVideos={({ limit, offset, filter, sort, onlyHermitCraft }: VideoQueryParams) =>
 						remoteGetChannelVideos({
 							ytChannelId: channel.ytChannelId,
 							limit,
