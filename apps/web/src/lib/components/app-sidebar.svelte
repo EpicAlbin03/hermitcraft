@@ -48,7 +48,7 @@
 		title: string;
 		icon: Component;
 		url: string;
-		isActive?: boolean;
+		isActive: boolean;
 	};
 
 	type NestedItem = { title: string; url: string };
@@ -58,14 +58,14 @@
 		url: string;
 		icon?: string | Component;
 		iconClass?: string;
-		isActive?: boolean;
+		isActive: boolean;
 		// member-specific
-		twitchUserLogin?: string;
-		isTwitchLive?: boolean;
-		ytLiveVideoId?: string;
-		truncate?: boolean;
+		twitchUserLogin: string | undefined;
+		isTwitchLive: boolean;
+		ytLiveVideoId: string | undefined;
+		truncate: boolean;
 		// link-specific
-		targetBlank?: boolean;
+		targetBlank: boolean;
 		// map-specific
 		items?: NestedItem[];
 	};
@@ -107,9 +107,10 @@
 					iconClass: 'rounded-full h-5 w-5',
 					isActive: page.url.pathname.startsWith(`/${channel.ytHandle}`),
 					twitchUserLogin: channel.twitchUserLogin ?? undefined,
-					isTwitchLive: channel.isTwitchLive,
+					isTwitchLive: channel.isTwitchLive ?? false,
 					ytLiveVideoId: channel.ytLiveVideoId ?? undefined,
-					truncate: true
+					truncate: true,
+					targetBlank: false
 				}))
 				.sort((a, b) => a.title.localeCompare(b.title))
 		},
@@ -121,6 +122,11 @@
 				title: link.title,
 				url: link.url,
 				icon: link.icon,
+				isActive: false,
+				twitchUserLogin: undefined,
+				isTwitchLive: false,
+				ytLiveVideoId: undefined,
+				truncate: false,
 				targetBlank: true
 			}))
 		},
@@ -130,7 +136,17 @@
 			icon: MapIcon,
 			items: maps.map((map) => {
 				if ('url' in map) {
-					return { title: map.title, url: map.url, icon: '/favicon-32x32.png' };
+					return {
+						title: map.title,
+						url: map.url,
+						icon: '/favicon-32x32.png',
+						isActive: false,
+						twitchUserLogin: undefined,
+						isTwitchLive: false,
+						ytLiveVideoId: undefined,
+						truncate: false,
+						targetBlank: false
+					};
 				}
 				const items: NestedItem[] = [
 					{ title: 'Java', url: map.javaUrl },
@@ -138,7 +154,18 @@
 					{ title: 'Mcworld', url: map.mcwUrl },
 					...(map.mcMarketplaceUrl ? [{ title: 'MC Marketplace', url: map.mcMarketplaceUrl }] : [])
 				];
-				return { title: map.title, url: items[0]!.url, icon: '/favicon-32x32.png', items };
+				return {
+					title: map.title,
+					url: items[0]!.url,
+					icon: '/favicon-32x32.png',
+					isActive: false,
+					twitchUserLogin: undefined,
+					isTwitchLive: false,
+					ytLiveVideoId: undefined,
+					truncate: false,
+					targetBlank: false,
+					items
+				};
 			})
 		}
 	]);
@@ -217,7 +244,7 @@
 																			<ImageIcon
 																				url={subItem.icon}
 																				alt={subItem.title}
-																				class={subItem.iconClass}
+																				class={subItem.iconClass ?? ''}
 																				fallback={GlobeIcon}
 																			/>
 																		{:else}
@@ -233,7 +260,7 @@
 															side={sidebar.isMobile ? 'bottom' : 'right'}
 															align={sidebar.isMobile ? 'end' : 'start'}
 														>
-															{#each subItem.items as childItem}
+															{#each subItem.items as childItem (childItem.title)}
 																<DropdownMenu.Item class="cursor-pointer">
 																	{#snippet child({ props })}
 																		<a href={childItem.url} {...props}>
@@ -278,7 +305,7 @@
 																			<ImageIcon
 																				url={subItem.icon}
 																				alt={subItem.title}
-																				class={subItem.iconClass}
+																				class={subItem.iconClass ?? ''}
 																				fallback={GlobeIcon}
 																			/>
 																		{/if}
