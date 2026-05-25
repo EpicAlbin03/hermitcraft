@@ -1,0 +1,95 @@
+import { DateTime } from 'effect';
+
+// Format number to compact notation (e.g., "1.2k" instead of "1200")
+export function formatCompactNumber(num: number) {
+	return new Intl.NumberFormat('en-US', {
+		notation: 'compact',
+		maximumFractionDigits: 1
+	}).format(num);
+}
+
+// Format date to readable string (e.g., "Nov 24, 2025")
+export function formatDate(date: Date | string, time = false) {
+	const dateTime = DateTime.makeUnsafe(date);
+
+	if (time) {
+		return DateTime.formatLocal(dateTime, {
+			locale: 'en-US',
+			month: 'short',
+			day: 'numeric',
+			hour: 'numeric',
+			minute: '2-digit'
+		});
+	}
+
+	return DateTime.formatLocal(dateTime, {
+		locale: 'en-US',
+		year: 'numeric',
+		month: 'short',
+		day: 'numeric'
+	});
+}
+
+// Format video duration (e.g., "1:23:45" or "20:34")
+export function formatVideoDuration(durationSeconds: number) {
+	const hours = Math.floor(durationSeconds / 3600);
+	const minutes = Math.floor((durationSeconds % 3600) / 60);
+	const seconds = durationSeconds % 60;
+
+	if (hours > 0) {
+		return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+	}
+
+	return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+// Format relative time (e.g., "2 hours ago", "3 days ago")
+export function formatRelativeTime(date: Date | string) {
+	const dateTime = DateTime.makeUnsafe(date);
+	const now = DateTime.nowUnsafe();
+	const seconds = Math.floor(
+		(DateTime.toEpochMillis(now) - DateTime.toEpochMillis(dateTime)) / 1000
+	);
+
+	const timeInSeconds = {
+		minute: 60,
+		hour: 3600,
+		day: 86400,
+		week: 604800,
+		month: 2629746,
+		year: 31556952
+	};
+
+	if (seconds < timeInSeconds.minute) return 'just now';
+	if (seconds < timeInSeconds.hour) {
+		const minutes = Math.floor(seconds / timeInSeconds.minute);
+		return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+	}
+	if (seconds < timeInSeconds.day) {
+		const hours = Math.floor(seconds / timeInSeconds.hour);
+		return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+	}
+	if (seconds < timeInSeconds.week) {
+		const days = Math.floor(seconds / timeInSeconds.day);
+		return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+	}
+	if (seconds < timeInSeconds.month) {
+		const weeks = Math.floor(seconds / timeInSeconds.week);
+		return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+	}
+	if (seconds < timeInSeconds.year) {
+		const months = Math.floor(seconds / timeInSeconds.month);
+		return `${months} ${months === 1 ? 'month' : 'months'} ago`;
+	}
+
+	return formatDate(date);
+}
+
+// Parse channel description into parts (text and links)
+export function parseChannelDescription(description: string) {
+	const parts = description.split(/(https?:\/\/[^\s]+)/g);
+	return parts.map((part) => ({
+		type: part.match(/^https?:\/\//) ? 'link' : 'text',
+		content: part
+	}));
+}
