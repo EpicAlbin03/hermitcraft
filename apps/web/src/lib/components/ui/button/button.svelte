@@ -49,8 +49,6 @@
 </script>
 
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve */
-
 	let {
 		class: className,
 		variant = 'default',
