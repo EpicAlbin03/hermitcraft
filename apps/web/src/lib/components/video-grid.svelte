@@ -19,7 +19,7 @@
 		CircleIcon,
 		type LucideIcon
 	} from '@lucide/svelte';
-	import type { ChannelVideos, ChannelDetails } from '$lib/remote/channels.remote';
+	import type { CreatorVideos, CreatorDetails } from '$lib/remote/creators.remote';
 	import {
 		formatCompactNumber,
 		formatDate,
@@ -34,10 +34,10 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { UserConfigContext } from '$lib/config/user-config.svelte';
 
-	type VideoWithChannel = ChannelVideos[number] & {
-		channelName?: string;
-		channelAvatarUrl?: string;
-		channelHandle?: string;
+	type VideoWithCreator = CreatorVideos[number] & {
+		creatorName?: string;
+		creatorAvatarUrl?: string;
+		creatorHandle?: string;
 	};
 
 	type Props = {
@@ -47,12 +47,12 @@
 			filter: VideoFilter;
 			sort: VideoSort;
 			onlyHermitCraft: boolean;
-		}) => Promise<VideoWithChannel[]>;
+		}) => Promise<VideoWithCreator[]>;
 		key: string;
-		channel?: ChannelDetails;
+		creator?: CreatorDetails;
 	};
 
-	const { fetchVideos, key, channel }: Props = $props();
+	const { fetchVideos, key, creator }: Props = $props();
 
 	const userConfig = UserConfigContext.get();
 	let onlyHermitCraft = $derived(userConfig.current.onlyHermitCraft);
@@ -87,7 +87,7 @@
 	let videoGridWidth = $state(0);
 	let videoGridGap = $state(16);
 
-	let videos = $state<VideoWithChannel[]>([]);
+	let videos = $state<VideoWithCreator[]>([]);
 	let isLoading = $state(false);
 	let hasMore = $state(true);
 	let isIntersecting = $state(false);
@@ -221,7 +221,7 @@
 		return baselineBatchSize - remainder;
 	}
 	const currentTabLabel = $derived(tabLabels[activeFilter]);
-	const rowsVisibleOnLoad = $derived(channel ? 2 : 3);
+	const rowsVisibleOnLoad = $derived(creator ? 2 : 3);
 
 	const videoGridTemplate = $derived(`repeat(${Math.max(1, videoColumnCount)}, minmax(0, 1fr))`);
 	const videoSizes = $derived(
@@ -338,9 +338,9 @@
 		>
 			{#each videos as video, index (video.ytVideoId)}
 				{@const formattedDuration = formatVideoDuration(video.duration ?? 0)}
-				{@const channelName = channel?.ytName ?? video.channelName}
-				{@const channelThumbnail = channel?.ytAvatarUrl ?? video.channelAvatarUrl}
-				{@const channelHandle = channel?.ytHandle ?? video.channelHandle}
+				{@const creatorName = creator?.ytName ?? video.creatorName}
+				{@const creatorThumbnail = creator?.ytAvatarUrl ?? video.creatorAvatarUrl}
+				{@const creatorHandle = creator?.ytHandle ?? video.creatorHandle}
 				{@const shouldLazyLoad = index >= videoColumnCount * rowsVisibleOnLoad}
 
 				<div class="group relative">
@@ -360,7 +360,7 @@
 										src={video.thumbnailUrl}
 										alt={video.title}
 										sizes={videoSizes}
-										fetchpriority={!channel && index === 0
+										fetchpriority={!creator && index === 0
 											? 'high'
 											: shouldLazyLoad
 												? 'low'
@@ -395,20 +395,20 @@
 									</h3>
 								</div>
 
-								{#if !channel}
+								{#if !creator}
 									<div class="relative z-20 flex items-center gap-2">
-										{#if channelName && channelHandle && channelThumbnail}
+										{#if creatorName && creatorHandle && creatorThumbnail}
 											<a
-												href="/{channelHandle}"
+												href="/{creatorHandle}"
 												data-sveltekit-preload-data="false"
-												class="group/channel flex items-center gap-2 text-muted-foreground hover:text-foreground"
+												class="group/creator flex items-center gap-2 text-muted-foreground hover:text-foreground"
 											>
 												<Avatar class="h-6 w-6 shrink-0">
-													<AvatarImage src={channelThumbnail} alt={channelName} />
-													<AvatarFallback>{channelName.slice(0, 2).toUpperCase()}</AvatarFallback>
+													<AvatarImage src={creatorThumbnail} alt={creatorName} />
+													<AvatarFallback>{creatorName.slice(0, 2).toUpperCase()}</AvatarFallback>
 												</Avatar>
-												<span class="truncate text-xs font-medium group-hover/channel:underline">
-													{channelName}
+												<span class="truncate text-xs font-medium group-hover/creator:underline">
+													{creatorName}
 												</span>
 											</a>
 										{/if}

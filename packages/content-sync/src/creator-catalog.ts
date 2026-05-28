@@ -1,4 +1,4 @@
-import type { Channel, ChannelLink } from '@hc/db/schema';
+import type { Creator, CreatorLink } from '@hc/db/schema';
 import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
@@ -11,17 +11,17 @@ class CreatorCatalogError extends Data.TaggedError('CreatorCatalogError')<{
 	cause?: unknown;
 }> {}
 
-export type CreatorCatalogEntry = Channel;
+export type CreatorCatalogEntry = Creator;
 
 export type CreatorCatalogSyncInput = {
 	ytChannelId: string;
 	twitchUserId?: string | null;
 	twitchUserLogin?: string | null;
-	links?: ChannelLink[];
+	links?: CreatorLink[];
 };
 
 export type CreatorCatalogSnapshot = Pick<
-	Channel,
+	Creator,
 	| 'ytChannelId'
 	| 'ytName'
 	| 'ytHandle'
@@ -40,7 +40,7 @@ const creatorCatalog = Effect.gen(function* () {
 
 	const listTrackedCreators = Effect.fn('listTrackedCreators')(function* () {
 		return yield* db
-			.getAllChannels()
+			.getAllCreators()
 			.pipe(
 				Effect.mapError(
 					(err) => new CreatorCatalogError({ message: err.message, cause: err.cause })
@@ -52,7 +52,7 @@ const creatorCatalog = Effect.gen(function* () {
 		ytChannelIds: string[]
 	) {
 		return yield* db
-			.getChannels(ytChannelIds)
+			.getCreators(ytChannelIds)
 			.pipe(
 				Effect.mapError(
 					(err) => new CreatorCatalogError({ message: err.message, cause: err.cause })
@@ -67,7 +67,7 @@ const creatorCatalog = Effect.gen(function* () {
 
 	const getTrackedCreator = Effect.fn('getTrackedCreator')(function* (ytChannelId: string) {
 		return yield* db
-			.getChannel(ytChannelId)
+			.getCreator(ytChannelId)
 			.pipe(
 				Effect.mapError(
 					(err) => new CreatorCatalogError({ message: err.message, cause: err.cause })
@@ -83,7 +83,7 @@ const creatorCatalog = Effect.gen(function* () {
 		const storedCreator = Option.getOrUndefined(existingCreator);
 
 		return yield* db
-			.upsertChannel({
+			.upsertCreator({
 				...snapshot,
 				twitchUserId: input.twitchUserId ?? storedCreator?.twitchUserId ?? null,
 				twitchUserLogin: input.twitchUserLogin ?? storedCreator?.twitchUserLogin ?? null,
@@ -100,7 +100,7 @@ const creatorCatalog = Effect.gen(function* () {
 	const setTrackedCreatorTwitchLiveStatuses = Effect.fn('setTrackedCreatorTwitchLiveStatuses')(
 		function* (updates: Array<{ ytChannelId: string; isTwitchLive: boolean }>) {
 			return yield* db
-				.setTwitchLiveStatuses(updates)
+				.setCreatorTwitchLiveStatuses(updates)
 				.pipe(
 					Effect.mapError(
 						(err) => new CreatorCatalogError({ message: err.message, cause: err.cause })

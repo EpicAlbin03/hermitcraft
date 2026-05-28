@@ -5,20 +5,20 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { type ActiveTailwindBreakpoint } from '$lib/hooks/is-tailwind-breakpoint.svelte';
-	import { formatCompactNumber, parseChannelDescription } from '$lib/format';
+	import { formatCompactNumber, parseCreatorDescription } from '$lib/format';
 	import { cn } from '$lib/utils';
 	import { getIconFromUrl } from '$lib/utils';
-	import type { ChannelDetails } from '$lib/remote/channels.remote';
+	import type { CreatorDetails } from '$lib/remote/creators.remote';
 	import { YoutubeSVG, TwitchSVG } from '$lib/assets/svg';
 	import ImageIcon from './image-icon.svelte';
 
 	type Props = {
-		channel: ChannelDetails;
+		creator: CreatorDetails;
 		handle: string;
 	};
 
-	const { channel, handle }: Props = $props();
-	const channelHandle = $derived(channel.ytHandle ?? handle);
+	const { creator, handle }: Props = $props();
+	const creatorHandle = $derived(creator.ytHandle ?? handle);
 
 	const BANNER_WIDTHS: Record<ActiveTailwindBreakpoint, number> = {
 		xs: 960,
@@ -56,10 +56,10 @@
 		return descriptionEl.scrollHeight > descriptionEl.clientHeight;
 	});
 
-	const channelLinks = $derived.by(() => {
+	const creatorLinks = $derived.by(() => {
 		const allLinks = [
-			{ title: channel.ytName, url: `https://www.youtube.com/${channelHandle}` },
-			...(channel.links ?? [])
+			{ title: creator.ytName, url: `https://www.youtube.com/${creatorHandle}` },
+			...(creator.links ?? [])
 		];
 
 		const youtubeLinks = allLinks.filter(
@@ -69,8 +69,8 @@
 			(link) => !(link.url.includes('youtube.com') || link.url.includes('youtu.be'))
 		);
 
-		const twitchLink = channel.twitchUserLogin
-			? [{ title: 'Twitch', url: `https://www.twitch.tv/${channel.twitchUserLogin}` }]
+		const twitchLink = creator.twitchUserLogin
+			? [{ title: 'Twitch', url: `https://www.twitch.tv/${creator.twitchUserLogin}` }]
 			: [];
 
 		return [...youtubeLinks, ...twitchLink, ...nonYoutubeLinks];
@@ -78,19 +78,19 @@
 
 	// Use stable src for SSR hydration - srcset handles responsive loading
 	const bannerSrc = $derived(
-		channel.ytBannerUrl ? `${channel.ytBannerUrl}=w${BANNER_WIDTHS['2xl']}` : null
+		creator.ytBannerUrl ? `${creator.ytBannerUrl}=w${BANNER_WIDTHS['2xl']}` : null
 	);
 	const bannerSrcset = $derived(
-		channel.ytBannerUrl
-			? BANNER_SRCSET_WIDTHS.map((w) => `${channel.ytBannerUrl}=w${w} ${w}w`).join(', ')
+		creator.ytBannerUrl
+			? BANNER_SRCSET_WIDTHS.map((w) => `${creator.ytBannerUrl}=w${w} ${w}w`).join(', ')
 			: undefined
 	);
 
 	// Preload link values for early image fetching
-	const preloadHref = $derived(channel.ytBannerUrl ? `${channel.ytBannerUrl}=w2560` : undefined);
+	const preloadHref = $derived(creator.ytBannerUrl ? `${creator.ytBannerUrl}=w2560` : undefined);
 	const preloadSrcset = $derived(
-		channel.ytBannerUrl
-			? BANNER_SRCSET_WIDTHS.map((w) => `${channel.ytBannerUrl}=w${w} ${w}w`).join(', ')
+		creator.ytBannerUrl
+			? BANNER_SRCSET_WIDTHS.map((w) => `${creator.ytBannerUrl}=w${w} ${w}w`).join(', ')
 			: undefined
 	);
 </script>
@@ -114,9 +114,9 @@
 		<div
 			class="relative aspect-2/1 w-full overflow-hidden rounded-t-xl bg-muted sm:aspect-5/2 md:aspect-8/3 lg:aspect-4/1 xl:aspect-5/1 2xl:aspect-7/1"
 		>
-			{#if channel.ytBannerThumbHash}
+			{#if creator.ytBannerThumbHash}
 				<img
-					src={channel.ytBannerThumbHash}
+					src={creator.ytBannerThumbHash}
 					alt=""
 					aria-hidden="true"
 					class={cn(
@@ -134,7 +134,7 @@
 				loading="eager"
 				decoding="async"
 				onload={() => (bannerLoaded = true)}
-				alt={`${channel.ytName} channel banner`}
+				alt={`${creator.ytName} creator banner`}
 				class={cn(
 					'relative h-full w-full object-cover transition-opacity duration-500',
 					bannerLoaded ? 'opacity-100' : 'opacity-0'
@@ -147,9 +147,9 @@
 		<div class="relative z-10 -mt-12 shrink-0 md:mt-6">
 			<Avatar.Root class="h-24 w-24 border-4 border-card text-3xl shadow-sm md:h-32 md:w-32">
 				{#snippet child({ props })}
-					<a {...props} href={`https://www.youtube.com/${channelHandle}`} target="_blank">
-						<Avatar.Image src={channel.ytAvatarUrl} alt={channel.ytName} />
-						<Avatar.Fallback>{channel.ytName.slice(0, 2).toUpperCase()}</Avatar.Fallback>
+					<a {...props} href={`https://www.youtube.com/${creatorHandle}`} target="_blank">
+						<Avatar.Image src={creator.ytAvatarUrl} alt={creator.ytName} />
+						<Avatar.Fallback>{creator.ytName.slice(0, 2).toUpperCase()}</Avatar.Fallback>
 					</a>
 				{/snippet}
 			</Avatar.Root>
@@ -161,17 +161,17 @@
 					<Button
 						variant="link"
 						class="p-0 text-2xl font-bold md:text-3xl"
-						href={`https://www.youtube.com/${channelHandle}`}
+						href={`https://www.youtube.com/${creatorHandle}`}
 						target="_blank"
 					>
-						{channel.ytName}
+						{creator.ytName}
 					</Button>
 					<div class="flex items-center">
-						{#if channel.ytLiveVideoId}
+						{#if creator.ytLiveVideoId}
 							<Button
 								variant="ghost"
 								size="sm"
-								href={`https://www.youtube.com/watch?v=${channel.ytLiveVideoId}`}
+								href={`https://www.youtube.com/watch?v=${creator.ytLiveVideoId}`}
 								target="_blank"
 								class="text-sm font-semibold"
 							>
@@ -179,11 +179,11 @@
 								Live
 							</Button>
 						{/if}
-						{#if channel.isTwitchLive}
+						{#if creator.isTwitchLive}
 							<Button
 								variant="ghost"
 								size="sm"
-								href={`https://www.twitch.tv/${channel.twitchUserLogin}`}
+								href={`https://www.twitch.tv/${creator.twitchUserLogin}`}
 								target="_blank"
 								class="text-sm font-semibold"
 							>
@@ -193,21 +193,21 @@
 						{/if}
 					</div>
 				</div>
-				<p class="text-muted-foreground">{channelHandle}</p>
+				<p class="text-muted-foreground">{creatorHandle}</p>
 			</div>
 
 			<div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
 				<span class="flex items-center gap-1">
 					<Users class="h-4 w-4" />
-					{formatCompactNumber(channel.ytSubscriberCount)} subscribers
+					{formatCompactNumber(creator.ytSubscriberCount)} subscribers
 				</span>
 				<span class="flex items-center gap-1">
 					<Video class="h-4 w-4" />
-					{formatCompactNumber(channel.ytVideoCount)} videos
+					{formatCompactNumber(creator.ytVideoCount)} videos
 				</span>
 				<span class="flex items-center gap-1">
 					<Eye class="h-4 w-4" />
-					{formatCompactNumber(channel.ytViewCount)} views
+					{formatCompactNumber(creator.ytViewCount)} views
 				</span>
 			</div>
 
@@ -219,7 +219,7 @@
 						!isDescriptionExpanded && 'line-clamp-1 lg:line-clamp-2'
 					)}
 				>
-					{#each parseChannelDescription(channel.ytDescription.trim()) as part, index (index)}
+					{#each parseCreatorDescription(creator.ytDescription.trim()) as part, index (index)}
 						{#if part.type === 'link'}
 							<Button class="p-0" variant="link" size="sm" href={part.content} target="_blank">
 								{part.content}
@@ -251,7 +251,7 @@
 
 		<div class="absolute top-2 right-4 mt-2 flex max-w-md gap-2 md:static md:mt-6">
 			<div class="hidden flex-wrap justify-end xl:flex">
-				{#each channelLinks as link (link.url)}
+				{#each creatorLinks as link (link.url)}
 					{@const Icon = getIconFromUrl(link.url, link.title)}
 					<Button variant="ghost" size="sm" href={link.url} target="_blank">
 						{#if typeof Icon === 'object' && 'url' in Icon && 'alt' in Icon}
@@ -275,7 +275,7 @@
 						{/snippet}
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end">
-						{#each channelLinks as link (link.url)}
+						{#each creatorLinks as link (link.url)}
 							{@const Icon = getIconFromUrl(link.url, link.title)}
 							<DropdownMenu.Item>
 								{#snippet child({ props })}

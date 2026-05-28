@@ -1,6 +1,6 @@
 # Content Sync
 
-Content Sync reconciles external platform data with the project’s canonical stored records. It exists to turn YouTube and Twitch responses into consistent channel and video updates.
+Content Sync reconciles external platform data with the project’s canonical stored records. It exists to turn YouTube and Twitch responses into consistent creator and video updates.
 
 ## Language
 
@@ -18,7 +18,7 @@ _Avoid_: User, visitor
 
 **Creator Catalog**:
 The locally stored set of tracked creators and curated fields that Content Sync reads before refresh and updates after reconciliation.
-_Avoid_: Channel table, creator cache
+_Avoid_: Creator table, creator cache
 
 **Creator Sync**:
 The operation that refreshes a creator’s primary YouTube channel data and linked Twitch channel data when present, while preserving locally curated external links.
@@ -46,5 +46,3 @@ _Avoid_: Stream check, presence check
 > **Domain expert:** "No — **Video Sync** refreshes video records broadly, while **Live Status Sync** refreshes platform-specific livestream state for a creator."
 
 ## Flagged ambiguities
-
-- "channel" was being used to mean both the person aggregate and the YouTube identity anchor — resolved: the canonical aggregate term is **Creator**.

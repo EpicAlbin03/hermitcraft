@@ -1,7 +1,7 @@
-import type { Channel } from '@hc/db/schema';
+import type { Creator } from '@hc/db/schema';
 
-export const channels: Pick<
-	Channel,
+export const creators: Pick<
+	Creator,
 	'ytChannelId' | 'ytName' | 'ytHandle' | 'twitchUserId' | 'twitchUserLogin' | 'links'
 >[] = [
 	{

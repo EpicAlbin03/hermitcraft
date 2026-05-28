@@ -15,12 +15,12 @@ export class DbError extends Data.TaggedError('DbError')<{
 }> {}
 
 // Cache TTL constants (in seconds)
-// Sync frequencies: Channels daily, Old videos daily, Recent videos/Twitch/YT live every 2 min
+// Sync frequencies: Creators daily, old videos daily, recent videos/Twitch/YT live every 2 min
 const CACHE_TTL = {
-	SIDEBAR_CHANNELS: 3600, // Channel list (synced daily) - 1 hour
+	SIDEBAR_CREATORS: 3600, // Creator list (synced daily) - 1 hour
 	LIVE_STATUS: 120, // Twitch & YT live status (synced every 2 min)
-	CHANNEL_DETAILS: 120, // Includes live status fields (synced every 2 min)
-	CHANNEL_VIDEOS: 120, // Videos synced every 2 min
+	CREATOR_DETAILS: 120, // Includes live status fields (synced every 2 min)
+	CREATOR_VIDEOS: 120, // Videos synced every 2 min
 	ALL_VIDEOS: 120 // Videos synced every 2 min
 } as const;
 
@@ -111,49 +111,49 @@ const dbService = Effect.gen(function* () {
 		);
 	};
 
-	const getSidebarChannels = cache.getOrSet(
-		'sidebar:channels',
+	const getSidebarCreators = cache.getOrSet(
+		'sidebar:creators',
 		Effect.tryPromise({
 			try: () =>
 				drizzleDb
 					.select({
-						ytName: DB_SCHEMA.channels.ytName,
-						ytHandle: DB_SCHEMA.channels.ytHandle,
-						ytAvatarUrl: DB_SCHEMA.channels.ytAvatarUrl,
-						twitchUserLogin: DB_SCHEMA.channels.twitchUserLogin
+						ytName: DB_SCHEMA.creators.ytName,
+						ytHandle: DB_SCHEMA.creators.ytHandle,
+						ytAvatarUrl: DB_SCHEMA.creators.ytAvatarUrl,
+						twitchUserLogin: DB_SCHEMA.creators.twitchUserLogin
 					})
-					.from(DB_SCHEMA.channels)
-					.orderBy(DB_SCHEMA.channels.ytName),
+					.from(DB_SCHEMA.creators)
+					.orderBy(DB_SCHEMA.creators.ytName),
 			catch: (cause) =>
 				new DbError({
-					message: 'Failed to get sidebar channels',
+					message: 'Failed to get sidebar creators',
 					cause
 				})
 		}).pipe(Effect.orDie),
-		CACHE_TTL.SIDEBAR_CHANNELS
+		CACHE_TTL.SIDEBAR_CREATORS
 	);
 
 	const getLiveStatus = cache.getOrSet(
 		'live:status',
 		Effect.tryPromise({
 			try: async () => {
-				const channels = await drizzleDb
+				const creators = await drizzleDb
 					.select({
-						ytChannelId: DB_SCHEMA.channels.ytChannelId,
-						ytHandle: DB_SCHEMA.channels.ytHandle,
-						isTwitchLive: DB_SCHEMA.channels.isTwitchLive
+						ytChannelId: DB_SCHEMA.creators.ytChannelId,
+						ytHandle: DB_SCHEMA.creators.ytHandle,
+						isTwitchLive: DB_SCHEMA.creators.isTwitchLive
 					})
-					.from(DB_SCHEMA.channels);
+					.from(DB_SCHEMA.creators);
 				const ytLiveVideoIdsByChannelId = await getCurrentYtLiveVideoIdsByChannelId(
-					channels.map((channel) => channel.ytChannelId)
+					creators.map((creator) => creator.ytChannelId)
 				);
 
 				return Object.fromEntries(
-					channels.map((channel) => [
-						channel.ytHandle,
+					creators.map((creator) => [
+						creator.ytHandle,
 						{
-							isTwitchLive: channel.isTwitchLive,
-							ytLiveVideoId: ytLiveVideoIdsByChannelId.get(channel.ytChannelId) ?? null
+							isTwitchLive: creator.isTwitchLive,
+							ytLiveVideoId: ytLiveVideoIdsByChannelId.get(creator.ytChannelId) ?? null
 						}
 					])
 				);
@@ -167,60 +167,60 @@ const dbService = Effect.gen(function* () {
 		CACHE_TTL.LIVE_STATUS
 	);
 
-	const getChannelByHandle = (handle: string) =>
+	const getCreatorByHandle = (handle: string) =>
 		cache.getOrSet(
-			`channel:${handle}`,
+			`creator:${handle}`,
 			Effect.tryPromise({
 				try: async () => {
-					const channels = await drizzleDb
+					const creators = await drizzleDb
 						.select({
-							ytChannelId: DB_SCHEMA.channels.ytChannelId,
-							ytName: DB_SCHEMA.channels.ytName,
-							ytHandle: DB_SCHEMA.channels.ytHandle,
-							ytAvatarUrl: DB_SCHEMA.channels.ytAvatarUrl,
-							ytBannerUrl: DB_SCHEMA.channels.ytBannerUrl,
-							ytBannerThumbHash: DB_SCHEMA.channels.ytBannerThumbHash,
-							ytDescription: DB_SCHEMA.channels.ytDescription,
-							ytViewCount: DB_SCHEMA.channels.ytViewCount,
-							ytSubscriberCount: DB_SCHEMA.channels.ytSubscriberCount,
-							ytVideoCount: DB_SCHEMA.channels.ytVideoCount,
-							twitchUserLogin: DB_SCHEMA.channels.twitchUserLogin,
-							isTwitchLive: DB_SCHEMA.channels.isTwitchLive,
-							links: DB_SCHEMA.channels.links
+							ytChannelId: DB_SCHEMA.creators.ytChannelId,
+							ytName: DB_SCHEMA.creators.ytName,
+							ytHandle: DB_SCHEMA.creators.ytHandle,
+							ytAvatarUrl: DB_SCHEMA.creators.ytAvatarUrl,
+							ytBannerUrl: DB_SCHEMA.creators.ytBannerUrl,
+							ytBannerThumbHash: DB_SCHEMA.creators.ytBannerThumbHash,
+							ytDescription: DB_SCHEMA.creators.ytDescription,
+							ytViewCount: DB_SCHEMA.creators.ytViewCount,
+							ytSubscriberCount: DB_SCHEMA.creators.ytSubscriberCount,
+							ytVideoCount: DB_SCHEMA.creators.ytVideoCount,
+							twitchUserLogin: DB_SCHEMA.creators.twitchUserLogin,
+							isTwitchLive: DB_SCHEMA.creators.isTwitchLive,
+							links: DB_SCHEMA.creators.links
 						})
-						.from(DB_SCHEMA.channels)
-						.where(eq(DB_SCHEMA.channels.ytHandle, handle))
+						.from(DB_SCHEMA.creators)
+						.where(eq(DB_SCHEMA.creators.ytHandle, handle))
 						.limit(1);
 
-					const channel = channels[0];
-					if (!channel) {
+					const creator = creators[0];
+					if (!creator) {
 						throw new DbError({
-							message: 'Channel not found',
-							cause: new Error('Channel not found')
+							message: 'Creator not found',
+							cause: new Error('Creator not found')
 						});
 					}
 
 					const ytLiveVideoIdsByChannelId = await getCurrentYtLiveVideoIdsByChannelId([
-						channel.ytChannelId
+						creator.ytChannelId
 					]);
 
 					return {
-						...channel,
-						ytLiveVideoId: ytLiveVideoIdsByChannelId.get(channel.ytChannelId) ?? null
+						...creator,
+						ytLiveVideoId: ytLiveVideoIdsByChannelId.get(creator.ytChannelId) ?? null
 					};
 				},
 				catch: (cause) =>
 					cause instanceof DbError
 						? cause
 						: new DbError({
-								message: 'Failed to get channel by handle',
+								message: 'Failed to get creator by handle',
 								cause
 							})
 			}).pipe(Effect.orDie),
-			CACHE_TTL.CHANNEL_DETAILS
+			CACHE_TTL.CREATOR_DETAILS
 		);
 
-	const getChannelVideos = (
+	const getCreatorVideos = (
 		ytChannelId: string,
 		limit: number,
 		offset: number,
@@ -229,7 +229,7 @@ const dbService = Effect.gen(function* () {
 		onlyHermitCraft: boolean = false
 	) =>
 		cache.getOrSet(
-			`videos:channel:${ytChannelId}:${filter}:${sort}:${onlyHermitCraft}:${limit}:${offset}`,
+			`videos:creator:${ytChannelId}:${filter}:${sort}:${onlyHermitCraft}:${limit}:${offset}`,
 			Effect.tryPromise({
 				try: () =>
 					drizzleDb
@@ -297,11 +297,11 @@ const dbService = Effect.gen(function* () {
 						.offset(offset),
 				catch: (cause) =>
 					new DbError({
-						message: 'Failed to get channel videos',
+						message: 'Failed to get creator videos',
 						cause
 					})
 			}).pipe(Effect.orDie),
-			CACHE_TTL.CHANNEL_VIDEOS
+			CACHE_TTL.CREATOR_VIDEOS
 		);
 
 	const getAllVideos = (
@@ -330,14 +330,14 @@ const dbService = Effect.gen(function* () {
 							livestreamScheduledStartTime: DB_SCHEMA.videos.livestreamScheduledStartTime,
 							livestreamActualStartTime: DB_SCHEMA.videos.livestreamActualStartTime,
 							livestreamConcurrentViewers: DB_SCHEMA.videos.livestreamConcurrentViewers,
-							channelName: DB_SCHEMA.channels.ytName,
-							channelAvatarUrl: DB_SCHEMA.channels.ytAvatarUrl,
-							channelHandle: DB_SCHEMA.channels.ytHandle
+							creatorName: DB_SCHEMA.creators.ytName,
+							creatorAvatarUrl: DB_SCHEMA.creators.ytAvatarUrl,
+							creatorHandle: DB_SCHEMA.creators.ytHandle
 						})
 						.from(DB_SCHEMA.videos)
 						.innerJoin(
-							DB_SCHEMA.channels,
-							eq(DB_SCHEMA.videos.ytChannelId, DB_SCHEMA.channels.ytChannelId)
+							DB_SCHEMA.creators,
+							eq(DB_SCHEMA.videos.ytChannelId, DB_SCHEMA.creators.ytChannelId)
 						)
 						.where(() => {
 							const conditions = [
@@ -389,10 +389,10 @@ const dbService = Effect.gen(function* () {
 		);
 
 	return {
-		getSidebarChannels,
+		getSidebarCreators,
 		getLiveStatus,
-		getChannelByHandle,
-		getChannelVideos,
+		getCreatorByHandle,
+		getCreatorVideos,
 		getAllVideos
 	} as const;
 });

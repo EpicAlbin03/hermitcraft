@@ -60,7 +60,7 @@ export const DbRemoteRunner = async <A>(
 			DbError: (err) =>
 				Effect.fail(
 					new AppError({
-						status: err.message === 'Channel not found' ? 404 : 500,
+						status: err.message === 'Creator not found' ? 404 : 500,
 						body: {
 							type: 'db',
 							message: err.message,

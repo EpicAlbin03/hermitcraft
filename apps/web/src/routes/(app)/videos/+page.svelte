@@ -1,7 +1,7 @@
 <script lang="ts">
 	import MetaData from '$lib/components/metadata.svelte';
 	import VideoGrid from '$lib/components/video-grid.svelte';
-	import { remoteGetAllVideos, type VideoQueryParams } from '$lib/remote/channels.remote';
+	import { remoteGetAllVideos, type VideoQueryParams } from '$lib/remote/creators.remote';
 
 	const title = 'Videos';
 	const description =

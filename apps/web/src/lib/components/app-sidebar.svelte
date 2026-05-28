@@ -21,20 +21,20 @@
 	import { links } from '$lib/assets/data/links';
 	import { maps } from '$lib/assets/data/maps';
 	import { cn } from '$lib/utils';
-	import type { SidebarChannel } from '$lib/remote/channels.remote';
+	import type { SidebarCreator } from '$lib/remote/creators.remote';
 	import { page } from '$app/state';
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
 	import { TwitchSVG, TwitterSVG, YoutubeSVG } from '$lib/assets/svg';
 	import { siteConfig } from '$lib/config/site-config';
 
 	type Props = ComponentProps<typeof Sidebar.Root> & {
-		channels: SidebarChannel[];
+		creators: SidebarCreator[];
 	};
 
 	let {
 		ref = $bindable(null),
 		collapsible = 'offcanvas',
-		channels,
+		creators,
 		...restProps
 	}: Props = $props();
 
@@ -99,16 +99,16 @@
 			key: 'members',
 			title: 'Members',
 			icon: UsersIcon,
-			items: channels
-				.map((channel) => ({
-					title: channel.ytName,
-					url: `/${channel.ytHandle}`,
-					icon: channel.ytAvatarUrl,
+			items: creators
+				.map((creator) => ({
+					title: creator.ytName,
+					url: `/${creator.ytHandle}`,
+					icon: creator.ytAvatarUrl,
 					iconClass: 'rounded-full h-5 w-5',
-					isActive: page.url.pathname.startsWith(`/${channel.ytHandle}`),
-					twitchUserLogin: channel.twitchUserLogin ?? undefined,
-					isTwitchLive: channel.isTwitchLive ?? false,
-					ytLiveVideoId: channel.ytLiveVideoId ?? undefined,
+					isActive: page.url.pathname.startsWith(`/${creator.ytHandle}`),
+					twitchUserLogin: creator.twitchUserLogin ?? undefined,
+					isTwitchLive: creator.isTwitchLive ?? false,
+					ytLiveVideoId: creator.ytLiveVideoId ?? undefined,
 					truncate: true,
 					targetBlank: false
 				}))

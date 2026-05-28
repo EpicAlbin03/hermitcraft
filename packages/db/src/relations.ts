@@ -4,16 +4,16 @@ import { DB_SCHEMA } from './schema';
 type DbRelations = ReturnType<typeof defineRelations<typeof DB_SCHEMA>>;
 
 export const relations: DbRelations = defineRelations(DB_SCHEMA, (r) => ({
-	channels: {
+	creators: {
 		videos: r.many.videos({
-			from: r.channels.ytChannelId,
+			from: r.creators.ytChannelId,
 			to: r.videos.ytChannelId
 		})
 	},
 	videos: {
-		channel: r.one.channels({
+		creator: r.one.creators({
 			from: r.videos.ytChannelId,
-			to: r.channels.ytChannelId
+			to: r.creators.ytChannelId
 		})
 	}
 }));

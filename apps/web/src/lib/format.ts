@@ -85,8 +85,8 @@ export function formatRelativeTime(date: Date | string) {
 	return formatDate(date);
 }
 
-// Parse channel description into parts (text and links)
-export function parseChannelDescription(description: string) {
+// Parse creator description into parts (text and links)
+export function parseCreatorDescription(description: string) {
 	const parts = description.split(/(https?:\/\/[^\s]+)/g);
 	return parts.map((part) => ({
 		type: part.match(/^https?:\/\//) ? 'link' : 'text',

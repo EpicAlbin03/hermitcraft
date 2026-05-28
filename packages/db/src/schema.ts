@@ -1,11 +1,11 @@
 import * as d from 'drizzle-orm/pg-core';
 
-export type ChannelSchema = typeof channels.$inferSelect;
-export type Channel = Omit<ChannelSchema, 'createdAt' | 'modifiedAt'>;
+export type CreatorSchema = typeof creators.$inferSelect;
+export type Creator = Omit<CreatorSchema, 'createdAt' | 'modifiedAt'>;
 export type VideoSchema = typeof videos.$inferSelect;
 export type Video = Omit<VideoSchema, 'createdAt' | 'modifiedAt'>;
 
-export type ChannelLink = {
+export type CreatorLink = {
 	title: string;
 	url: string;
 };
@@ -25,7 +25,7 @@ export const livestreamTypeEnum = d.pgEnum('livestream_type', [
 	'completed'
 ]);
 
-export const channels = d.pgTable('channels', {
+export const creators = d.pgTable('creators', {
 	ytChannelId: d.varchar('yt_channel_id', { length: 24 }).primaryKey(),
 	ytName: d.varchar('yt_name', { length: 60 }).notNull(),
 	ytHandle: d.varchar('yt_handle', { length: 30 }).notNull(),
@@ -41,7 +41,7 @@ export const channels = d.pgTable('channels', {
 	twitchUserLogin: d.varchar('twitch_user_login', { length: 25 }),
 	// twitchUsername: d.varchar('twitch_username', { length: 50 }), // Max 25, but can include non-latin characters
 	isTwitchLive: d.boolean('is_twitch_live').notNull(),
-	links: d.jsonb('links').$type<ChannelLink[]>().notNull(),
+	links: d.jsonb('links').$type<CreatorLink[]>().notNull(),
 	createdAt: d.timestamp('created_at').notNull().defaultNow(),
 	modifiedAt: d.timestamp('modified_at').notNull().defaultNow()
 });
@@ -53,7 +53,7 @@ export const videos = d.pgTable(
 		ytChannelId: d
 			.varchar('yt_channel_id', { length: 24 })
 			.notNull()
-			.references((): d.PgColumn => channels.ytChannelId, { onDelete: 'cascade' }),
+			.references((): d.PgColumn => creators.ytChannelId, { onDelete: 'cascade' }),
 		title: d.varchar('title', { length: 100 }).notNull(),
 		thumbnailUrl: d.varchar('thumbnail_url', { length: 255 }).notNull(),
 		publishedAt: d.timestamp('published_at').notNull(),
@@ -74,7 +74,7 @@ export const videos = d.pgTable(
 	(table) => [
 		d.index('yt_channel_id_and_published_at').on(table.ytChannelId, table.publishedAt),
 		d
-			.index('channel_filtered_videos')
+			.index('creator_filtered_videos')
 			.on(
 				table.ytChannelId,
 				table.privacyStatus,
@@ -98,6 +98,6 @@ export const videos = d.pgTable(
 );
 
 export const DB_SCHEMA = {
-	channels,
+	creators,
 	videos
 };

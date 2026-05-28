@@ -18,22 +18,22 @@ function getRateLimit(endpoint: RateLimitKey) {
 	};
 }
 
-export const remoteGetSidebarChannels = query(async () => {
+export const remoteGetSidebarCreators = query(async () => {
 	const rateLimit = getRateLimit('sidebar');
 	return DbRemoteRunner(
 		Effect.gen(function* () {
 			const db = yield* Effect.service(DbService);
-			const [channels, liveStatus] = yield* Effect.all([db.getSidebarChannels, db.getLiveStatus]);
-			return channels.map((channel) => ({
-				...channel,
-				...liveStatus[channel.ytHandle]
+			const [creators, liveStatus] = yield* Effect.all([db.getSidebarCreators, db.getLiveStatus]);
+			return creators.map((creator) => ({
+				...creator,
+				...liveStatus[creator.ytHandle]
 			}));
 		}),
 		rateLimit
 	);
 });
 
-export type SidebarChannel = Awaited<ReturnType<typeof remoteGetSidebarChannels>>[number];
+export type SidebarCreator = Awaited<ReturnType<typeof remoteGetSidebarCreators>>[number];
 
 export const remoteGetLiveStatus = query(async () => {
 	const rateLimit = getRateLimit('live');
@@ -45,15 +45,15 @@ export const remoteGetLiveStatus = query(async () => {
 
 export type LiveStatus = Awaited<ReturnType<typeof remoteGetLiveStatus>>;
 
-export const remoteGetChannelDetails = query(z.string(), async (handle) => {
-	const rateLimit = getRateLimit('channel');
+export const remoteGetCreatorDetails = query(z.string(), async (handle) => {
+	const rateLimit = getRateLimit('creator');
 	return DbRemoteRunner(
-		Effect.service(DbService).pipe(Effect.flatMap((db) => db.getChannelByHandle(handle))),
+		Effect.service(DbService).pipe(Effect.flatMap((db) => db.getCreatorByHandle(handle))),
 		rateLimit
 	);
 });
 
-export type ChannelDetails = Awaited<ReturnType<typeof remoteGetChannelDetails>>;
+export type CreatorDetails = Awaited<ReturnType<typeof remoteGetCreatorDetails>>;
 
 export type VideoQueryParams = {
 	limit: number;
@@ -63,7 +63,7 @@ export type VideoQueryParams = {
 	onlyHermitCraft: boolean;
 };
 
-export type ChannelVideoQueryParams = VideoQueryParams & {
+export type CreatorVideoQueryParams = VideoQueryParams & {
 	ytChannelId: string;
 };
 
@@ -75,17 +75,17 @@ const paginationSchema = z.object({
 	onlyHermitCraft: z.boolean().default(false)
 });
 
-export const remoteGetChannelVideos = query(
+export const remoteGetCreatorVideos = query(
 	z.object({
 		ytChannelId: z.string(),
 		...paginationSchema.shape
 	}),
 	async ({ ytChannelId, limit, offset, filter, sort, onlyHermitCraft }) => {
-		const rateLimit = getRateLimit('channelVideos');
+		const rateLimit = getRateLimit('creatorVideos');
 		return DbRemoteRunner(
 			Effect.service(DbService).pipe(
 				Effect.flatMap((db) =>
-					db.getChannelVideos(ytChannelId, limit, offset, filter, sort, onlyHermitCraft)
+					db.getCreatorVideos(ytChannelId, limit, offset, filter, sort, onlyHermitCraft)
 				)
 			),
 			rateLimit
@@ -93,7 +93,7 @@ export const remoteGetChannelVideos = query(
 	}
 );
 
-export type ChannelVideos = Awaited<ReturnType<typeof remoteGetChannelVideos>>;
+export type CreatorVideos = Awaited<ReturnType<typeof remoteGetCreatorVideos>>;
 
 export const remoteGetAllVideos = query(
 	paginationSchema,

@@ -35,7 +35,7 @@ const recurringContentSync = Effect.gen(function* () {
 	const runVideoSync = Effect.fn('runVideoSync')(function* (args: VideoSyncArgs) {
 		return yield* Effect.gen(function* () {
 			const ytChannelIds = yield* creatorCatalog.listTrackedCreatorIds();
-			yield* videoSync.syncVideosForChannels(ytChannelIds, args);
+			yield* videoSync.syncVideosForCreators(ytChannelIds, args);
 		}).pipe(
 			Effect.catchTags({
 				CreatorCatalogError: (err) =>

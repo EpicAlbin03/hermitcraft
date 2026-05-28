@@ -251,7 +251,7 @@ const videoSync = Effect.gen(function* () {
 		);
 	});
 
-	const syncVideosForChannels = Effect.fn('syncVideosForChannels')(function* (
+	const syncVideosForCreators = Effect.fn('syncVideosForCreators')(function* (
 		ytChannelIds: string[],
 		args: VideoSyncArgs
 	) {
@@ -259,7 +259,7 @@ const videoSync = Effect.gen(function* () {
 			const start = yield* Clock.currentTimeMillis;
 			const counts = yield* Ref.make({ successCount: 0, errorCount: 0, skipCount: 0 });
 			const fullTaskName = args.taskName ? `${args.taskName}: ` : '';
-			const currentYtLiveVideos = yield* db.getCurrentYtLiveVideosByChannels(ytChannelIds);
+			const currentYtLiveVideos = yield* db.getCurrentYtLiveVideosByCreators(ytChannelIds);
 			const currentYtLiveVideoIdsByChannel = new Map(
 				currentYtLiveVideos.map((video) => [video.ytChannelId, video.ytVideoId])
 			);
@@ -335,13 +335,13 @@ const videoSync = Effect.gen(function* () {
 				ytChannelCount: ytChannelIds.length,
 				...(args.taskName ? { taskName: args.taskName } : {})
 			}),
-			Effect.withSpan('VideoSync.syncVideosForChannels')
+			Effect.withSpan('VideoSync.syncVideosForCreators')
 		);
 	});
 
 	return {
 		refreshYtLiveStatus,
-		syncVideosForChannels
+		syncVideosForCreators
 	} as const;
 });
 

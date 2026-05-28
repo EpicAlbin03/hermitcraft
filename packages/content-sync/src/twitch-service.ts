@@ -16,7 +16,7 @@ const twitchService = Effect.gen(function* () {
 	const authProvider = new AppTokenAuthProvider(clientId, clientSecret);
 	const twitch = new ApiClient({ authProvider });
 
-	const isChannelLive = Effect.fn('isChannelLive')(function* (userId: string) {
+	const isCreatorLive = Effect.fn('isCreatorLive')(function* (userId: string) {
 		const response = yield* Effect.tryPromise({
 			try: () => twitch.streams.getStreamByUserId(userId),
 			catch: (cause) =>
@@ -29,7 +29,7 @@ const twitchService = Effect.gen(function* () {
 		return response !== null;
 	});
 
-	const areChannelsLive = Effect.fn('areChannelsLive')(function* (userIds: string[]) {
+	const areCreatorsLive = Effect.fn('areCreatorsLive')(function* (userIds: string[]) {
 		if (userIds.length === 0) return new Map<string, boolean>();
 
 		const response = yield* Effect.tryPromise({
@@ -47,8 +47,8 @@ const twitchService = Effect.gen(function* () {
 	});
 
 	return {
-		isChannelLive,
-		areChannelsLive
+		isCreatorLive,
+		areCreatorsLive
 	} as const;
 });
 

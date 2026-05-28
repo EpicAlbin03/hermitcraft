@@ -2,7 +2,7 @@
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import ToggleMode from '$lib/components/toggle-mode.svelte';
-	import { remoteGetSidebarChannels, type SidebarChannel } from '$lib/remote/channels.remote';
+	import { remoteGetSidebarCreators, type SidebarCreator } from '$lib/remote/creators.remote';
 	import { UserConfigContext } from '$lib/config/user-config.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { GithubSVG } from '$lib/assets/svg';
@@ -23,7 +23,7 @@
 		userConfig.setConfig({ sidebarOpen: open });
 	}}
 >
-	{#await remoteGetSidebarChannels()}
+	{#await remoteGetSidebarCreators()}
 		<Sidebar.Root collapsible="offcanvas">
 			<Sidebar.Header>
 				<div class="px-2 pt-2">
@@ -42,8 +42,8 @@
 				</Sidebar.Group>
 			</Sidebar.Content>
 		</Sidebar.Root>
-	{:then channels}
-		<AppSidebar channels={channels as SidebarChannel[]} />
+	{:then creators}
+		<AppSidebar creators={creators as SidebarCreator[]} />
 	{/await}
 	<Sidebar.Inset>
 		<header
@@ -84,14 +84,14 @@
 							<h4 class="leading-none font-medium">App Info</h4>
 							<ul class="flex list-none flex-col gap-2 p-0 text-sm text-muted-foreground">
 								<li>
-									The latest 15 videos for each channel are updated every 2 minutes. Therefore, new
-									videos can take up to 2 minutes before they appear. It also checks if channels are
-									live on Twitch and YouTube. Videos, live status, and channel details are cached
+									The latest 15 videos for each creator are updated every 2 minutes. Therefore, new
+									videos can take up to 2 minutes before they appear. It also checks if creators are
+									live on Twitch and YouTube. Videos, live status, and creator details are cached
 									for 2 minutes.
 								</li>
 								<li>
-									The channel list and old videos are updated once a day at 06:00 UTC / 01:00 ET /
-									22:00 PT / 06:00 GMT / 07:00 CET. The channel list is cached for 1 hour.
+									The creator list and old videos are updated once a day at 06:00 UTC / 01:00 ET /
+									22:00 PT / 06:00 GMT / 07:00 CET. The creator list is cached for 1 hour.
 								</li>
 								<li>
 									If you encounter any issues or find something missing, please open an issue on <a

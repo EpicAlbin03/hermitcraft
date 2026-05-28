@@ -101,7 +101,7 @@ _Avoid_: Creator video list, uploads tab
 ## Example dialogue
 
 > **Dev:** "When a visitor opens /geminitay, are they viewing a channel or a creator?"
-> **Domain expert:** "They are viewing a **Creator Page** for one **Creator**. The site may source data from channel-shaped fields, but the public concept is still the **Creator**."
+> **Domain expert:** "They are viewing a **Creator Page** for one **Creator**. The site may source data from YouTube channel fields, but the public concept is still the **Creator**."
 >
 > **Dev:** "Is **Live Status** just a badge on the sidebar?"
 > **Domain expert:** "No. **Live Status** is a first-class public concept. It appears on the **Creator Page**, in the **Sidebar**, and through a separate **Live Video** experience from normal **Video** browsing."
@@ -123,5 +123,4 @@ _Avoid_: Creator video list, uploads tab
 
 ## Flagged ambiguities
 
-- "channel" is used heavily in the implementation and some UI labels, but in this context it means **Creator** — resolved: treat channel wording as implementation shorthand, not a separate domain concept.
 - "maps" in the UI includes some downloadable packaged play artifacts beyond literal world saves — resolved: keep the canonical public term **Map Download** for the whole visitor-facing category.

@@ -1,5 +1,5 @@
 import { DB } from '@hc/db/connection';
-import { DB_SCHEMA, type Channel, type Video } from '@hc/db/schema';
+import { DB_SCHEMA, type Creator, type Video } from '@hc/db/schema';
 import * as Option from 'effect/Option';
 import * as Effect from 'effect/Effect';
 import * as Context from 'effect/Context';
@@ -31,10 +31,10 @@ const chooseCurrentYtLiveVideoWinner = <
 export class DbError extends Data.TaggedError('DbError')<{ message: string; cause?: unknown }> {}
 
 const {
-	createdAt: channelCreatedAt,
-	modifiedAt: channelModifiedAt,
-	...channelColumns
-} = getColumns(DB_SCHEMA.channels);
+	createdAt: creatorCreatedAt,
+	modifiedAt: creatorModifiedAt,
+	...creatorColumns
+} = getColumns(DB_SCHEMA.creators);
 const {
 	createdAt: videoCreatedAt,
 	modifiedAt: videoModifiedAt,
@@ -44,51 +44,51 @@ const {
 const dbService = Effect.gen(function* () {
 	const db = yield* DB;
 
-	const getAllChannels = Effect.fn('getAllChannels')(function* () {
+	const getAllCreators = Effect.fn('getAllCreators')(function* () {
 		return yield* db
-			.select(channelColumns)
-			.from(DB_SCHEMA.channels)
+			.select(creatorColumns)
+			.from(DB_SCHEMA.creators)
 			.pipe(
 				Effect.mapError(
 					(cause) =>
 						new DbError({
-							message: 'Failed to get all channels',
+							message: 'Failed to get all creators',
 							cause
 						})
 				)
 			);
 	});
 
-	const getChannel = Effect.fn('getChannel')(function* (ytChannelId: string) {
+	const getCreator = Effect.fn('getCreator')(function* (ytChannelId: string) {
 		return yield* db
-			.select(channelColumns)
-			.from(DB_SCHEMA.channels)
-			.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId))
+			.select(creatorColumns)
+			.from(DB_SCHEMA.creators)
+			.where(eq(DB_SCHEMA.creators.ytChannelId, ytChannelId))
 			.limit(1)
 			.pipe(
-				Effect.map(([channel]) => Option.fromNullishOr(channel)),
+				Effect.map(([creator]) => Option.fromNullishOr(creator)),
 				Effect.mapError(
 					(cause) =>
 						new DbError({
-							message: `Failed to get channel ${ytChannelId}`,
+							message: `Failed to get creator ${ytChannelId}`,
 							cause
 						})
 				)
 			);
 	});
 
-	const getChannels = Effect.fn('getChannels')(function* (ytChannelIds: string[]) {
+	const getCreators = Effect.fn('getCreators')(function* (ytChannelIds: string[]) {
 		if (ytChannelIds.length === 0) return [];
 
 		return yield* db
-			.select(channelColumns)
-			.from(DB_SCHEMA.channels)
-			.where(inArray(DB_SCHEMA.channels.ytChannelId, ytChannelIds))
+			.select(creatorColumns)
+			.from(DB_SCHEMA.creators)
+			.where(inArray(DB_SCHEMA.creators.ytChannelId, ytChannelIds))
 			.pipe(
 				Effect.mapError(
 					(cause) =>
 						new DbError({
-							message: `Failed to get ${ytChannelIds.length} channels`,
+							message: `Failed to get ${ytChannelIds.length} creators`,
 							cause
 						})
 				)
@@ -123,7 +123,7 @@ const dbService = Effect.gen(function* () {
 			);
 	});
 
-	const setTwitchLiveStatuses = Effect.fn('setTwitchLiveStatuses')(function* (
+	const setCreatorTwitchLiveStatuses = Effect.fn('setCreatorTwitchLiveStatuses')(function* (
 		updates: Array<{ ytChannelId: string; isTwitchLive: boolean }>
 	) {
 		if (updates.length === 0) return;
@@ -134,9 +134,9 @@ const dbService = Effect.gen(function* () {
 					updates,
 					(update) =>
 						tx
-							.update(DB_SCHEMA.channels)
+							.update(DB_SCHEMA.creators)
 							.set({ isTwitchLive: update.isTwitchLive })
-							.where(eq(DB_SCHEMA.channels.ytChannelId, update.ytChannelId))
+							.where(eq(DB_SCHEMA.creators.ytChannelId, update.ytChannelId))
 							.pipe(Effect.asVoid),
 					{ concurrency: 'unbounded' }
 				)
@@ -146,19 +146,19 @@ const dbService = Effect.gen(function* () {
 				Effect.mapError(
 					(cause) =>
 						new DbError({
-							message: `Failed to set Twitch live statuses for ${updates.length} channels`,
+							message: `Failed to set Twitch live statuses for ${updates.length} creators`,
 							cause
 						})
 				)
 			);
 	});
 
-	const upsertChannel = Effect.fn('upsertChannel')(function* (data: Channel) {
+	const upsertCreator = Effect.fn('upsertCreator')(function* (data: Creator) {
 		const [result] = yield* db
-			.insert(DB_SCHEMA.channels)
+			.insert(DB_SCHEMA.creators)
 			.values(data)
 			.onConflictDoUpdate({
-				target: DB_SCHEMA.channels.ytChannelId,
+				target: DB_SCHEMA.creators.ytChannelId,
 				set: {
 					ytName: data.ytName,
 					ytHandle: data.ytHandle,
@@ -178,7 +178,7 @@ const dbService = Effect.gen(function* () {
 			.returning({ wasInserted: sql<boolean>`xmax = 0` })
 			.pipe(
 				Effect.mapError(
-					(cause) => new DbError({ message: `Failed to upsert channel ${data.ytChannelId}`, cause })
+					(cause) => new DbError({ message: `Failed to upsert creator ${data.ytChannelId}`, cause })
 				)
 			);
 
@@ -259,7 +259,7 @@ const dbService = Effect.gen(function* () {
 		return result.length;
 	});
 
-	const getCurrentYtLiveVideosByChannels = Effect.fn('getCurrentYtLiveVideosByChannels')(function* (
+	const getCurrentYtLiveVideosByCreators = Effect.fn('getCurrentYtLiveVideosByCreators')(function* (
 		ytChannelIds: string[]
 	) {
 		if (ytChannelIds.length === 0) return [];
@@ -278,7 +278,7 @@ const dbService = Effect.gen(function* () {
 				Effect.mapError(
 					(cause) =>
 						new DbError({
-							message: `Failed to get current YT live videos for ${ytChannelIds.length} channels`,
+							message: `Failed to get current YT live videos for ${ytChannelIds.length} creators`,
 							cause
 						})
 				)
@@ -298,13 +298,13 @@ const dbService = Effect.gen(function* () {
 		});
 	});
 
-	const deleteChannel = Effect.fn('deleteChannel')(function* (ytChannelId: string) {
+	const deleteCreator = Effect.fn('deleteCreator')(function* (ytChannelId: string) {
 		return yield* db
-			.delete(DB_SCHEMA.channels)
-			.where(eq(DB_SCHEMA.channels.ytChannelId, ytChannelId))
+			.delete(DB_SCHEMA.creators)
+			.where(eq(DB_SCHEMA.creators.ytChannelId, ytChannelId))
 			.pipe(
 				Effect.mapError(
-					(cause) => new DbError({ message: `Failed to delete channel ${ytChannelId}`, cause })
+					(cause) => new DbError({ message: `Failed to delete creator ${ytChannelId}`, cause })
 				)
 			);
 	});
@@ -317,29 +317,29 @@ const dbService = Effect.gen(function* () {
 			);
 	});
 
-	const deleteAllChannels = Effect.fn('deleteAllChannels')(function* () {
+	const deleteAllCreators = Effect.fn('deleteAllCreators')(function* () {
 		return yield* db
-			.delete(DB_SCHEMA.channels)
+			.delete(DB_SCHEMA.creators)
 			.pipe(
-				Effect.mapError((cause) => new DbError({ message: `Failed to delete all channels`, cause }))
+				Effect.mapError((cause) => new DbError({ message: `Failed to delete all creators`, cause }))
 			);
 	});
 
 	return {
-		getAllChannels,
-		getChannel,
-		getChannels,
+		getAllCreators,
+		getCreator,
+		getCreators,
 		getVideo,
 		getVideos,
-		setTwitchLiveStatuses,
-		upsertChannel,
+		setCreatorTwitchLiveStatuses,
+		upsertCreator,
 		upsertVideo,
 		deleteVideo,
-		deleteChannel,
+		deleteCreator,
 		deleteAllVideos,
-		deleteAllChannels,
+		deleteAllCreators,
 		markVideosAsPrivate,
-		getCurrentYtLiveVideosByChannels
+		getCurrentYtLiveVideosByCreators
 	} as const;
 });
 

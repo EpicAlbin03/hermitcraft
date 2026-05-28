@@ -23,8 +23,8 @@ const DEFAULT_TTL = 120; // 2 minutes
 export const RATE_LIMITS = {
 	sidebar: { limit: 60, windowSecs: 60 },
 	live: { limit: 60, windowSecs: 60 },
-	channel: { limit: 60, windowSecs: 60 },
-	channelVideos: { limit: 240, windowSecs: 60 },
+	creator: { limit: 60, windowSecs: 60 },
+	creatorVideos: { limit: 240, windowSecs: 60 },
 	allVideos: { limit: 240, windowSecs: 60 }
 } as const;
 

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import {
-		remoteGetChannelDetails,
-		remoteGetChannelVideos,
+		remoteGetCreatorDetails,
+		remoteGetCreatorVideos,
 		type VideoQueryParams
-	} from '$lib/remote/channels.remote';
-	import ChannelHeader from '$lib/components/channel-header.svelte';
+	} from '$lib/remote/creators.remote';
+	import CreatorHeader from '$lib/components/creator-header.svelte';
 	import VideoGrid from '$lib/components/video-grid.svelte';
 	import MetaData from '$lib/components/metadata.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
@@ -15,26 +15,26 @@
 
 {#if handle}
 	<svelte:boundary>
-		{#await remoteGetChannelDetails(handle) then channel}
+		{#await remoteGetCreatorDetails(handle) then creator}
 			<MetaData
-				title={channel.ytName}
-				description={`Watch the latest Hermitcraft Minecraft videos and episodes from ${channel.ytName}.`}
+				title={creator.ytName}
+				description={`Watch the latest Hermitcraft Minecraft videos and episodes from ${creator.ytName}.`}
 			/>
 
-			{#key channel.ytChannelId}
-				<ChannelHeader {channel} {handle} />
+			{#key creator.ytChannelId}
+				<CreatorHeader {creator} {handle} />
 				<VideoGrid
 					fetchVideos={({ limit, offset, filter, sort, onlyHermitCraft }: VideoQueryParams) =>
-						remoteGetChannelVideos({
-							ytChannelId: channel.ytChannelId,
+						remoteGetCreatorVideos({
+							ytChannelId: creator.ytChannelId,
 							limit,
 							offset,
 							filter,
 							sort,
 							onlyHermitCraft
 						})}
-					key={channel.ytChannelId}
-					{channel}
+					key={creator.ytChannelId}
+					{creator}
 				/>
 			{/key}
 		{/await}

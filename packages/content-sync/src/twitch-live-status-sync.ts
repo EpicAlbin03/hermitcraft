@@ -24,7 +24,7 @@ const twitchLiveStatusSync = Effect.gen(function* () {
 			const twitchUserIds = creators
 				.map((creator) => creator.twitchUserId)
 				.filter((id) => id !== null && id !== undefined);
-			const isTwitchLiveMap = yield* twitch.areChannelsLive(twitchUserIds);
+			const isTwitchLiveMap = yield* twitch.areCreatorsLive(twitchUserIds);
 			const fullTaskName = taskName ? `${taskName}: ` : '';
 
 			yield* Effect.logInfo(`${fullTaskName}Syncing creators (twitch)`);
