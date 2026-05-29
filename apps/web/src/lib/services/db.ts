@@ -38,11 +38,11 @@ const getCurrentYtLiveVideoSortTime = (
 	).getTime();
 
 const dbService = Effect.gen(function* () {
-	const dbUrl = yield* Effect.sync(() => env.MYSQL_URL);
+	const dbUrl = yield* Effect.sync(() => env.DATABASE_URL);
 	const cache = yield* CacheService;
 
 	if (!dbUrl) {
-		return yield* Effect.die('MYSQL_URL is not set...');
+		return yield* Effect.die('DATABASE_URL is not set...');
 	}
 
 	const drizzleDb = yield* Effect.acquireRelease(
