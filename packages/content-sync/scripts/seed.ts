@@ -1,41 +1,61 @@
 #!/usr/bin/env bun
 
-import { Command, Options, Prompt } from '@effect/cli';
-import { BunContext, BunRuntime } from '@effect/platform-bun';
-import { Cause, Console, Effect, Layer, Option } from 'effect';
-import { ChannelSyncService, DbService } from '../src';
-import { color, parseOperations, selectOperations } from './utils';
-import { channels } from '../src/channels';
+import { BunRuntime, BunServices } from '@effect/platform-bun';
+import * as Console from 'effect/Console';
+import * as Effect from 'effect/Effect';
+import * as Layer from 'effect/Layer';
+import * as Option from 'effect/Option';
+import { Command, Flag, Prompt } from 'effect/unstable/cli';
+import { creators } from '../src/creators';
+import { CreatorSync } from '../src/creator-sync';
+import { contentSyncLayer } from '../src/layer';
+import { TwitchLiveStatusSync } from '../src/twitch-live-status-sync';
+import { VideoSync } from '../src/video-sync';
+import { color, ScriptError, parseOperations, selectOperations } from './utils';
 
-const id = Options.text('id').pipe(Options.withAlias('i'), Options.optional);
-const yes = Options.boolean('yes').pipe(Options.withAlias('y'));
-const all = Options.boolean('all').pipe(Options.withAlias('a'));
-const ops = Options.text('ops').pipe(Options.withAlias('o'), Options.optional);
+const mapOperationError = (name: string) =>
+	Effect.mapError((cause: unknown) => new ScriptError({ message: `Failed to run ${name}`, cause }));
 
-const command = Command.make('seed', { id, yes, all, ops }, ({ id, yes, all, ops }) =>
-	Effect.gen(function* () {
-		const channelSync = yield* ChannelSyncService;
+const command = Command.make(
+	'seed',
+	{
+		id: Flag.string('id').pipe(Flag.withAlias('i'), Flag.optional),
+		yes: Flag.boolean('yes').pipe(Flag.withAlias('y')),
+		all: Flag.boolean('all').pipe(Flag.withAlias('a')),
+		ops: Flag.string('ops').pipe(Flag.withAlias('o'), Flag.optional)
+	},
+	Effect.fn(function* ({ id, yes, all, ops }) {
+		const creatorSync = yield* CreatorSync;
+		const videoSync = yield* VideoSync;
+		const twitchLiveStatusSync = yield* TwitchLiveStatusSync;
+		const ytChannelId = Option.getOrUndefined(id);
 		const operations = parseOperations(Option.getOrUndefined(ops));
 
-		const maybeId = Option.getOrUndefined(id);
+		if (ytChannelId) {
+			const creator = creators.find((entry) => entry.ytChannelId === ytChannelId);
 
-		if (maybeId) {
+			if (!creator) {
+				return yield* new ScriptError({
+					message: `Creator ${ytChannelId} not found in the tracked creator list`
+				});
+			}
+
 			const { selected, names } = yield* selectOperations({
 				operations: {
-					channel: () => {
-						const channel = channels.find((c) => c.ytChannelId === maybeId);
-						if (!channel || !channel.ytChannelId) {
-							return Effect.die(`Channel ${maybeId} not found in channels list`);
-						}
-						return channelSync.syncChannel(channel.ytChannelId, {
-							twitchUserId: channel.twitchUserId ?? undefined,
-							twitchUserLogin: channel.twitchUserLogin ?? undefined,
-							links: channel.links ?? []
-						});
-					},
-					video: () => channelSync.syncVideo(maybeId)
+					creator: () => creatorSync.syncCreator(creator).pipe(mapOperationError('creator sync')),
+					videos: () =>
+						videoSync
+							.syncVideosForCreators([ytChannelId], {
+								taskName: 'SEED',
+								maxResults: 15
+							})
+							.pipe(mapOperationError('video sync')),
+					youtubeLiveStatus: () =>
+						videoSync
+							.refreshYtLiveStatus([ytChannelId], 'SEED')
+							.pipe(mapOperationError('YouTube live status sync'))
 				},
-				promptLabel: 'Select what to seed (channel or video)',
+				promptLabel: 'Select creator operations',
 				autoSelect: operations,
 				all
 			});
@@ -47,7 +67,8 @@ const command = Command.make('seed', { id, yes, all, ops }, ({ id, yes, all, ops
 
 			if (!yes) {
 				const confirmed = yield* Prompt.confirm({
-					message: `Sync ${names} with id "${maybeId}"?`
+					message: `Run ${names} for creator "${ytChannelId}"?`,
+					initial: false
 				});
 				if (!confirmed) {
 					yield* Console.log(color.warn('Aborted.'));
@@ -56,40 +77,36 @@ const command = Command.make('seed', { id, yes, all, ops }, ({ id, yes, all, ops
 			}
 
 			yield* Console.log(color.action(`Running operations: ${names}`));
-
-			yield* Effect.forEach(selected, ([name, sync]) =>
-				Effect.gen(function* () {
-					yield* sync();
-					yield* Console.log(color.success(`Synced ${name}: ${maybeId}`));
-				})
+			yield* Effect.forEach(selected, ([name, run]) =>
+				run().pipe(
+					Effect.tap(() => Console.log(color.success(`Completed ${name}: ${ytChannelId}`)))
+				)
 			);
-
-			if (selected.some(([name]) => name === 'channel')) {
-				yield* channelSync.syncTwitchLive();
-				yield* Console.log(color.success('Synced twitch live'));
-				yield* channelSync.syncYoutubeLive();
-				yield* Console.log(color.success('Synced youtube live'));
-			}
-
 			return;
 		}
 
-		const ytChannelIds = channels.map((c) => c.ytChannelId);
-
+		const ytChannelIds = creators.map((creator) => creator.ytChannelId);
 		const { selected, names } = yield* selectOperations({
 			operations: {
-				channels: () =>
-					channelSync.syncChannels(
-						channels.map((c) => ({
-							ytChannelId: c.ytChannelId,
-							twitchUserId: c.twitchUserId ?? undefined,
-							twitchUserLogin: c.twitchUserLogin ?? undefined,
-							links: c.links ?? []
-						}))
-					),
-				videos: () => channelSync.syncVideos(ytChannelIds, { maxResults: 15 })
+				creators: () =>
+					creatorSync.syncCreators(creators, 'SEED').pipe(mapOperationError('creator sync')),
+				videos: () =>
+					videoSync
+						.syncVideosForCreators(ytChannelIds, {
+							taskName: 'SEED',
+							maxResults: 15
+						})
+						.pipe(mapOperationError('video sync')),
+				twitchLiveStatus: () =>
+					twitchLiveStatusSync
+						.refreshTwitchLiveStatus('SEED')
+						.pipe(mapOperationError('Twitch live status sync')),
+				youtubeLiveStatus: () =>
+					videoSync
+						.refreshYtLiveStatus(ytChannelIds, 'SEED')
+						.pipe(mapOperationError('YouTube live status sync'))
 			},
-			promptLabel: 'Select tables to seed',
+			promptLabel: 'Select content sync operations',
 			autoSelect: operations,
 			all
 		});
@@ -101,9 +118,9 @@ const command = Command.make('seed', { id, yes, all, ops }, ({ id, yes, all, ops
 
 		if (!yes) {
 			const confirmed = yield* Prompt.confirm({
-				message: `Sync the following: ${names}.`
+				message: `Run the following operations: ${names}?`,
+				initial: false
 			});
-
 			if (!confirmed) {
 				yield* Console.log(color.warn('Aborted.'));
 				return;
@@ -111,45 +128,13 @@ const command = Command.make('seed', { id, yes, all, ops }, ({ id, yes, all, ops
 		}
 
 		yield* Console.log(color.action(`Running operations: ${names}`));
-
-		yield* Effect.forEach(selected, ([name, sync]) =>
-			Effect.gen(function* () {
-				yield* sync();
-				yield* Console.log(color.success(`Synced ${name}`));
-			})
+		yield* Effect.forEach(selected, ([name, run]) =>
+			run().pipe(Effect.tap(() => Console.log(color.success(`Completed ${name}`))))
 		);
-
-		if (selected.some(([name]) => name === 'channels')) {
-			yield* channelSync.syncTwitchLive();
-			yield* Console.log(color.success('Synced twitch live'));
-			yield* channelSync.syncYoutubeLive();
-			yield* Console.log(color.success('Synced youtube live'));
-		}
 	})
-);
+).pipe(Command.withDescription('Seed tracked creators and videos into the database'));
 
-const program = (args: ReadonlyArray<string>) =>
-	Effect.scoped(
-		Effect.gen(function* () {
-			yield* Command.run(command, {
-				name: '@hc/channel-sync seed',
-				version: 'INTERNAL'
-			})(args);
-		})
-	);
-
-const MainLayer = ChannelSyncService.Default.pipe(
-	Layer.provideMerge(DbService.Default),
-	Layer.provideMerge(BunContext.layer)
-);
-
-program(process.argv).pipe(
-	Effect.provide(MainLayer),
-	Effect.catchAllCause((cause) =>
-		Effect.sync(() => {
-			console.error(color.error('Seed failed:'), Cause.pretty(cause));
-			process.exit(1);
-		})
-	),
+Command.run(command, { version: 'INTERNAL' }).pipe(
+	Effect.provide(Layer.merge(contentSyncLayer, BunServices.layer)),
 	BunRuntime.runMain
 );

@@ -19,7 +19,7 @@
     "apps/bg-worker": {
       "name": "@hc/bg-worker",
       "dependencies": {
-        "@effect/platform-bun": "4.0.0-beta.68",
+        "@effect/platform-bun": "catalog:",
         "@hc/content-sync": "workspace:*",
         "effect": "catalog:",
       },
@@ -79,6 +79,7 @@
     "packages/content-sync": {
       "name": "@hc/content-sync",
       "dependencies": {
+        "@effect/platform-bun": "catalog:",
         "@hc/db": "workspace:*",
         "@twurple/api": "^8.1.4",
         "@twurple/auth": "^8.1.4",
@@ -119,6 +120,7 @@
   },
   "catalog": {
     "@effect/language-service": "^0.86.1",
+    "@effect/platform-bun": "4.0.0-beta.68",
     "@types/bun": "^1.3.14",
     "@typescript/native-preview": "^7.0.0-dev.20260421.2",
     "drizzle-orm": "1.0.0-rc.2",

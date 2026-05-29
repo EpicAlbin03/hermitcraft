@@ -1,30 +1,35 @@
 #!/usr/bin/env bun
 
-import { Command, Options, Prompt } from '@effect/cli';
-import { BunContext, BunRuntime } from '@effect/platform-bun';
-import { Console, Effect, Layer, Option } from 'effect';
-import { DbService } from '../src';
+import { BunRuntime, BunServices } from '@effect/platform-bun';
+import * as Console from 'effect/Console';
+import * as Effect from 'effect/Effect';
+import * as Layer from 'effect/Layer';
+import * as Option from 'effect/Option';
+import { Command, Flag, Prompt } from 'effect/unstable/cli';
+import { DbService } from '../src/db-service';
+import { contentSyncLayer } from '../src/layer';
 import { color, parseOperations, selectOperations } from './utils';
 
-const id = Options.text('id').pipe(Options.withAlias('i'), Options.optional);
-const yes = Options.boolean('yes').pipe(Options.withAlias('y'));
-const all = Options.boolean('all').pipe(Options.withAlias('a'));
-const ops = Options.text('ops').pipe(Options.withAlias('o'), Options.optional);
-
-const command = Command.make('wipe', { id, yes, all, ops }, ({ id, yes, all, ops }) =>
-	Effect.gen(function* () {
+const command = Command.make(
+	'wipe',
+	{
+		id: Flag.string('id').pipe(Flag.withAlias('i'), Flag.optional),
+		yes: Flag.boolean('yes').pipe(Flag.withAlias('y')),
+		all: Flag.boolean('all').pipe(Flag.withAlias('a')),
+		ops: Flag.string('ops').pipe(Flag.withAlias('o'), Flag.optional)
+	},
+	Effect.fn(function* ({ id, yes, all, ops }) {
 		const db = yield* DbService;
+		const targetId = Option.getOrUndefined(id);
 		const operations = parseOperations(Option.getOrUndefined(ops));
 
-		const maybeId = Option.getOrUndefined(id);
-
-		if (maybeId) {
+		if (targetId) {
 			const { selected, names } = yield* selectOperations({
 				operations: {
-					channel: () => db.deleteChannel(maybeId),
-					video: () => db.deleteVideo(maybeId)
+					creator: () => db.deleteCreator(targetId).pipe(Effect.asVoid),
+					video: () => db.deleteVideo(targetId).pipe(Effect.asVoid)
 				},
-				promptLabel: 'Select what to wipe (channel or video)',
+				promptLabel: 'Select what to wipe',
 				autoSelect: operations,
 				all
 			});
@@ -36,7 +41,8 @@ const command = Command.make('wipe', { id, yes, all, ops }, ({ id, yes, all, ops
 
 			if (!yes) {
 				const confirmed = yield* Prompt.confirm({
-					message: `Delete ${names} with id "${maybeId}"?`
+					message: `Delete ${names} with id "${targetId}"?`,
+					initial: false
 				});
 				if (!confirmed) {
 					yield* Console.log(color.warn('Aborted.'));
@@ -45,23 +51,18 @@ const command = Command.make('wipe', { id, yes, all, ops }, ({ id, yes, all, ops
 			}
 
 			yield* Console.log(color.action(`Running operations: ${names}`));
-
-			yield* Effect.forEach(selected, ([name, wipe]) =>
-				Effect.gen(function* () {
-					yield* wipe();
-					yield* Console.log(color.success(`Deleted ${name}: ${maybeId}`));
-				})
+			yield* Effect.forEach(selected, ([name, run]) =>
+				run().pipe(Effect.tap(() => Console.log(color.success(`Deleted ${name}: ${targetId}`))))
 			);
-
 			return;
 		}
 
 		const { selected, names } = yield* selectOperations({
 			operations: {
-				videos: () => db.deleteAllVideos(),
-				channels: () => db.deleteAllChannels()
+				videos: () => db.deleteAllVideos().pipe(Effect.asVoid),
+				creators: () => db.deleteAllCreators().pipe(Effect.asVoid)
 			},
-			promptLabel: 'Select tables to wipe',
+			promptLabel: 'Select what to wipe',
 			autoSelect: operations,
 			all
 		});
@@ -73,9 +74,9 @@ const command = Command.make('wipe', { id, yes, all, ops }, ({ id, yes, all, ops
 
 		if (!yes) {
 			const confirmed = yield* Prompt.confirm({
-				message: `Wipe the following: ${names}.`
+				message: `Wipe the following: ${names}?`,
+				initial: false
 			});
-
 			if (!confirmed) {
 				yield* Console.log(color.warn('Aborted.'));
 				return;
@@ -83,33 +84,13 @@ const command = Command.make('wipe', { id, yes, all, ops }, ({ id, yes, all, ops
 		}
 
 		yield* Console.log(color.action(`Running operations: ${names}`));
-
-		yield* Effect.forEach(selected, ([name, wipe]) =>
-			Effect.gen(function* () {
-				yield* wipe();
-				yield* Console.log(color.success(`Wiped ${name}`));
-			})
+		yield* Effect.forEach(selected, ([name, run]) =>
+			run().pipe(Effect.tap(() => Console.log(color.success(`Wiped ${name}`))))
 		);
 	})
-);
+).pipe(Command.withDescription('Delete creator and video records from the database'));
 
-const program = (args: ReadonlyArray<string>) =>
-	Effect.scoped(
-		Effect.gen(function* () {
-			yield* Command.run(command, {
-				name: '@hc/channel-sync wipe',
-				version: 'INTERNAL'
-			})(args);
-		})
-	);
-
-program(process.argv).pipe(
-	Effect.provide(DbService.Default.pipe(Layer.provideMerge(BunContext.layer))),
-	Effect.catchAllCause((cause) =>
-		Effect.sync(() => {
-			console.error(color.error('Wipe failed:'), cause);
-			process.exit(1);
-		})
-	),
+Command.run(command, { version: 'INTERNAL' }).pipe(
+	Effect.provide(Layer.merge(contentSyncLayer, BunServices.layer)),
 	BunRuntime.runMain
 );

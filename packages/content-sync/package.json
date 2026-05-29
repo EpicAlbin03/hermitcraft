@@ -15,6 +15,7 @@
 		"db:backfill": "bun run scripts/backfill.ts"
 	},
 	"dependencies": {
+		"@effect/platform-bun": "catalog:",
 		"@hc/db": "workspace:*",
 		"@twurple/api": "^8.1.4",
 		"@twurple/auth": "^8.1.4",
