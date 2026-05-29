@@ -1,20 +1,21 @@
 <script lang="ts">
-	import AppSidebar from '$lib/components/app-sidebar.svelte';
+	import AppSidebar from '$lib/components/sidebar/app-sidebar.svelte';
+	import SidebarLoading from '$lib/components/sidebar/sidebar-loading.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import ToggleMode from '$lib/components/toggle-mode.svelte';
-	import { remoteGetSidebarCreators, type SidebarCreator } from '$lib/remote/creators.remote';
+	import { remoteGetSidebarCreators } from '$lib/remote/creators.remote';
 	import { UserConfigContext } from '$lib/config/user-config.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { GithubSVG } from '$lib/assets/svg';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { InfoIcon } from '@lucide/svelte';
 	import { siteConfig } from '$lib/config/site-config';
-	import { Skeleton } from '$lib/components/ui/skeleton';
 	import ScrollToTop from '$lib/components/scroll-to-top.svelte';
 
 	let { children } = $props();
 
 	const userConfig = UserConfigContext.get();
+	const sidebarCreators = remoteGetSidebarCreators();
 </script>
 
 <Sidebar.Provider
@@ -23,27 +24,10 @@
 		userConfig.setConfig({ sidebarOpen: open });
 	}}
 >
-	{#await remoteGetSidebarCreators()}
-		<Sidebar.Root collapsible="offcanvas">
-			<Sidebar.Header>
-				<div class="px-2 pt-2">
-					<Skeleton class="h-16 w-full rounded-md" />
-				</div>
-			</Sidebar.Header>
-			<Sidebar.Content class="no-scrollbar">
-				<Sidebar.Group class="pt-0">
-					<Sidebar.Menu>
-						{#each [1, 2, 3, 4, 5, 6, 7, 8] as item (item)}
-							<Sidebar.MenuItem>
-								<Sidebar.MenuSkeleton showIcon />
-							</Sidebar.MenuItem>
-						{/each}
-					</Sidebar.Menu>
-				</Sidebar.Group>
-			</Sidebar.Content>
-		</Sidebar.Root>
+	{#await sidebarCreators}
+		<SidebarLoading />
 	{:then creators}
-		<AppSidebar creators={creators as SidebarCreator[]} />
+		<AppSidebar {creators} />
 	{/await}
 	<Sidebar.Inset>
 		<header
@@ -51,7 +35,6 @@
 		>
 			<div class="flex items-center gap-2 px-4">
 				<Sidebar.Trigger class="-ml-1" />
-				<!-- <Separator orientation="vertical" class="mr-2 data-[orientation=vertical]:h-4" /> -->
 				<a
 					href="https://www.youtube.com"
 					target="_blank"

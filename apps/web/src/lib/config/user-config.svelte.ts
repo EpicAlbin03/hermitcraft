@@ -21,23 +21,36 @@ export const userConfigSchema = z
 
 export type UserConfigType = z.infer<typeof userConfigSchema>;
 
-function parseCookie(cookie: string): Record<string, string> {
-	const cookies = cookie.split(';');
-	const cookieMap: Record<string, string> = {};
-	for (const cookie of cookies) {
-		const [key, value] = cookie.split('=');
-		if (key && value) {
-			cookieMap[key.trim()] = value;
+function parseCookie(cookie: string) {
+	return cookie.split(';').reduce<Record<string, string>>((cookieMap, cookiePart) => {
+		const [key, ...valueParts] = cookiePart.split('=');
+		if (!key || valueParts.length === 0) {
+			return cookieMap;
 		}
-	}
-	return cookieMap;
+
+		cookieMap[key.trim()] = valueParts.join('=');
+		return cookieMap;
+	}, {});
 }
 
-export function parseUserConfig(cookie: string): UserConfigType {
-	const cookieMap = parseCookie(cookie);
-	const userConfig = cookieMap[USER_CONFIG_COOKIE_NAME];
-	if (!userConfig) return userConfigSchema.parse({});
-	return userConfigSchema.parse(JSON.parse(userConfig));
+export function serializeUserConfig(config: UserConfigType) {
+	return encodeURIComponent(JSON.stringify(userConfigSchema.parse(config)));
+}
+
+export function deserializeUserConfig(value: string | undefined) {
+	if (!value) {
+		return userConfigSchema.parse({});
+	}
+
+	try {
+		return userConfigSchema.parse(JSON.parse(decodeURIComponent(value)));
+	} catch {
+		return userConfigSchema.parse({});
+	}
+}
+
+export function parseUserConfig(cookie: string) {
+	return deserializeUserConfig(parseCookie(cookie)[USER_CONFIG_COOKIE_NAME]);
 }
 
 export class UserConfig {
@@ -47,13 +60,13 @@ export class UserConfig {
 		this.#config = $state.raw(config);
 	}
 
-	get current(): UserConfigType {
+	get current() {
 		return this.#config;
 	}
 
-	setConfig(config: Partial<UserConfigType>): void {
+	setConfig(config: Partial<UserConfigType>) {
 		this.#config = { ...this.#config, ...config };
-		document.cookie = `${USER_CONFIG_COOKIE_NAME}=${JSON.stringify(this.#config)}; path=/; max-age=31536000; SameSite=Lax;`;
+		document.cookie = `${USER_CONFIG_COOKIE_NAME}=${serializeUserConfig(this.#config)}; path=/; max-age=31536000; SameSite=Lax;`;
 	}
 }
 

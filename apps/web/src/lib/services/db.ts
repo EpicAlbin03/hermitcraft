@@ -4,28 +4,29 @@ import * as Context from 'effect/Context';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
-import { and, asc, desc, eq, inArray, like } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { CacheService } from './cache';
+import {
+	buildVideoFeedWhere,
+	getVideoFeedOrderBy,
+	videoSelect,
+	videoSelectWithCreator
+} from './video-query';
+import type { VideoFilter, VideoSort } from '$lib/components/video-feed/contract';
 
 export class DbError extends Data.TaggedError('DbError')<{
 	message: string;
 	cause?: unknown;
 }> {}
 
-// Cache TTL constants (in seconds)
-// Sync frequencies: Creators daily, old videos daily, recent videos/Twitch/YT live every 2 min
 const CACHE_TTL = {
-	SIDEBAR_CREATORS: 3600, // Creator list (synced daily) - 1 hour
-	LIVE_STATUS: 120, // Twitch & YT live status (synced every 2 min)
-	CREATOR_DETAILS: 120, // Includes live status fields (synced every 2 min)
-	CREATOR_VIDEOS: 120, // Videos synced every 2 min
-	ALL_VIDEOS: 120 // Videos synced every 2 min
+	SIDEBAR_CREATORS: 120,
+	CREATOR_DETAILS: 120,
+	CREATOR_VIDEOS: 120,
+	ALL_VIDEOS: 120
 } as const;
-
-export type VideoFilter = 'videos' | 'shorts' | 'livestreams';
-export type VideoSort = 'latest' | 'most_viewed' | 'most_liked' | 'oldest';
 
 const getCurrentYtLiveVideoSortTime = (
 	video: Pick<Video, 'livestreamActualStartTime' | 'livestreamScheduledStartTime' | 'publishedAt'>
@@ -46,10 +47,7 @@ const dbService = Effect.gen(function* () {
 
 	const drizzleDb = yield* Effect.acquireRelease(
 		Effect.try({
-			try: () => {
-				const pool = new Pool({ connectionString: dbUrl });
-				return drizzle({ client: pool });
-			},
+			try: () => drizzle({ client: new Pool({ connectionString: dbUrl }) }),
 			catch: (cause) =>
 				new DbError({
 					message: 'Failed to connect to database...',
@@ -59,8 +57,7 @@ const dbService = Effect.gen(function* () {
 		(db) =>
 			Effect.gen(function* () {
 				yield* Effect.log('Releasing database connection...');
-				const pool = db.$client;
-				yield* Effect.promise(() => pool.end());
+				yield* Effect.promise(() => db.$client.end());
 			})
 	).pipe(
 		Effect.catchTag('DbError', (error) =>
@@ -83,11 +80,11 @@ const dbService = Effect.gen(function* () {
 			})
 			.from(DB_SCHEMA.videos)
 			.where(
-				and(
+				buildVideoFeedWhere(
+					'livestreams',
+					false,
 					inArray(DB_SCHEMA.videos.ytChannelId, ytChannelIds),
-					eq(DB_SCHEMA.videos.livestreamType, 'live'),
-					eq(DB_SCHEMA.videos.privacyStatus, 'public'),
-					inArray(DB_SCHEMA.videos.uploadStatus, ['uploaded', 'processed'])
+					eq(DB_SCHEMA.videos.livestreamType, 'live')
 				)
 			);
 
@@ -111,19 +108,31 @@ const dbService = Effect.gen(function* () {
 		);
 	};
 
-	const getSidebarCreators = cache.getOrSet(
-		'sidebar:creators',
+	const getSidebarCreatorsWithLiveStatus = cache.getOrSet(
+		'sidebar:creators-with-live-status',
 		Effect.tryPromise({
-			try: () =>
-				drizzleDb
+			try: async () => {
+				const creators = await drizzleDb
 					.select({
+						ytChannelId: DB_SCHEMA.creators.ytChannelId,
 						ytName: DB_SCHEMA.creators.ytName,
 						ytHandle: DB_SCHEMA.creators.ytHandle,
 						ytAvatarUrl: DB_SCHEMA.creators.ytAvatarUrl,
-						twitchUserLogin: DB_SCHEMA.creators.twitchUserLogin
+						twitchUserLogin: DB_SCHEMA.creators.twitchUserLogin,
+						isTwitchLive: DB_SCHEMA.creators.isTwitchLive
 					})
 					.from(DB_SCHEMA.creators)
-					.orderBy(DB_SCHEMA.creators.ytName),
+					.orderBy(DB_SCHEMA.creators.ytName);
+
+				const ytLiveVideoIdsByChannelId = await getCurrentYtLiveVideoIdsByChannelId(
+					creators.map((creator) => creator.ytChannelId)
+				);
+
+				return creators.map((creator) => ({
+					...creator,
+					ytLiveVideoId: ytLiveVideoIdsByChannelId.get(creator.ytChannelId) ?? null
+				}));
+			},
 			catch: (cause) =>
 				new DbError({
 					message: 'Failed to get sidebar creators',
@@ -131,40 +140,6 @@ const dbService = Effect.gen(function* () {
 				})
 		}).pipe(Effect.orDie),
 		CACHE_TTL.SIDEBAR_CREATORS
-	);
-
-	const getLiveStatus = cache.getOrSet(
-		'live:status',
-		Effect.tryPromise({
-			try: async () => {
-				const creators = await drizzleDb
-					.select({
-						ytChannelId: DB_SCHEMA.creators.ytChannelId,
-						ytHandle: DB_SCHEMA.creators.ytHandle,
-						isTwitchLive: DB_SCHEMA.creators.isTwitchLive
-					})
-					.from(DB_SCHEMA.creators);
-				const ytLiveVideoIdsByChannelId = await getCurrentYtLiveVideoIdsByChannelId(
-					creators.map((creator) => creator.ytChannelId)
-				);
-
-				return Object.fromEntries(
-					creators.map((creator) => [
-						creator.ytHandle,
-						{
-							isTwitchLive: creator.isTwitchLive,
-							ytLiveVideoId: ytLiveVideoIdsByChannelId.get(creator.ytChannelId) ?? null
-						}
-					])
-				);
-			},
-			catch: (cause) =>
-				new DbError({
-					message: 'Failed to get live status',
-					cause
-				})
-		}).pipe(Effect.orDie),
-		CACHE_TTL.LIVE_STATUS
 	);
 
 	const getCreatorByHandle = (handle: string) =>
@@ -226,73 +201,23 @@ const dbService = Effect.gen(function* () {
 		offset: number,
 		filter: VideoFilter,
 		sort: VideoSort = 'latest',
-		onlyHermitCraft: boolean = false
+		onlyHermitCraft = false
 	) =>
 		cache.getOrSet(
 			`videos:creator:${ytChannelId}:${filter}:${sort}:${onlyHermitCraft}:${limit}:${offset}`,
 			Effect.tryPromise({
 				try: () =>
 					drizzleDb
-						.select({
-							ytVideoId: DB_SCHEMA.videos.ytVideoId,
-							title: DB_SCHEMA.videos.title,
-							thumbnailUrl: DB_SCHEMA.videos.thumbnailUrl,
-							publishedAt: DB_SCHEMA.videos.publishedAt,
-							viewCount: DB_SCHEMA.videos.viewCount,
-							likeCount: DB_SCHEMA.videos.likeCount,
-							commentCount: DB_SCHEMA.videos.commentCount,
-							duration: DB_SCHEMA.videos.durationSeconds,
-							isShort: DB_SCHEMA.videos.isShort,
-							livestreamType: DB_SCHEMA.videos.livestreamType,
-							livestreamScheduledStartTime: DB_SCHEMA.videos.livestreamScheduledStartTime,
-							livestreamActualStartTime: DB_SCHEMA.videos.livestreamActualStartTime,
-							livestreamConcurrentViewers: DB_SCHEMA.videos.livestreamConcurrentViewers
-						})
+						.select(videoSelect)
 						.from(DB_SCHEMA.videos)
-						.where(() => {
-							const conditions = [
-								inArray(DB_SCHEMA.videos.uploadStatus, ['uploaded', 'processed']),
-								eq(DB_SCHEMA.videos.privacyStatus, 'public')
-							];
-
-							if (onlyHermitCraft) {
-								conditions.push(like(DB_SCHEMA.videos.title, '%hermitcraft%'));
-							}
-
-							if (filter === 'livestreams') {
-								return and(
-									eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
-									inArray(DB_SCHEMA.videos.livestreamType, ['live', 'upcoming', 'completed']),
-									...conditions
-								);
-							} else if (filter === 'shorts') {
-								return and(
-									eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
-									eq(DB_SCHEMA.videos.isShort, true),
-									...conditions
-								);
-							} else {
-								return and(
-									eq(DB_SCHEMA.videos.ytChannelId, ytChannelId),
-									eq(DB_SCHEMA.videos.livestreamType, 'none'),
-									eq(DB_SCHEMA.videos.isShort, false),
-									...conditions
-								);
-							}
-						})
-						.orderBy(() => {
-							switch (sort) {
-								case 'most_viewed':
-									return desc(DB_SCHEMA.videos.viewCount);
-								case 'most_liked':
-									return desc(DB_SCHEMA.videos.likeCount);
-								case 'oldest':
-									return asc(DB_SCHEMA.videos.publishedAt);
-								case 'latest':
-								default:
-									return desc(DB_SCHEMA.videos.publishedAt);
-							}
-						})
+						.where(
+							buildVideoFeedWhere(
+								filter,
+								onlyHermitCraft,
+								eq(DB_SCHEMA.videos.ytChannelId, ytChannelId)
+							)
+						)
+						.orderBy(getVideoFeedOrderBy(sort))
 						.limit(limit)
 						.offset(offset),
 				catch: (cause) =>
@@ -309,74 +234,21 @@ const dbService = Effect.gen(function* () {
 		offset: number,
 		filter: VideoFilter,
 		sort: VideoSort = 'latest',
-		onlyHermitCraft: boolean = false
+		onlyHermitCraft = false
 	) =>
 		cache.getOrSet(
 			`videos:all:${filter}:${sort}:${onlyHermitCraft}:${limit}:${offset}`,
 			Effect.tryPromise({
 				try: () =>
 					drizzleDb
-						.select({
-							ytVideoId: DB_SCHEMA.videos.ytVideoId,
-							title: DB_SCHEMA.videos.title,
-							thumbnailUrl: DB_SCHEMA.videos.thumbnailUrl,
-							publishedAt: DB_SCHEMA.videos.publishedAt,
-							viewCount: DB_SCHEMA.videos.viewCount,
-							likeCount: DB_SCHEMA.videos.likeCount,
-							commentCount: DB_SCHEMA.videos.commentCount,
-							duration: DB_SCHEMA.videos.durationSeconds,
-							isShort: DB_SCHEMA.videos.isShort,
-							livestreamType: DB_SCHEMA.videos.livestreamType,
-							livestreamScheduledStartTime: DB_SCHEMA.videos.livestreamScheduledStartTime,
-							livestreamActualStartTime: DB_SCHEMA.videos.livestreamActualStartTime,
-							livestreamConcurrentViewers: DB_SCHEMA.videos.livestreamConcurrentViewers,
-							creatorName: DB_SCHEMA.creators.ytName,
-							creatorAvatarUrl: DB_SCHEMA.creators.ytAvatarUrl,
-							creatorHandle: DB_SCHEMA.creators.ytHandle
-						})
+						.select(videoSelectWithCreator)
 						.from(DB_SCHEMA.videos)
 						.innerJoin(
 							DB_SCHEMA.creators,
 							eq(DB_SCHEMA.videos.ytChannelId, DB_SCHEMA.creators.ytChannelId)
 						)
-						.where(() => {
-							const conditions = [
-								inArray(DB_SCHEMA.videos.uploadStatus, ['uploaded', 'processed']),
-								eq(DB_SCHEMA.videos.privacyStatus, 'public')
-							];
-
-							if (onlyHermitCraft) {
-								conditions.push(like(DB_SCHEMA.videos.title, '%hermitcraft%'));
-							}
-
-							if (filter === 'livestreams') {
-								return and(
-									inArray(DB_SCHEMA.videos.livestreamType, ['live', 'upcoming', 'completed']),
-									...conditions
-								);
-							} else if (filter === 'shorts') {
-								return and(eq(DB_SCHEMA.videos.isShort, true), ...conditions);
-							} else {
-								return and(
-									eq(DB_SCHEMA.videos.livestreamType, 'none'),
-									eq(DB_SCHEMA.videos.isShort, false),
-									...conditions
-								);
-							}
-						})
-						.orderBy(() => {
-							switch (sort) {
-								case 'most_viewed':
-									return desc(DB_SCHEMA.videos.viewCount);
-								case 'most_liked':
-									return desc(DB_SCHEMA.videos.likeCount);
-								case 'oldest':
-									return asc(DB_SCHEMA.videos.publishedAt);
-								case 'latest':
-								default:
-									return desc(DB_SCHEMA.videos.publishedAt);
-							}
-						})
+						.where(buildVideoFeedWhere(filter, onlyHermitCraft))
+						.orderBy(getVideoFeedOrderBy(sort))
 						.limit(limit)
 						.offset(offset),
 				catch: (cause) =>
@@ -389,8 +261,7 @@ const dbService = Effect.gen(function* () {
 		);
 
 	return {
-		getSidebarCreators,
-		getLiveStatus,
+		getSidebarCreatorsWithLiveStatus,
 		getCreatorByHandle,
 		getCreatorVideos,
 		getAllVideos

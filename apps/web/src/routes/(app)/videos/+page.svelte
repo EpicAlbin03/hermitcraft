@@ -1,7 +1,6 @@
 <script lang="ts">
 	import MetaData from '$lib/components/metadata.svelte';
-	import VideoGrid from '$lib/components/video-grid.svelte';
-	import { remoteGetAllVideos, type VideoQueryParams } from '$lib/remote/creators.remote';
+	import VideoFeed from '$lib/components/video-feed/video-feed.svelte';
 
 	const title = 'Videos';
 	const description =
@@ -10,10 +9,4 @@
 
 <MetaData {title} {description} />
 
-{#key 'all-videos'}
-	<VideoGrid
-		fetchVideos={({ limit, offset, filter, sort, onlyHermitCraft }: VideoQueryParams) =>
-			remoteGetAllVideos({ limit, offset, filter, sort, onlyHermitCraft })}
-		key="all-videos"
-	/>
-{/key}
+<VideoFeed source={{ type: 'all' }} />
