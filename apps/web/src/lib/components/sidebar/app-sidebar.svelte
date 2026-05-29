@@ -53,7 +53,7 @@
 					{#snippet child({ props })}
 						<a href="/videos" {...props} onclick={closeMobileIfOpen}>
 							<enhanced:img
-								src="../../../static/hermitcraft-banner.png"
+								src="../../../../static/hermitcraft-banner.png"
 								alt="Hermitcraft"
 								class="w-48 rounded-md object-cover"
 							/>
