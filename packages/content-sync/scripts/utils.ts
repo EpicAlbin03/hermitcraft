@@ -32,23 +32,19 @@ export const parseOperations = (value?: string) =>
 		.map((item) => item.trim().toLowerCase())
 		.filter(Boolean) ?? [];
 
-export type OperationMap<T extends string, E = never, R = never> = Record<
-	T,
-	() => Effect.Effect<void, E, R>
->;
+export type OperationMap<T extends string, E = never> = Record<T, () => Effect.Effect<void, E>>;
 
 export const selectOperations = Effect.fn('selectOperations')(function* <
 	T extends string,
-	E,
-	R
+	E
 >(args: {
-	operations: OperationMap<T, E, R>;
+	operations: OperationMap<T, E>;
 	promptLabel: string;
 	autoSelect?: string[];
 	all?: boolean;
 }) {
 	if (args.all) {
-		const selected = Object.entries(args.operations) as Array<[T, () => Effect.Effect<void, E, R>]>;
+		const selected = Object.entries(args.operations) as Array<[T, () => Effect.Effect<void, E>]>;
 		const names = selected.map(([name]) => name).join(', ');
 		return { selected, names };
 	}
@@ -61,7 +57,7 @@ export const selectOperations = Effect.fn('selectOperations')(function* <
 				const handler = args.operations[key];
 				return handler ? ([key, handler] as const) : null;
 			})
-			.filter((entry): entry is [T, () => Effect.Effect<void, E, R>] => Boolean(entry));
+			.filter((entry): entry is [T, () => Effect.Effect<void, E>] => Boolean(entry));
 
 		const names = selected.map(([name]) => name).join(', ');
 		return { selected, names };
@@ -71,7 +67,7 @@ export const selectOperations = Effect.fn('selectOperations')(function* <
 		message: 'Choose specific operations?',
 		initial: false
 	});
-	let selected = Object.entries(args.operations) as Array<[T, () => Effect.Effect<void, E, R>]>;
+	let selected = Object.entries(args.operations) as Array<[T, () => Effect.Effect<void, E>]>;
 
 	if (wantsSpecific) {
 		const selection = yield* Prompt.text({
@@ -85,7 +81,7 @@ export const selectOperations = Effect.fn('selectOperations')(function* <
 				const handler = args.operations[key];
 				return handler ? ([key, handler] as const) : null;
 			})
-			.filter((entry): entry is [T, () => Effect.Effect<void, E, R>] => Boolean(entry));
+			.filter((entry): entry is [T, () => Effect.Effect<void, E>] => Boolean(entry));
 
 		if (filtered.length === 0) {
 			return { selected: [], names: '' };
@@ -96,4 +92,45 @@ export const selectOperations = Effect.fn('selectOperations')(function* <
 
 	const names = selected.map(([name]) => name).join(', ');
 	return { selected, names };
+});
+
+export const runOperationSelection = Effect.fn('runOperationSelection')(function* <
+	T extends string,
+	E
+>(args: {
+	operations: OperationMap<T, E>;
+	promptLabel: string;
+	autoSelect?: string[];
+	all?: boolean;
+	yes: boolean;
+	confirmMessage: (names: string) => string;
+	successMessage: (name: T) => string;
+}) {
+	const { selected, names } = yield* selectOperations({
+		operations: args.operations,
+		promptLabel: args.promptLabel,
+		...(args.autoSelect ? { autoSelect: args.autoSelect } : {}),
+		...(args.all ? { all: args.all } : {})
+	});
+
+	if (selected.length === 0) {
+		yield* Effect.log(color.warn('No valid selection. Aborting.'));
+		return;
+	}
+
+	if (!args.yes) {
+		const confirmed = yield* Prompt.confirm({
+			message: args.confirmMessage(names),
+			initial: false
+		});
+		if (!confirmed) {
+			yield* Effect.log(color.warn('Aborted.'));
+			return;
+		}
+	}
+
+	yield* Effect.log(color.action(`Running operations: ${names}`));
+	yield* Effect.forEach(selected, ([name, run]) =>
+		run().pipe(Effect.tap(() => Effect.log(color.success(args.successMessage(name)))))
+	);
 });

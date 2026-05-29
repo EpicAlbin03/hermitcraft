@@ -1,22 +1,28 @@
 #!/usr/bin/env bun
 
-import { BunRuntime, BunServices } from '@effect/platform-bun';
-import * as Console from 'effect/Console';
+import {
+	BunChildProcessSpawner,
+	BunFileSystem,
+	BunPath,
+	BunRuntime,
+	BunStdio,
+	BunTerminal
+} from '@effect/platform-bun';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
 import * as Option from 'effect/Option';
-import { Command, Flag, Prompt } from 'effect/unstable/cli';
+import { Command, Flag } from 'effect/unstable/cli';
 import { creators } from '../src/creators';
 import { CreatorSync } from '../src/creator-sync';
 import { contentSyncLayer } from '../src/layer';
 import { TwitchLiveStatusSync } from '../src/twitch-live-status-sync';
 import { VideoSync } from '../src/video-sync';
-import { color, ScriptError, parseOperations, selectOperations } from './utils';
+import { ScriptError, parseOperations, runOperationSelection } from './utils';
 
 const mapOperationError = (name: string) =>
 	Effect.mapError((cause: unknown) => new ScriptError({ message: `Failed to run ${name}`, cause }));
 
-const command = Command.make(
+const seedCommand = Command.make(
 	'seed',
 	{
 		id: Flag.string('id').pipe(Flag.withAlias('i'), Flag.optional),
@@ -40,7 +46,7 @@ const command = Command.make(
 				});
 			}
 
-			const { selected, names } = yield* selectOperations({
+			return yield* runOperationSelection({
 				operations: {
 					creator: () => creatorSync.syncCreator(creator).pipe(mapOperationError('creator sync')),
 					videos: () =>
@@ -57,36 +63,15 @@ const command = Command.make(
 				},
 				promptLabel: 'Select creator operations',
 				autoSelect: operations,
-				all
+				all,
+				yes,
+				confirmMessage: (names) => `Run ${names} for creator "${ytChannelId}"?`,
+				successMessage: (name) => `Completed ${name}: ${ytChannelId}`
 			});
-
-			if (selected.length === 0) {
-				yield* Console.log(color.warn('No valid selection. Aborting.'));
-				return;
-			}
-
-			if (!yes) {
-				const confirmed = yield* Prompt.confirm({
-					message: `Run ${names} for creator "${ytChannelId}"?`,
-					initial: false
-				});
-				if (!confirmed) {
-					yield* Console.log(color.warn('Aborted.'));
-					return;
-				}
-			}
-
-			yield* Console.log(color.action(`Running operations: ${names}`));
-			yield* Effect.forEach(selected, ([name, run]) =>
-				run().pipe(
-					Effect.tap(() => Console.log(color.success(`Completed ${name}: ${ytChannelId}`)))
-				)
-			);
-			return;
 		}
 
 		const ytChannelIds = creators.map((creator) => creator.ytChannelId);
-		const { selected, names } = yield* selectOperations({
+		return yield* runOperationSelection({
 			operations: {
 				creators: () =>
 					creatorSync.syncCreators(creators, 'SEED').pipe(mapOperationError('creator sync')),
@@ -108,33 +93,21 @@ const command = Command.make(
 			},
 			promptLabel: 'Select content sync operations',
 			autoSelect: operations,
-			all
+			all,
+			yes,
+			confirmMessage: (names) => `Run the following operations: ${names}?`,
+			successMessage: (name) => `Completed ${name}`
 		});
-
-		if (selected.length === 0) {
-			yield* Console.log(color.warn('No valid selection. Aborting.'));
-			return;
-		}
-
-		if (!yes) {
-			const confirmed = yield* Prompt.confirm({
-				message: `Run the following operations: ${names}?`,
-				initial: false
-			});
-			if (!confirmed) {
-				yield* Console.log(color.warn('Aborted.'));
-				return;
-			}
-		}
-
-		yield* Console.log(color.action(`Running operations: ${names}`));
-		yield* Effect.forEach(selected, ([name, run]) =>
-			run().pipe(Effect.tap(() => Console.log(color.success(`Completed ${name}`))))
-		);
 	})
 ).pipe(Command.withDescription('Seed tracked creators and videos into the database'));
 
-Command.run(command, { version: 'INTERNAL' }).pipe(
-	Effect.provide(Layer.merge(contentSyncLayer, BunServices.layer)),
+const bunCommandLayer = BunChildProcessSpawner.layer.pipe(
+	Layer.provideMerge(
+		Layer.mergeAll(BunFileSystem.layer, BunPath.layer, BunStdio.layer, BunTerminal.layer)
+	)
+);
+
+Command.run(seedCommand, { version: 'INTERNAL' }).pipe(
+	Effect.provide(Layer.merge(contentSyncLayer, bunCommandLayer)),
 	BunRuntime.runMain
 );
