@@ -1,20 +1,12 @@
 #!/usr/bin/env bun
 
-import {
-	BunChildProcessSpawner,
-	BunFileSystem,
-	BunPath,
-	BunRuntime,
-	BunStdio,
-	BunTerminal
-} from '@effect/platform-bun';
+import { BunRuntime } from '@effect/platform-bun';
 import * as Effect from 'effect/Effect';
-import * as Layer from 'effect/Layer';
 import * as Option from 'effect/Option';
 import { Command, Flag } from 'effect/unstable/cli';
 import { CreatorCatalog } from '../src/creator-catalog';
-import { contentSyncLayer } from '../src/layer';
 import { VideoSync } from '../src/video-sync';
+import { provideContentSyncCommand } from './runtime';
 import { color } from './utils';
 
 const backfillCommand = Command.make(
@@ -40,22 +32,32 @@ const backfillCommand = Command.make(
 
 		const ytChannelIds = yield* creatorCatalog.listTrackedCreatorIds();
 		yield* Effect.log(color.info(`Found ${ytChannelIds.length} tracked creators to backfill.`));
-		yield* videoSync.syncVideosForCreators(ytChannelIds, {
-			backfill: true,
-			taskName: 'BACKFILL',
-			maxResults: 100
-		});
-		yield* Effect.log(color.success(`Backfilled ${ytChannelIds.length} tracked creators.`));
+		yield* Effect.forEach(
+			ytChannelIds,
+			(currentYtChannelId) =>
+				videoSync
+					.syncVideosForCreators([currentYtChannelId], {
+						backfill: true,
+						taskName: 'BACKFILL',
+						maxResults: 100
+					})
+					.pipe(
+						Effect.tap(() =>
+							Effect.log(color.success(`Backfilled creator: ${currentYtChannelId}`))
+						),
+						Effect.catch((error) =>
+							Effect.logError(
+								color.error(`Failed to backfill creator: ${currentYtChannelId}`),
+								error
+							)
+						)
+					),
+			{ concurrency: 5 }
+		);
+		yield* Effect.log(
+			color.success(`Finished backfill run for ${ytChannelIds.length} tracked creators.`)
+		);
 	})
 ).pipe(Command.withDescription('Backfill videos for tracked creators'));
 
-const bunCommandLayer = BunChildProcessSpawner.layer.pipe(
-	Layer.provideMerge(
-		Layer.mergeAll(BunFileSystem.layer, BunPath.layer, BunStdio.layer, BunTerminal.layer)
-	)
-);
-
-Command.run(backfillCommand, { version: 'INTERNAL' }).pipe(
-	Effect.provide(Layer.merge(contentSyncLayer, bunCommandLayer)),
-	BunRuntime.runMain
-);
+BunRuntime.runMain(provideContentSyncCommand(backfillCommand));

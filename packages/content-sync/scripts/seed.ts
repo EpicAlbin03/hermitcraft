@@ -1,26 +1,81 @@
 #!/usr/bin/env bun
 
-import {
-	BunChildProcessSpawner,
-	BunFileSystem,
-	BunPath,
-	BunRuntime,
-	BunStdio,
-	BunTerminal
-} from '@effect/platform-bun';
+import { BunRuntime } from '@effect/platform-bun';
 import * as Effect from 'effect/Effect';
-import * as Layer from 'effect/Layer';
 import * as Option from 'effect/Option';
 import { Command, Flag } from 'effect/unstable/cli';
 import { creators } from '../src/creators';
 import { CreatorSync } from '../src/creator-sync';
-import { contentSyncLayer } from '../src/layer';
 import { TwitchLiveStatusSync } from '../src/twitch-live-status-sync';
 import { VideoSync } from '../src/video-sync';
-import { ScriptError, parseOperations, runOperationSelection } from './utils';
+import { provideContentSyncCommand } from './runtime';
+import { ScriptError, parseOperations, runOperationSelection, type OperationMap } from './utils';
 
 const mapOperationError = (name: string) =>
 	Effect.mapError((cause: unknown) => new ScriptError({ message: `Failed to run ${name}`, cause }));
+
+type CreatorSyncService = Effect.Success<typeof CreatorSync>;
+type VideoSyncService = Effect.Success<typeof VideoSync>;
+type TwitchLiveStatusSyncService = Effect.Success<typeof TwitchLiveStatusSync>;
+
+const createMultiCreatorVideoOperations = (
+	videoSync: VideoSyncService,
+	ytChannelIds: string[]
+) => ({
+	videos: () =>
+		videoSync
+			.syncVideosForCreators(ytChannelIds, {
+				taskName: 'SEED',
+				maxResults: 15
+			})
+			.pipe(mapOperationError('video sync')),
+	youtubeLiveStatus: () =>
+		videoSync
+			.refreshYtLiveStatus(ytChannelIds, 'SEED')
+			.pipe(mapOperationError('YouTube live status sync'))
+});
+
+const createSingleCreatorOperations = (args: {
+	creatorSync: CreatorSyncService;
+	videoSync: VideoSyncService;
+	creator: (typeof creators)[number];
+}) =>
+	({
+		creator: () =>
+			args.creatorSync.syncCreator(args.creator).pipe(mapOperationError('creator sync')),
+		videos: () =>
+			args.videoSync
+				.syncVideosForCreators([args.creator.ytChannelId], {
+					taskName: 'SEED',
+					maxResults: 15
+				})
+				.pipe(mapOperationError('video sync')),
+		youtubeLiveStatus: () =>
+			args.videoSync
+				.refreshYtLiveStatus([args.creator.ytChannelId], 'SEED')
+				.pipe(mapOperationError('YouTube live status sync'))
+	}) satisfies OperationMap<'creator' | 'videos' | 'youtubeLiveStatus', ScriptError>;
+
+const createAllCreatorOperations = (args: {
+	creatorSync: CreatorSyncService;
+	videoSync: VideoSyncService;
+	twitchLiveStatusSync: TwitchLiveStatusSyncService;
+}) => {
+	const ytChannelIds = creators.map((creator) => creator.ytChannelId);
+
+	return {
+		creators: () =>
+			args.creatorSync.syncCreators(creators, 'SEED').pipe(mapOperationError('creator sync')),
+		...createMultiCreatorVideoOperations(args.videoSync, ytChannelIds),
+		twitchLiveStatus: () =>
+			args.twitchLiveStatusSync
+				.refreshTwitchLiveStatus('SEED')
+				.pipe(mapOperationError('Twitch live status sync'))
+	} satisfies OperationMap<
+		'creators' | 'videos' | 'twitchLiveStatus' | 'youtubeLiveStatus',
+		ScriptError
+	>;
+};
 
 const seedCommand = Command.make(
 	'seed',
@@ -47,20 +102,7 @@ const seedCommand = Command.make(
 			}
 
 			return yield* runOperationSelection({
-				operations: {
-					creator: () => creatorSync.syncCreator(creator).pipe(mapOperationError('creator sync')),
-					videos: () =>
-						videoSync
-							.syncVideosForCreators([ytChannelId], {
-								taskName: 'SEED',
-								maxResults: 15
-							})
-							.pipe(mapOperationError('video sync')),
-					youtubeLiveStatus: () =>
-						videoSync
-							.refreshYtLiveStatus([ytChannelId], 'SEED')
-							.pipe(mapOperationError('YouTube live status sync'))
-				},
+				operations: createSingleCreatorOperations({ creatorSync, videoSync, creator }),
 				promptLabel: 'Select creator operations',
 				autoSelect: operations,
 				all,
@@ -70,27 +112,8 @@ const seedCommand = Command.make(
 			});
 		}
 
-		const ytChannelIds = creators.map((creator) => creator.ytChannelId);
 		return yield* runOperationSelection({
-			operations: {
-				creators: () =>
-					creatorSync.syncCreators(creators, 'SEED').pipe(mapOperationError('creator sync')),
-				videos: () =>
-					videoSync
-						.syncVideosForCreators(ytChannelIds, {
-							taskName: 'SEED',
-							maxResults: 15
-						})
-						.pipe(mapOperationError('video sync')),
-				twitchLiveStatus: () =>
-					twitchLiveStatusSync
-						.refreshTwitchLiveStatus('SEED')
-						.pipe(mapOperationError('Twitch live status sync')),
-				youtubeLiveStatus: () =>
-					videoSync
-						.refreshYtLiveStatus(ytChannelIds, 'SEED')
-						.pipe(mapOperationError('YouTube live status sync'))
-			},
+			operations: createAllCreatorOperations({ creatorSync, videoSync, twitchLiveStatusSync }),
 			promptLabel: 'Select content sync operations',
 			autoSelect: operations,
 			all,
@@ -101,13 +124,4 @@ const seedCommand = Command.make(
 	})
 ).pipe(Command.withDescription('Seed tracked creators and videos into the database'));
 
-const bunCommandLayer = BunChildProcessSpawner.layer.pipe(
-	Layer.provideMerge(
-		Layer.mergeAll(BunFileSystem.layer, BunPath.layer, BunStdio.layer, BunTerminal.layer)
-	)
-);
-
-Command.run(seedCommand, { version: 'INTERNAL' }).pipe(
-	Effect.provide(Layer.merge(contentSyncLayer, bunCommandLayer)),
-	BunRuntime.runMain
-);
+BunRuntime.runMain(provideContentSyncCommand(seedCommand));

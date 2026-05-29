@@ -1,19 +1,11 @@
 #!/usr/bin/env bun
 
-import {
-	BunChildProcessSpawner,
-	BunFileSystem,
-	BunPath,
-	BunRuntime,
-	BunStdio,
-	BunTerminal
-} from '@effect/platform-bun';
+import { BunRuntime } from '@effect/platform-bun';
 import * as Effect from 'effect/Effect';
-import * as Layer from 'effect/Layer';
 import * as Option from 'effect/Option';
 import { Command, Flag } from 'effect/unstable/cli';
 import { DbService } from '../src/db-service';
-import { contentSyncLayer } from '../src/layer';
+import { provideContentSyncCommand } from './runtime';
 import { parseOperations, runOperationSelection } from './utils';
 
 const wipeCommand = Command.make(
@@ -59,13 +51,4 @@ const wipeCommand = Command.make(
 	})
 ).pipe(Command.withDescription('Delete creator and video records from the database'));
 
-const bunCommandLayer = BunChildProcessSpawner.layer.pipe(
-	Layer.provideMerge(
-		Layer.mergeAll(BunFileSystem.layer, BunPath.layer, BunStdio.layer, BunTerminal.layer)
-	)
-);
-
-Command.run(wipeCommand, { version: 'INTERNAL' }).pipe(
-	Effect.provide(Layer.merge(contentSyncLayer, bunCommandLayer)),
-	BunRuntime.runMain
-);
+BunRuntime.runMain(provideContentSyncCommand(wipeCommand));
