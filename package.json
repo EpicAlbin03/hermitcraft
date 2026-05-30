@@ -13,7 +13,7 @@
     "lint": "turbo run lint",
     "format": "turbo run format",
     "prepare": "effect-language-service patch",
-    "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules .turbo apps/*/.turbo packages/*/.turbo"
+    "clean": "bash -lc \"find . -type d \\( -name node_modules -o -name build -o -name .turbo -o -name .svelte-kit \\) -exec rm -rf {} +\""
   },
   "workspaces": {
     "packages": [
