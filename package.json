@@ -9,17 +9,26 @@
       "packages/*"
     ],
     "catalog": {
-      "@effect/language-service": "^0.86.1",
-      "@effect/platform-bun": "4.0.0-beta.68",
       "@types/bun": "^1.3.14",
-      "@typescript/native-preview": "^7.0.0-dev.20260421.2",
-      "drizzle-orm": "1.0.0-rc.2",
-      "effect": "4.0.0-beta.68",
-      "prettier": "^3.8.3",
-      "typescript": "npm:@typescript/typescript6@^6.0.1"
+      "typescript": "^5.9.3",
+      "prettier": "^3.8.3"
+    },
+    "catalogs": {
+      "svelte": {
+        "prettier-plugin-svelte": "^4.0.1",
+        "prettier-plugin-tailwindcss": "^0.8.0"
+      },
+      "effect": {
+        "@effect/language-service": "^0.86.2",
+        "@effect/platform-bun": "^0.89.0",
+        "effect": "^3.21.2"
+      },
+      "db": {
+        "drizzle-orm": "^0.45.2"
+      }
     }
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "turbo": "^2.9.14"
   }
 }

@@ -1,0 +1,8 @@
+{
+  "name": "@hc/db",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@hc/ts-config": "workspace:*"
+  }
+}

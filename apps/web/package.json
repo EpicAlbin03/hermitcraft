@@ -1,0 +1,8 @@
+{
+  "name": "@hc/web",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@hc/ts-config": "workspace:*"
+  }
+}

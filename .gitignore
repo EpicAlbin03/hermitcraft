@@ -1,34 +1,56 @@
-# dependencies (bun install)
+# Dependencies
 node_modules
+.pnp
+.pnp.js
 
-# output
-out
-dist
-*.tgz
+# Env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# code coverage
+# Coverage
 coverage
 *.lcov
 
-# logs
+# Turbo
+.turbo
+
+# Build Outputs
+out
+build
+dist
+*.tgz
+.output
+.vercel
+.netlify
+.wrangler
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+.idea
+*.pem
+
+# Logs
 logs
 _.log
 report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
-# caches
+# Caches
 .eslintcache
 .cache
 *.tsbuildinfo
 
-# IntelliJ based IDEs
-.idea
-
-# Finder (MacOS) folder config
-.DS_Store
+# Svelte
+.svelte-kit
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
