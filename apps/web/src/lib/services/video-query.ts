@@ -1,5 +1,5 @@
 import { DB_SCHEMA } from '@hc/db/schema';
-import { and, asc, desc, eq, inArray, like, type SQLWrapper } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, type SQLWrapper } from 'drizzle-orm';
 import type { VideoFilter, VideoSort } from '$lib/components/video-feed/contract';
 
 const PUBLIC_UPLOAD_STATUSES = ['uploaded', 'processed'] as const;
@@ -35,7 +35,7 @@ function getPublicVideoConditions(onlyHermitCraft: boolean) {
 	];
 
 	if (onlyHermitCraft) {
-		conditions.push(like(DB_SCHEMA.videos.title, '%hermitcraft%'));
+		conditions.push(ilike(DB_SCHEMA.videos.title, '%hermitcraft%'));
 	}
 
 	return conditions;
