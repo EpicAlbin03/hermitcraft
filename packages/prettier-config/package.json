@@ -1,0 +1,14 @@
+{
+  "name": "@hc/prettier-config",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./base": "./base.ts",
+    "./svelte": "./svelte.ts"
+  },
+  "devDependencies": {
+    "prettier": "catalog:prettier",
+    "prettier-plugin-tailwindcss": "catalog:prettier",
+    "prettier-plugin-svelte": "catalog:prettier"
+  }
+}

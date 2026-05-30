@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "devDependencies": {
-    "@hc/ts-config": "workspace:*"
+    "@hc/prettier-config": "workspace:*",
+    "prettier": "catalog:prettier"
   }
 }

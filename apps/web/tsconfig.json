@@ -1,4 +1,7 @@
 {
-  "extends": ["@hc/ts-config/svelte.json", "./.svelte-kit/tsconfig.json"],
+  "extends": [
+    "../../packages/ts-config/svelte.json",
+    "./.svelte-kit/tsconfig.json"
+  ],
   "exclude": ["node_modules", "build", ".turbo"]
 }
