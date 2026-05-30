@@ -10,11 +10,13 @@
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
+		"db:export-json": "bun run scripts/export-json.ts",
 		"check": "tsgo --noEmit",
 		"format": "prettier --ignore-path ../../.prettierignore --write .",
 		"lint": "prettier --ignore-path ../../.prettierignore --check ."
 	},
 	"dependencies": {
+		"@effect/platform-bun": "4.0.0-beta.68",
 		"@effect/sql-pg": "4.0.0-beta.68",
 		"drizzle-orm": "catalog:",
 		"effect": "catalog:",
