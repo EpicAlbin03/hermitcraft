@@ -19,6 +19,7 @@
     "@sveltejs/enhanced-img": "catalog:svelte",
     "@sveltejs/kit": "catalog:svelte",
     "@sveltejs/vite-plugin-svelte": "catalog:svelte",
+    "@tailwindcss/vite": "catalog:svelte",
     "@types/bun": "catalog:base",
     "eslint": "catalog:eslint",
     "eslint-plugin-svelte": "catalog:eslint",
