@@ -26,6 +26,13 @@
 	} from './remote';
 	import VideoFeedToolbar from './video-feed-toolbar.svelte';
 	import VideoCard from './video-card.svelte';
+	import {
+		getBatchSizeForColumns,
+		getColumnsForWidth,
+		getFallbackVideoColumns,
+		getVideoGridTemplate,
+		getVideoSizes
+	} from './layout';
 
 	type Props = {
 		source: VideoFeedSource;
@@ -36,11 +43,6 @@
 
 	const userConfig = UserConfigContext.get();
 	let onlyHermitCraft = $derived(userConfig.current.onlyHermitCraft);
-
-	const VIDEO_CARD_MIN_WIDTH = 260;
-	const VIDEO_CARD_MAX_WIDTH = 420;
-	const VIDEO_CARD_MAX_COLUMNS = 6;
-	const ROWS_PER_BATCH = 3;
 
 	let videoGridElement = $state<HTMLElement | null>(null);
 	let sentinelElement = $state<HTMLElement | null>(null);
@@ -98,65 +100,29 @@
 		}
 	);
 
-	const fallbackVideoColumnsByBreakpoint = $derived({
-		xs: 1,
-		sm: 2,
-		md: shouldReserveSidebarSpace ? 1 : 2,
-		lg: shouldReserveSidebarSpace ? 2 : 3,
-		xl: shouldReserveSidebarSpace ? 3 : 4,
-		'2xl': shouldReserveSidebarSpace ? 5 : 6
-	});
 	const fallbackVideoColumns = $derived(
-		fallbackVideoColumnsByBreakpoint[isTailwindBreakpoint] ?? 1
+		getFallbackVideoColumns(isTailwindBreakpoint, shouldReserveSidebarSpace)
 	);
 
-	function getColumnsForWidth(width: number) {
-		if (width <= 0) {
-			return fallbackVideoColumns;
-		}
-
-		for (let columns = VIDEO_CARD_MAX_COLUMNS; columns >= 1; columns--) {
-			const totalGap = Math.max(0, columns - 1) * videoGridGap;
-			const cardWidth = (width - totalGap) / columns;
-			if (cardWidth >= VIDEO_CARD_MIN_WIDTH && cardWidth <= VIDEO_CARD_MAX_WIDTH) {
-				return columns;
-			}
-		}
-
-		const widestWidth =
-			(width - Math.max(0, VIDEO_CARD_MAX_COLUMNS - 1) * videoGridGap) / VIDEO_CARD_MAX_COLUMNS;
-		if (widestWidth > VIDEO_CARD_MAX_WIDTH) {
-			return VIDEO_CARD_MAX_COLUMNS;
-		}
-
-		const estimatedColumns = Math.floor(
-			(width + videoGridGap) / (VIDEO_CARD_MIN_WIDTH + videoGridGap)
-		);
-		return Math.max(1, Math.min(estimatedColumns, VIDEO_CARD_MAX_COLUMNS));
-	}
-
-	const videoColumnCount = $derived(Math.max(1, getColumnsForWidth(videoGridWidth)));
-
-	function getBatchSizeForColumns(columns: number, loadedCount: number) {
-		const safeColumns = Math.max(1, columns);
-		const baselineRows = safeColumns >= 3 ? ROWS_PER_BATCH : ROWS_PER_BATCH + 1;
-		const baselineBatchSize = safeColumns * baselineRows;
-		const remainder = loadedCount % safeColumns;
-		return remainder === 0 ? baselineBatchSize : baselineBatchSize - remainder;
-	}
+	const videoColumnCount = $derived(
+		Math.max(
+			1,
+			getColumnsForWidth({
+				width: videoGridWidth,
+				gap: videoGridGap,
+				fallbackColumns: fallbackVideoColumns
+			})
+		)
+	);
 
 	const currentTabLabel = $derived(videoFilterLabels[activeFilter]);
 	const rowsVisibleOnLoad = $derived(creator ? 2 : 3);
-	const videoGridTemplate = $derived(`repeat(${Math.max(1, videoColumnCount)}, minmax(0, 1fr))`);
+	const videoGridTemplate = $derived(getVideoGridTemplate(videoColumnCount));
 	const videoSizes = $derived(
-		[
-			`(min-width: 1536px) calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint['2xl']})`,
-			`(min-width: 1280px) calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint.xl})`,
-			`(min-width: 1024px) calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint.lg})`,
-			`(min-width: 768px) calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint.md})`,
-			`(min-width: 640px) calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint.sm})`,
-			`calc(${contentWidthRaw} / ${fallbackVideoColumnsByBreakpoint.xs})`
-		].join(', ')
+		getVideoSizes({
+			contentWidthRaw,
+			shouldReserveSidebarSpace
+		})
 	);
 
 	function updateBrowseUrl(mutate: (url: URL) => void) {
