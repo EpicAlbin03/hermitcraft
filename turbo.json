@@ -7,11 +7,14 @@
       "inputs": ["$TURBO_DEFAULT$"],
       "outputs": ["build/**"]
     },
+    "check": {
+      "dependsOn": ["^check"]
+    },
     "lint": {
       "dependsOn": ["^lint"]
     },
-    "check": {
-      "dependsOn": ["^check"]
+    "format": {
+      "dependsOn": ["^format"]
     },
     "dev": {
       "cache": false,

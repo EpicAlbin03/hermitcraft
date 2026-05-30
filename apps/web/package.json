@@ -2,15 +2,33 @@
   "name": "@hc/web",
   "private": true,
   "type": "module",
+  "scripts": {
+		"dev": "bunx --bun vite dev",
+		"build": "bunx --bun vite build",
+		"preview": "bunx --bun vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && bun run check:ts",
+		"check:ts": "tsc --noEmit",
+		"lint": "prettier --ignore-path ../../.prettierignore --check . && eslint .",
+		"format": "prettier --ignore-path ../../.prettierignore --write ."
+	},
   "devDependencies": {
     "@hc/eslint-config": "workspace:*",
     "@hc/prettier-config": "workspace:*",
     "@sveltejs/adapter-auto": "catalog:svelte",
+    "@sveltejs/enhanced-img": "catalog:svelte",
+    "@sveltejs/kit": "catalog:svelte",
+    "@sveltejs/vite-plugin-svelte": "catalog:svelte",
     "@types/bun": "catalog:base",
     "eslint": "catalog:eslint",
     "eslint-plugin-svelte": "catalog:eslint",
     "mdsvex": "catalog:svelte",
     "prettier": "catalog:prettier",
-    "typescript": "catalog:base"
+    "typescript": "catalog:base",
+    "mode-watcher": "catalog:svelte",
+    "runed": "catalog:svelte",
+    "svelte": "catalog:svelte",
+    "svelte-check": "catalog:svelte",
+    "vite": "catalog:svelte"
   }
 }

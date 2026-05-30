@@ -2,6 +2,11 @@
   "name": "@hc/db",
   "private": true,
   "type": "module",
+  "scripts": {
+		"check": "tsgo --noEmit",
+		"lint": "prettier --ignore-path ../../.prettierignore --check . && eslint .",
+		"format": "prettier --ignore-path ../../.prettierignore --write ."
+	},
   "devDependencies": {
     "@hc/eslint-config": "workspace:*",
     "@hc/prettier-config": "workspace:*",
