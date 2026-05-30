@@ -8,7 +8,6 @@
 	<div class="flex flex-wrap items-center gap-2">
 		<Skeleton class="h-9 w-20 rounded-md" />
 		<Skeleton class="h-9 w-20 rounded-md" />
-		<Skeleton class="h-9 w-20 rounded-md" />
 		<Skeleton class="h-9 w-24 rounded-md" />
 	</div>
 

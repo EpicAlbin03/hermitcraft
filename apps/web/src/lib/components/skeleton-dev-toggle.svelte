@@ -11,7 +11,7 @@
 	<Button
 		variant={skeletonsEnabled ? 'default' : 'secondary'}
 		size="sm"
-		class="fixed right-1 bottom-9 z-50 shadow-md"
+		class="fixed right-8 bottom-1 z-50 shadow-md"
 		onclick={() => skeletonDevTools.toggle()}
 	>
 		Skeletons: {skeletonsEnabled ? 'On' : 'Off'}
