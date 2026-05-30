@@ -1,0 +1,24 @@
+# Package Managers
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+bun.lockb
+
+# Build outputs
+dist
+build
+drizzle
+
+# Dependencies
+node_modules
+
+# Misc
+.agents
+.turbo
+
+# Svelte
+static
+.svelte-kit
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*

@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "devDependencies": {
+    "@hc/eslint-config": "workspace:*",
     "@hc/prettier-config": "workspace:*",
+    "eslint": "catalog:eslint",
     "prettier": "catalog:prettier"
   }
 }

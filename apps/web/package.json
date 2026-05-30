@@ -3,7 +3,12 @@
   "private": true,
   "type": "module",
   "devDependencies": {
+    "@hc/eslint-config": "workspace:*",
     "@hc/prettier-config": "workspace:*",
-    "prettier": "catalog:prettier"
+    "eslint": "catalog:eslint",
+    "eslint-plugin-svelte": "catalog:eslint",
+    "mdsvex": "catalog:svelte",
+    "prettier": "catalog:prettier",
+    "@sveltejs/adapter-auto": "catalog:svelte"
   }
 }
