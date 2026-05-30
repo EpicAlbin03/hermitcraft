@@ -24,12 +24,12 @@
     "eslint": "catalog:eslint",
     "eslint-plugin-svelte": "catalog:eslint",
     "mdsvex": "catalog:svelte",
-    "prettier": "catalog:prettier",
-    "typescript": "catalog:base",
     "mode-watcher": "catalog:svelte",
+    "prettier": "catalog:prettier",
     "runed": "catalog:svelte",
     "svelte": "catalog:svelte",
     "svelte-check": "catalog:svelte",
+    "typescript": "catalog:base",
     "vite": "catalog:svelte"
   }
 }

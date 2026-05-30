@@ -9,6 +9,7 @@ export default defineConfig(
   {
     languageOptions: {
       parserOptions: {
+        tsconfigRootDir: import.meta.dirname,
         svelteConfig,
       },
     },

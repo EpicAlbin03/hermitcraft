@@ -4,6 +4,13 @@ import baseConfig from "@hc/eslint-config/base";
 export default defineConfig(
   baseConfig,
   {
+    languageOptions: {
+      parserOptions: {
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
     ignores: ["node_modules", "dist", "build", ".turbo"],
   },
 );

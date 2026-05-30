@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-		"check": "tsgo --noEmit",
+		"check": "tsc --noEmit",
 		"lint": "prettier --ignore-path ../../.prettierignore --check . && eslint .",
 		"format": "prettier --ignore-path ../../.prettierignore --write ."
 	},

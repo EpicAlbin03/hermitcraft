@@ -85,6 +85,8 @@
     }
   },
   "devDependencies": {
-    "turbo": "^2.9.14"
+    "@effect/language-service": "catalog:effect",
+    "turbo": "^2.9.14",
+    "typescript": "catalog:base"
   }
 }
