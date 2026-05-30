@@ -15,7 +15,6 @@
 	let { children } = $props();
 
 	const userConfig = UserConfigContext.get();
-	const sidebarCreators = remoteGetSidebarCreators();
 </script>
 
 <Sidebar.Provider
@@ -24,11 +23,14 @@
 		userConfig.setConfig({ sidebarOpen: open });
 	}}
 >
-	{#await sidebarCreators}
-		<SidebarLoading />
-	{:then creators}
+	<svelte:boundary>
+		{@const creators = await remoteGetSidebarCreators()}
 		<AppSidebar {creators} />
-	{/await}
+
+		{#snippet pending()}
+			<SidebarLoading />
+		{/snippet}
+	</svelte:boundary>
 	<Sidebar.Inset>
 		<header
 			class="flex h-16 shrink-0 items-center justify-between gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12"

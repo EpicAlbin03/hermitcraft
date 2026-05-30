@@ -10,19 +10,17 @@
 	let { params }: PageProps = $props();
 
 	const handle = $derived(params.handle);
-	const creatorDetails = $derived(remoteGetCreatorDetails(handle));
 </script>
 
 <svelte:boundary>
-	{#await creatorDetails then creator}
-		<MetaData
-			title={creator.ytName}
-			description={`Watch the latest Hermitcraft Minecraft videos and episodes from ${creator.ytName}.`}
-		/>
+	{@const creator = await remoteGetCreatorDetails(handle)}
+	<MetaData
+		title={creator.ytName}
+		description={`Watch the latest Hermitcraft Minecraft videos and episodes from ${creator.ytName}.`}
+	/>
 
-		<CreatorHeader {creator} {handle} />
-		<VideoFeed source={{ type: 'creator', ytChannelId: creator.ytChannelId }} {creator} />
-	{/await}
+	<CreatorHeader {creator} {handle} />
+	<VideoFeed source={{ type: 'creator', ytChannelId: creator.ytChannelId }} {creator} />
 
 	{#snippet pending()}
 		<div class="space-y-6">
