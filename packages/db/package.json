@@ -5,7 +5,9 @@
   "devDependencies": {
     "@hc/eslint-config": "workspace:*",
     "@hc/prettier-config": "workspace:*",
+    "@types/bun": "catalog:base",
     "eslint": "catalog:eslint",
-    "prettier": "catalog:prettier"
+    "prettier": "catalog:prettier",
+    "typescript": "catalog:base"
   }
 }

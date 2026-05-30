@@ -5,10 +5,12 @@
   "devDependencies": {
     "@hc/eslint-config": "workspace:*",
     "@hc/prettier-config": "workspace:*",
+    "@sveltejs/adapter-auto": "catalog:svelte",
+    "@types/bun": "catalog:base",
     "eslint": "catalog:eslint",
     "eslint-plugin-svelte": "catalog:eslint",
     "mdsvex": "catalog:svelte",
     "prettier": "catalog:prettier",
-    "@sveltejs/adapter-auto": "catalog:svelte"
+    "typescript": "catalog:base"
   }
 }
