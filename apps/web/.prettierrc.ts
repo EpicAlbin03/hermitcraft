@@ -1,8 +1,8 @@
 import { type Config } from "prettier";
-import baseConfig from "@hc/prettier-config/base";
+import svelteBaseConfig from "@hc/prettier-config/svelte";
 
 const config: Config = {
-  ...baseConfig,
+  ...svelteBaseConfig,
   tailwindStylesheet: "./src/routes/layout.css",
 };
 

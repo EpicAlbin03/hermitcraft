@@ -1,10 +1,10 @@
 import svelte from "eslint-plugin-svelte";
 import { defineConfig } from "eslint/config";
 import svelteConfig from "./svelte.config.js";
-import baseConfig from "@hc/eslint-config/base";
+import svelteBaseConfig from "@hc/eslint-config/svelte";
 
 export default defineConfig(
-  baseConfig,
+  svelteBaseConfig,
   ...svelte.configs["flat/prettier"],
   {
     languageOptions: {
