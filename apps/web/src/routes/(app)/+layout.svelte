@@ -1,6 +1,5 @@
 <script lang="ts">
 	import AppSidebar from '$lib/components/sidebar/app-sidebar.svelte';
-	import SidebarLoading from '$lib/components/sidebar/sidebar-loading.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import ToggleMode from '$lib/components/toggle-mode.svelte';
 	import { remoteGetSidebarCreators } from '$lib/remote/creators.remote';
@@ -26,10 +25,6 @@
 	<svelte:boundary>
 		{@const creators = await remoteGetSidebarCreators()}
 		<AppSidebar {creators} />
-
-		{#snippet pending()}
-			<SidebarLoading />
-		{/snippet}
 	</svelte:boundary>
 	<Sidebar.Inset>
 		<header

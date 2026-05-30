@@ -98,6 +98,7 @@
     "packages/db": {
       "name": "@hc/db",
       "dependencies": {
+        "@effect/platform-bun": "4.0.0-beta.68",
         "@effect/sql-pg": "4.0.0-beta.68",
         "drizzle-orm": "catalog:",
         "effect": "catalog:",
