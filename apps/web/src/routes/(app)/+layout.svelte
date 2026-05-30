@@ -14,6 +14,7 @@
 	let { children } = $props();
 
 	const userConfig = UserConfigContext.get();
+	const creators = $derived(await remoteGetSidebarCreators());
 </script>
 
 <Sidebar.Provider
@@ -23,7 +24,6 @@
 	}}
 >
 	<svelte:boundary>
-		{@const creators = await remoteGetSidebarCreators()}
 		<AppSidebar {creators} />
 	</svelte:boundary>
 	<Sidebar.Inset>

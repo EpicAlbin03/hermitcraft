@@ -8,10 +8,10 @@
 	let { params }: PageProps = $props();
 
 	const handle = $derived(params.handle);
+	const creator = $derived(await remoteGetCreatorDetails(handle));
 </script>
 
 <svelte:boundary>
-	{@const creator = await remoteGetCreatorDetails(handle)}
 	<MetaData
 		title={creator.ytName}
 		description={`Watch the latest Hermitcraft Minecraft videos and episodes from ${creator.ytName}.`}
