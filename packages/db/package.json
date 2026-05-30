@@ -15,7 +15,7 @@
 		"lint": "prettier --ignore-path ../../.prettierignore --check ."
 	},
 	"dependencies": {
-		"@effect/sql-pg": "4.0.0-beta.66",
+		"@effect/sql-pg": "4.0.0-beta.68",
 		"drizzle-orm": "catalog:",
 		"effect": "catalog:",
 		"pg": "^8.20.0"
