@@ -27,8 +27,8 @@
       },
       "effect": {
         "@effect/language-service": "^0.87.0",
-        "@effect/platform-bun": "^0.91.0",
-        "effect": "^3.22.0"
+        "@effect/platform-bun": "^4.0.0-beta.99",
+        "effect": "^4.0.0-beta.99"
       },
       "eslint": {
         "@eslint/js": "^10.0.1",
@@ -45,7 +45,7 @@
         "prettier-plugin-tailwindcss": "^0.8.1"
       },
       "db": {
-        "@effect/sql-pg": "^0.53.0",
+        "@effect/sql-pg": "^4.0.0-beta.99",
         "@types/pg": "^8.20.0",
         "drizzle-kit": "^0.31.10",
         "drizzle-orm": "^0.45.2",
