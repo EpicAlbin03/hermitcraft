@@ -12,6 +12,7 @@
     "check": "turbo run check",
     "lint": "turbo run lint",
     "format": "turbo run format",
+    "prepare": "effect-language-service patch",
     "clean": "bash -lc \"find . -type d \\( -name node_modules -o -name build -o -name .turbo -o -name .tsbuildinfo -o -name .svelte-kit \\) -exec rm -rf {} +\""
   },
   "workspaces": {
@@ -86,6 +87,8 @@
   },
   "devDependencies": {
     "@effect/language-service": "catalog:effect",
-    "turbo": "^2.10.5"
+    "@typescript/native": "catalog:base",
+    "turbo": "^2.10.5",
+    "typescript": "catalog:base"
   }
 }
