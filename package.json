@@ -12,7 +12,7 @@
     "check": "turbo run check",
     "lint": "turbo run lint",
     "format": "turbo run format",
-    "prepare": "effect-language-service patch",
+    "prepare": "effect-tsgo patch",
     "clean": "bash -lc \"find . -type d \\( -name node_modules -o -name build -o -name .turbo -o -name .tsbuildinfo -o -name .svelte-kit \\) -exec rm -rf {} +\""
   },
   "workspaces": {
@@ -27,9 +27,9 @@
         "typescript": "npm:@typescript/typescript6"
       },
       "effect": {
-        "@effect/language-service": "^0.87.0",
         "@effect/platform-bun": "^4.0.0-beta.99",
         "@effect/sql-pg": "^4.0.0-beta.99",
+        "@effect/tsgo": "0.24.1",
         "effect": "^4.0.0-beta.99"
       },
       "eslint": {
@@ -86,9 +86,9 @@
     }
   },
   "devDependencies": {
-    "@effect/language-service": "catalog:effect",
+    "@effect/tsgo": "catalog:effect",
     "@typescript/native": "catalog:base",
     "turbo": "^2.10.5",
-    "typescript": "catalog:base"
+    "typescript": "7.1.0-dev.20260715.1"
   }
 }
