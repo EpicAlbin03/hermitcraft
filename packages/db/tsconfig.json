@@ -1,4 +1,4 @@
 {
-  "extends": "../../packages/ts-config/base.json",
-  "exclude": ["node_modules", "build", ".turbo"]
+	"extends": "@hc/ts-config/base",
+	"exclude": ["node_modules", "build", ".turbo"]
 }

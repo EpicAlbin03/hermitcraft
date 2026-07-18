@@ -1,12 +1,13 @@
 import { defineConfig } from "eslint/config"
 import ts from "typescript-eslint"
-import baseConfig from "./base"
+import baseConfig from "./base.ts"
 import svelte from "eslint-plugin-svelte"
 import globals from "globals"
 
 export default defineConfig(
   baseConfig,
   ...svelte.configs["flat/recommended"],
+  ...svelte.configs["flat/prettier"],
   {
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
     rules: {

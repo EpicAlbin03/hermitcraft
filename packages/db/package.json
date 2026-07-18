@@ -1,19 +1,20 @@
 {
-  "name": "@hc/db",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "check": "tsc --noEmit",
-    "lint": "prettier --ignore-path ../../.prettierignore --check . && eslint .",
-    "format": "prettier --ignore-path ../../.prettierignore --write ."
-  },
-  "devDependencies": {
-    "@hc/eslint-config": "workspace:*",
-    "@hc/prettier-config": "workspace:*",
-    "@types/bun": "catalog:base",
-    "eslint": "catalog:eslint",
-    "prettier": "catalog:prettier",
-    "@typescript/native": "catalog:base",
-    "typescript": "catalog:base"
-  }
+	"name": "@hc/db",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"check": "tsc --noEmit",
+		"lint": "prettier --ignore-path ../../.prettierignore --check . && eslint .",
+		"format": "prettier --ignore-path ../../.prettierignore --write ."
+	},
+	"devDependencies": {
+		"@hc/eslint-config": "workspace:*",
+		"@hc/prettier-config": "workspace:*",
+		"@hc/ts-config": "workspace:*",
+		"@types/bun": "catalog:base",
+		"eslint": "catalog:eslint",
+		"prettier": "catalog:prettier",
+		"@typescript/native": "catalog:base",
+		"typescript": "catalog:base"
+	}
 }

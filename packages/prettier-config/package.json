@@ -1,10 +1,36 @@
 {
-  "name": "@hc/prettier-config",
-  "private": true,
-  "type": "module",
-  "devDependencies": {
-    "prettier": "catalog:prettier",
-    "prettier-plugin-svelte": "catalog:prettier",
-    "prettier-plugin-tailwindcss": "catalog:prettier"
-  }
+	"name": "@hc/prettier-config",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./base": "./base.ts",
+		"./svelte": "./svelte.ts"
+	},
+	"scripts": {
+		"check": "tsc --noEmit",
+		"lint": "prettier --config ./base.ts --check . && eslint .",
+		"format": "prettier --config ./base.ts --write ."
+	},
+	"dependencies": {
+		"prettier-plugin-svelte": "catalog:prettier",
+		"prettier-plugin-tailwindcss": "catalog:prettier"
+	},
+	"peerDependencies": {
+		"prettier": "catalog:prettier",
+		"svelte": "catalog:svelte"
+	},
+	"peerDependenciesMeta": {
+		"svelte": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@hc/eslint-config": "workspace:*",
+		"@hc/ts-config": "workspace:*",
+		"@typescript/native": "catalog:base",
+		"eslint": "catalog:eslint",
+		"prettier": "catalog:prettier",
+		"svelte": "catalog:svelte",
+		"typescript": "catalog:base"
+	}
 }

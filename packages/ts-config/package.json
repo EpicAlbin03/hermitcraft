@@ -5,5 +5,16 @@
   "exports": {
     "./base": "./base.json",
     "./svelte": "./svelte.json"
+  },
+  "scripts": {
+    "lint": "prettier --config ../prettier-config/base.ts --check .",
+    "format": "prettier --config ../prettier-config/base.ts --write ."
+  },
+  "peerDependencies": {
+    "@types/bun": "catalog:base"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:base",
+    "prettier": "catalog:prettier"
   }
 }
