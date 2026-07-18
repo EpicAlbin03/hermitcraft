@@ -1,8 +1,8 @@
-import prettier from "eslint-config-prettier";
-import js from "@eslint/js";
-import { defineConfig } from "eslint/config";
-import ts from "typescript-eslint";
-import turboConfig from "eslint-config-turbo/flat";
+import prettier from "eslint-config-prettier"
+import js from "@eslint/js"
+import { defineConfig } from "eslint/config"
+import ts from "typescript-eslint"
+import turboConfig from "eslint-config-turbo/flat"
 
 export default defineConfig(
 	js.configs.recommended,
@@ -21,4 +21,4 @@ export default defineConfig(
 	{
 		ignores: ["node_modules", "build", ".turbo"]
 	}
-);
+)

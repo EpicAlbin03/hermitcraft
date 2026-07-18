@@ -1,6 +1,6 @@
-import { defineConfig } from "eslint/config";
-import svelteConfig from "./svelte.config.js";
-import svelteBaseConfig from "@hc/eslint-config/svelte";
+import { defineConfig } from "eslint/config"
+import svelteConfig from "./svelte.config.js"
+import svelteBaseConfig from "@hc/eslint-config/svelte"
 
 export default defineConfig(
 	svelteBaseConfig,
@@ -15,4 +15,4 @@ export default defineConfig(
 	{
 		ignores: ["node_modules", "build", ".turbo", ".svelte-kit"]
 	}
-);
+)

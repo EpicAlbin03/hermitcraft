@@ -1,4 +1,4 @@
 {
-  "extends": "@hc/ts-config/base",
-  "exclude": ["node_modules", ".turbo"]
+	"extends": "@hc/ts-config/base",
+	"exclude": ["node_modules", ".turbo"]
 }
