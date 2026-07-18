@@ -3,6 +3,9 @@ node_modules
 .pnp
 .pnp.js
 
+# Generated Effect TypeScript-Go editor binary
+.effect-tsgo
+
 # Env
 .env
 .env.local

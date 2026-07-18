@@ -28,7 +28,6 @@
         "name": "@effect/language-service",
         "namespaceImportPackages": ["effect"],
         "diagnosticSeverity": {
-          "importFromBarrel": "error",
           "anyUnknownInErrorContext": "error",
           "unsafeEffectTypeAssertion": "error",
           "instanceOfSchema": "error",
