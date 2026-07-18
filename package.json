@@ -89,6 +89,6 @@
     "@effect/tsgo": "catalog:effect",
     "@typescript/native": "catalog:base",
     "turbo": "^2.10.5",
-    "typescript": "7.1.0-dev.20260715.1"
+    "typescript": "catalog:base"
   }
 }
