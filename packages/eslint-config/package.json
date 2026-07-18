@@ -1,42 +1,42 @@
 {
-	"name": "@hc/eslint-config",
-	"private": true,
-	"type": "module",
-	"exports": {
-		"./base": "./base.ts",
-		"./svelte": "./svelte.ts"
-	},
-	"scripts": {
-		"check": "tsc --noEmit",
-		"lint": "prettier --config ../prettier-config/base.ts --check . && eslint --config ./base.ts .",
-		"format": "prettier --config ../prettier-config/base.ts --write ."
-	},
-	"dependencies": {
-		"@eslint/js": "catalog:eslint",
-		"eslint-config-prettier": "catalog:eslint",
-		"eslint-config-turbo": "catalog:eslint",
-		"eslint-plugin-svelte": "catalog:eslint",
-		"globals": "catalog:eslint",
-		"typescript-eslint": "catalog:eslint"
-	},
-	"peerDependencies": {
-		"eslint": "catalog:eslint",
-		"svelte": "catalog:svelte",
-		"turbo": "^2.10.5",
-		"typescript": "catalog:base"
-	},
-	"peerDependenciesMeta": {
-		"svelte": {
-			"optional": true
-		}
-	},
-	"devDependencies": {
-		"@hc/ts-config": "workspace:*",
-		"@typescript/native": "catalog:base",
-		"eslint": "catalog:eslint",
-		"prettier": "catalog:prettier",
-		"svelte": "catalog:svelte",
-		"turbo": "^2.10.5",
-		"typescript": "catalog:base"
-	}
+  "name": "@hc/eslint-config",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./base": "./base.ts",
+    "./svelte": "./svelte.ts"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "lint": "prettier --config ../prettier-config/base.ts --check . && eslint --config ./base.ts .",
+    "format": "prettier --config ../prettier-config/base.ts --write ."
+  },
+  "dependencies": {
+    "@eslint/js": "catalog:eslint",
+    "eslint-config-prettier": "catalog:eslint",
+    "eslint-config-turbo": "catalog:eslint",
+    "eslint-plugin-svelte": "catalog:eslint",
+    "globals": "catalog:eslint",
+    "typescript-eslint": "catalog:eslint"
+  },
+  "peerDependencies": {
+    "eslint": "catalog:eslint",
+    "svelte": "catalog:svelte",
+    "turbo": "catalog:base",
+    "typescript": "catalog:base"
+  },
+  "peerDependenciesMeta": {
+    "svelte": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@hc/ts-config": "workspace:*",
+    "@typescript/native": "catalog:base",
+    "eslint": "catalog:eslint",
+    "prettier": "catalog:prettier",
+    "svelte": "catalog:svelte",
+    "turbo": "catalog:base",
+    "typescript": "catalog:base"
+  }
 }
