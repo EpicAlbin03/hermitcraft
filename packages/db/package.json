@@ -13,6 +13,7 @@
     "@types/bun": "catalog:base",
     "eslint": "catalog:eslint",
     "prettier": "catalog:prettier",
+    "@typescript/native": "catalog:base",
     "typescript": "catalog:base"
   }
 }

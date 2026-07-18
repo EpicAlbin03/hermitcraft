@@ -29,6 +29,7 @@
     "runed": "catalog:svelte",
     "svelte": "catalog:svelte",
     "svelte-check": "catalog:svelte",
+    "@typescript/native": "catalog:base",
     "typescript": "catalog:base",
     "vite": "catalog:svelte"
   }
