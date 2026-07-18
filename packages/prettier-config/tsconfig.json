@@ -1,7 +1,4 @@
 {
   "extends": "@hc/ts-config/base",
-  "compilerOptions": {
-    "types": []
-  },
   "exclude": ["node_modules", ".turbo"]
 }

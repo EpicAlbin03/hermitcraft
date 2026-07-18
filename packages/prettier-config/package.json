@@ -27,6 +27,7 @@
 	"devDependencies": {
 		"@hc/eslint-config": "workspace:*",
 		"@hc/ts-config": "workspace:*",
+		"@types/bun": "catalog:base",
 		"@typescript/native": "catalog:base",
 		"eslint": "catalog:eslint",
 		"prettier": "catalog:prettier",

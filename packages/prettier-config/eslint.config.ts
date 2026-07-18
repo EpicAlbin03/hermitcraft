@@ -1,6 +1,11 @@
-import { defineConfig } from "eslint/config"
-import baseConfig from "@hc/eslint-config/base"
+import { defineConfig } from "eslint/config";
+import baseConfig from "@hc/eslint-config/base";
 
 export default defineConfig(baseConfig, {
-  ignores: ["node_modules", ".turbo"]
-})
+	languageOptions: {
+		parserOptions: {
+			tsconfigRootDir: import.meta.dirname
+		}
+	},
+	ignores: ["node_modules", ".turbo"]
+});

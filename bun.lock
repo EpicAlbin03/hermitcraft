@@ -7,7 +7,7 @@
       "devDependencies": {
         "@effect/tsgo": "catalog:effect",
         "@typescript/native": "catalog:base",
-        "turbo": "^2.10.5",
+        "turbo": "catalog:base",
         "typescript": "catalog:base",
       },
     },
@@ -64,13 +64,13 @@
         "eslint": "catalog:eslint",
         "prettier": "catalog:prettier",
         "svelte": "catalog:svelte",
-        "turbo": "^2.10.5",
+        "turbo": "catalog:base",
         "typescript": "catalog:base",
       },
       "peerDependencies": {
         "eslint": "catalog:eslint",
         "svelte": "catalog:svelte",
-        "turbo": "^2.10.5",
+        "turbo": "catalog:base",
         "typescript": "catalog:base",
       },
       "optionalPeers": [
@@ -86,6 +86,7 @@
       "devDependencies": {
         "@hc/eslint-config": "workspace:*",
         "@hc/ts-config": "workspace:*",
+        "@types/bun": "catalog:base",
         "@typescript/native": "catalog:base",
         "eslint": "catalog:eslint",
         "prettier": "catalog:prettier",
@@ -104,7 +105,6 @@
       "name": "@hc/ts-config",
       "devDependencies": {
         "@types/bun": "catalog:base",
-        "@typescript/native": "catalog:base",
         "prettier": "catalog:prettier",
       },
       "peerDependencies": {
@@ -116,6 +116,7 @@
     "base": {
       "@types/bun": "^1.3.14",
       "@typescript/native": "npm:typescript@7.0.2",
+      "turbo": "^2.10.5",
       "typescript": "npm:@typescript/typescript6@6.0.2",
     },
     "content-sync": {
