@@ -10,8 +10,8 @@
     "@eslint/js": "catalog:eslint",
     "eslint": "catalog:eslint",
     "eslint-config-prettier": "catalog:eslint",
-    "eslint-plugin-svelte": "catalog:eslint",
     "eslint-config-turbo": "catalog:eslint",
+    "eslint-plugin-svelte": "catalog:eslint",
     "globals": "catalog:eslint",
     "typescript-eslint": "catalog:eslint"
   }

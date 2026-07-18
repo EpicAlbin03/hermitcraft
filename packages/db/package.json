@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-		"check": "tsc --noEmit",
-		"lint": "prettier --ignore-path ../../.prettierignore --check . && eslint .",
-		"format": "prettier --ignore-path ../../.prettierignore --write ."
-	},
+    "check": "tsc --noEmit",
+    "lint": "prettier --ignore-path ../../.prettierignore --check . && eslint .",
+    "format": "prettier --ignore-path ../../.prettierignore --write ."
+  },
   "devDependencies": {
     "@hc/eslint-config": "workspace:*",
     "@hc/prettier-config": "workspace:*",

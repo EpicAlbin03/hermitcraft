@@ -3,15 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-		"dev": "bunx --bun vite dev",
-		"build": "bunx --bun vite build",
-		"preview": "bunx --bun vite preview",
-		"prepare": "svelte-kit sync || echo ''",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && bun run check:ts",
-		"check:ts": "tsc --noEmit",
-		"lint": "prettier --ignore-path ../../.prettierignore --check . && eslint .",
-		"format": "prettier --ignore-path ../../.prettierignore --write ."
-	},
+    "dev": "bunx --bun vite dev",
+    "build": "bunx --bun vite build",
+    "preview": "bunx --bun vite preview",
+    "prepare": "svelte-kit sync || echo ''",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && bun run check:ts",
+    "check:ts": "tsc --noEmit",
+    "lint": "prettier --ignore-path ../../.prettierignore --check . && eslint .",
+    "format": "prettier --ignore-path ../../.prettierignore --write ."
+  },
   "devDependencies": {
     "@hc/eslint-config": "workspace:*",
     "@hc/prettier-config": "workspace:*",

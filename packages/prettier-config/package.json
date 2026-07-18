@@ -4,7 +4,7 @@
   "type": "module",
   "devDependencies": {
     "prettier": "catalog:prettier",
-    "prettier-plugin-tailwindcss": "catalog:prettier",
-    "prettier-plugin-svelte": "catalog:prettier"
+    "prettier-plugin-svelte": "catalog:prettier",
+    "prettier-plugin-tailwindcss": "catalog:prettier"
   }
 }
