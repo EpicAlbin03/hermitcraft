@@ -16,6 +16,7 @@ node_modules
 # Misc
 .agents
 .turbo
+repos
 
 # Svelte
 static

@@ -54,3 +54,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .svelte-kit
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Other
+repos
