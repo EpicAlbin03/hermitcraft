@@ -14,7 +14,7 @@ export class TwitchService extends Context.Service<
 		isChannelLive(userId: string): Effect.Effect<boolean, TwitchError>
 		areChannelsLive(userIds: string[]): Effect.Effect<Map<string, boolean>, TwitchError>
 	}
->()("@hc/content-sync/twitch-service/TwitchService") {
+>()("@hc/content-sync/twitch/service/TwitchService") {
 	static readonly layer = Layer.effect(
 		TwitchService,
 		Effect.gen(function* () {

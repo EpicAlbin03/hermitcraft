@@ -29,6 +29,7 @@ Available repositories:
 
 - `effect-smol`: Effect v4
 - `drizzle-orm`: Drizzle ORM
+- `t3code`: Large effect codebase with many examples and patterns.
 
 ## Using Effect v4
 
