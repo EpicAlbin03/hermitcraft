@@ -39,6 +39,7 @@
       "name": "@hc/content-sync",
       "dependencies": {
         "@hc/db": "workspace:*",
+        "@js-temporal/polyfill": "catalog:content-sync",
         "@twurple/api": "catalog:content-sync",
         "@twurple/auth": "catalog:content-sync",
         "effect": "catalog:effect",
@@ -151,6 +152,7 @@
       "typescript": "npm:@typescript/typescript6@6.0.2",
     },
     "content-sync": {
+      "@js-temporal/polyfill": "^0.5.1",
       "@twurple/api": "^8.1.4",
       "@twurple/auth": "^8.1.4",
       "fast-xml-parser": "^5.10.1",
