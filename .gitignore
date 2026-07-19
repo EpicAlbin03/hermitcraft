@@ -57,3 +57,4 @@ vite.config.ts.timestamp-*
 
 # Other
 repos
+.pi-subagents
