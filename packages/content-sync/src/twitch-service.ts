@@ -8,11 +8,6 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Redacted from "effect/Redacted"
 
-export class TwitchError extends Data.TaggedError("TwitchError")<{
-	message: string
-	cause?: unknown
-}> {}
-
 export class TwitchService extends Context.Service<
 	TwitchService,
 	{
@@ -75,3 +70,8 @@ export class TwitchService extends Context.Service<
 }
 
 export type TwitchServiceType = TwitchService["Service"]
+
+export class TwitchError extends Data.TaggedError("TwitchError")<{
+	message: string
+	cause?: unknown
+}> {}

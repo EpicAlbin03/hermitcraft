@@ -19,10 +19,20 @@ import {
 	parseYtRSS
 } from "./utils"
 
-export class YtError extends Data.TaggedError("YtError")<{
-	message: string
-	cause?: unknown
-}> {}
+type VideoDetails = Omit<Video, "isShort">
+type ChannelDetails = {
+	ytChannelId: string
+	ytName: string
+	ytHandle: string
+	ytDescription: string
+	ytAvatarUrl: string
+	ytBannerUrl: string
+	ytBannerThumbHash: string | null
+	ytViewCount: number
+	ytSubscriberCount: number
+	ytVideoCount: number
+	ytJoinedAt: Date
+}
 
 const parseDate = (value: string | null | undefined) =>
 	DateTime.toDate(DateTime.makeUnsafe(value ?? 0))
@@ -40,31 +50,14 @@ const getThumbnailUrl = (item: yt_v3.Schema$Video | yt_v3.Schema$Channel) => {
 export class YtService extends Context.Service<
 	YtService,
 	{
-		getChannelDetails(ytChannelId: string): Effect.Effect<
-			{
-				ytChannelId: string
-				ytName: string
-				ytHandle: string
-				ytDescription: string
-				ytAvatarUrl: string
-				ytBannerUrl: string
-				ytBannerThumbHash: string | null
-				ytViewCount: number
-				ytSubscriberCount: number
-				ytVideoCount: number
-				ytJoinedAt: Date
-			},
-			YtError
-		>
-		getVideoDetails(ytVideoId: string): Effect.Effect<Omit<Video, "isShort">, YtError>
-		getBatchVideoDetails(
-			ytVideoIds: string[]
-		): Effect.Effect<Map<string, Omit<Video, "isShort">>, YtError>
+		getChannelDetails(ytChannelId: string): Effect.Effect<ChannelDetails, YtError>
+		getVideoDetails(ytVideoId: string): Effect.Effect<VideoDetails, YtError>
+		getBatchVideoDetails(ytVideoIds: string[]): Effect.Effect<Map<string, VideoDetails>, YtError>
 		getVideoIdsFromUploadsPlaylist(
 			ytChannelId: string,
 			maxResults?: number
 		): Effect.Effect<string[], YtError>
-		getRSSVideoIds(ytChannelId: string): Effect.Effect<(string | undefined)[], YtError>
+		getRSSVideoIds(ytChannelId: string): Effect.Effect<string[], YtError>
 		isVideoShort(ytVideoId: string, ytChannelId: string): Effect.Effect<boolean, YtError>
 		areVideosShorts(
 			ytVideoIds: string[],
@@ -74,7 +67,7 @@ export class YtService extends Context.Service<
 		getLiveStreamVideoIds(
 			ytChannelId: string,
 			maxResults?: number
-		): Effect.Effect<(string | null)[], YtError>
+		): Effect.Effect<string[], YtError>
 	}
 >()("@hc/content-sync/yt-service/YtService") {
 	static readonly layer = Layer.effect(
@@ -160,7 +153,7 @@ export class YtService extends Context.Service<
 					ytSubscriberCount: parseInt(item.statistics?.subscriberCount || "0", 10),
 					ytVideoCount: parseInt(item.statistics?.videoCount || "0", 10),
 					ytJoinedAt: parseDate(item.snippet.publishedAt)
-				}
+				} satisfies ChannelDetails
 			})
 
 			const parseVideoDetails = Effect.fn("YtService.parseVideoDetails")(function* (
@@ -187,7 +180,9 @@ export class YtService extends Context.Service<
 					viewCount: parseInt(item.statistics?.viewCount || "0", 10),
 					likeCount: parseInt(item.statistics?.likeCount || "0", 10),
 					commentCount: parseInt(item.statistics?.commentCount || "0", 10),
-					durationSeconds: parseIsoDurationToSeconds(item.contentDetails?.duration || ""),
+					durationSeconds: item.contentDetails?.duration
+						? parseIsoDurationToSeconds(item.contentDetails.duration)
+						: null,
 					livestreamType: getVideoLivestreamType(liveBroadcastContent, hasBeenLivestream),
 					livestreamScheduledStartTime: item.liveStreamingDetails?.scheduledStartTime
 						? parseDate(item.liveStreamingDetails.scheduledStartTime)
@@ -198,7 +193,7 @@ export class YtService extends Context.Service<
 					livestreamConcurrentViewers: item.liveStreamingDetails?.concurrentViewers
 						? parseInt(item.liveStreamingDetails.concurrentViewers, 10)
 						: null
-				} as Omit<Video, "isShort">
+				} satisfies VideoDetails
 			})
 
 			const getVideoDetails = Effect.fn("YtService.getVideoDetails")(function* (ytVideoId: string) {
@@ -224,7 +219,7 @@ export class YtService extends Context.Service<
 			const getBatchVideoDetails = Effect.fn("YtService.getBatchVideoDetails")(function* (
 				ytVideoIds: string[]
 			) {
-				if (ytVideoIds.length === 0) return new Map<string, Omit<Video, "isShort">>()
+				if (ytVideoIds.length === 0) return new Map<string, VideoDetails>()
 				if (ytVideoIds.length > 50) {
 					return yield* new YtError({ message: "Maximum of 50 videos can be fetched at once" })
 				}
@@ -466,3 +461,8 @@ export class YtService extends Context.Service<
 }
 
 export type YtServiceType = YtService["Service"]
+
+export class YtError extends Data.TaggedError("YtError")<{
+	message: string
+	cause?: unknown
+}> {}
