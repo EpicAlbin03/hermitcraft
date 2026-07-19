@@ -16,5 +16,6 @@
   },
   "search.exclude": {
     "repos/**": true
-  }
+  },
+  "vitest.configSearchPatternExclude": "{**/node_modules/**,**/repos/**,**/.*/**,*.d.ts}"
 }
