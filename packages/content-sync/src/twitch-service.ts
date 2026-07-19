@@ -33,7 +33,7 @@ const twitchService = Effect.gen(function* () {
 		return response !== null
 	})
 
-	const getLiveChannels = Effect.fn("TwitchService.getLiveChannels")(function* (userIds: string[]) {
+	const areChannelsLive = Effect.fn("TwitchService.areChannelsLive")(function* (userIds: string[]) {
 		if (userIds.length === 0) return new Map<string, boolean>()
 
 		const responses = yield* Effect.forEach(Arr.chunksOf(new Set(userIds), 100), (userIdChunk) =>
@@ -55,7 +55,7 @@ const twitchService = Effect.gen(function* () {
 
 	return {
 		isChannelLive,
-		getLiveChannels
+		areChannelsLive
 	} as const
 })
 

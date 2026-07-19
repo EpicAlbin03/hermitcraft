@@ -310,6 +310,8 @@ const ytService = Effect.gen(function* () {
 		ytChannelId: string,
 		maxResults?: number
 	) {
+		if (ytVideoIds.length === 0) return new Map<string, boolean>()
+
 		const shortsPlaylistId = getYtPlaylistId(ytChannelId, "shorts")
 		if (!shortsPlaylistId) {
 			return new Map(ytVideoIds.map((videoId) => [videoId, false]))
