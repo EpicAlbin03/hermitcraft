@@ -73,3 +73,5 @@ export class TwitchService extends Context.Service<
 		})
 	)
 }
+
+export type TwitchServiceType = TwitchService["Service"]

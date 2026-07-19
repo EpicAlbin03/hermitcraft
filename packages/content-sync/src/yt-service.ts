@@ -464,3 +464,5 @@ export class YtService extends Context.Service<
 		})
 	).pipe(Layer.provide(FetchHttpClient.layer))
 }
+
+export type YtServiceType = YtService["Service"]
