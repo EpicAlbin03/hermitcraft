@@ -14,6 +14,7 @@
 		"@hc/ts-config": "workspace:*",
 		"@types/bun": "catalog:base",
 		"@types/pg": "catalog:db",
+		"effect": "catalog:effect",
 		"eslint": "catalog:eslint",
 		"drizzle-kit": "catalog:db",
 		"drizzle-orm": "catalog:db",

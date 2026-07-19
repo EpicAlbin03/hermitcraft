@@ -47,6 +47,7 @@
         "@typescript/native": "catalog:base",
         "drizzle-kit": "catalog:db",
         "drizzle-orm": "catalog:db",
+        "effect": "catalog:effect",
         "eslint": "catalog:eslint",
         "pg": "catalog:db",
         "prettier": "catalog:prettier",
