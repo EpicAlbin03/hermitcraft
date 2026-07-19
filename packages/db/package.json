@@ -14,17 +14,19 @@
 		"lint": "prettier --ignore-path ../../.prettierignore --check . && eslint .",
 		"format": "prettier --ignore-path ../../.prettierignore --write ."
 	},
-	"devDependencies": {
+	"dependencies": {
 		"@effect/sql-pg": "catalog:effect",
+		"drizzle-orm": "catalog:db",
+		"effect": "catalog:effect"
+	},
+	"devDependencies": {
 		"@hc/eslint-config": "workspace:*",
 		"@hc/prettier-config": "workspace:*",
 		"@hc/ts-config": "workspace:*",
 		"@types/bun": "catalog:base",
 		"@types/pg": "catalog:db",
-		"effect": "catalog:effect",
 		"eslint": "catalog:eslint",
 		"drizzle-kit": "catalog:db",
-		"drizzle-orm": "catalog:db",
 		"pg": "catalog:db",
 		"prettier": "catalog:prettier",
 		"@typescript/native": "catalog:base",
