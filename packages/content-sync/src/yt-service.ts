@@ -9,6 +9,8 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Redacted from "effect/Redacted"
 import * as Schedule from "effect/Schedule"
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient"
+import * as HttpClient from "effect/unstable/http/HttpClient"
 import { rgbaToThumbHash, thumbHashToDataURL } from "thumbhash"
 import {
 	getYtPlaylistId,
@@ -35,6 +37,14 @@ const getThumbnailUrl = (item: yt_v3.Schema$Video | yt_v3.Schema$Channel) => {
 const ytService = Effect.gen(function* () {
 	const ytApiKey = Redacted.value(yield* Config.redacted("YT_API_KEY"))
 
+	const httpClient = (yield* HttpClient.HttpClient).pipe(HttpClient.filterStatusOk)
+	const retryingHttpClient = httpClient.pipe(
+		HttpClient.retryTransient({
+			schedule: Schedule.exponential("1 second"),
+			times: 3
+		})
+	)
+
 	const ytApi = google.youtube({
 		version: "v3",
 		auth: ytApiKey
@@ -43,19 +53,12 @@ const ytService = Effect.gen(function* () {
 	const generateBannerThumbHash = Effect.fn("YtService.generateBannerThumbHash")(function* (
 		bannerUrl: string
 	) {
-		const res = yield* Effect.tryPromise({
-			try: () => fetch(`${bannerUrl}=w100`),
-			catch: (cause) => new YtError({ message: "Failed to fetch banner for thumbhash", cause })
-		})
-		if (!res.ok) {
-			return yield* new YtError({
-				message: `Failed to fetch banner for thumbhash (HTTP ${res.status})`
-			})
-		}
-		const buffer = yield* Effect.tryPromise({
-			try: () => res.arrayBuffer(),
-			catch: (cause) => new YtError({ message: "Failed to read banner buffer", cause })
-		})
+		const buffer = yield* httpClient.get(`${bannerUrl}=w100`).pipe(
+			Effect.flatMap((response) => response.arrayBuffer),
+			Effect.mapError(
+				(cause) => new YtError({ message: "Failed to fetch banner for thumbhash", cause })
+			)
+		)
 		const { data, info } = yield* Effect.tryPromise({
 			try: () =>
 				sharp(new Uint8Array(buffer)).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
@@ -260,29 +263,21 @@ const ytService = Effect.gen(function* () {
 	)
 
 	const getRSSVideoIds = Effect.fn("YtService.getRSSVideoIds")(function* (ytChannelId: string) {
-		return yield* Effect.gen(function* () {
-			const response = yield* Effect.tryPromise({
-				try: () => fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${ytChannelId}`),
-				catch: (cause) =>
-					new YtError({
-						message: `Failed to fetch RSS for channel ${ytChannelId}`,
-						cause
-					})
+		return yield* retryingHttpClient
+			.get("https://www.youtube.com/feeds/videos.xml", {
+				urlParams: { channel_id: ytChannelId }
 			})
-
-			if (!response.ok) {
-				return yield* new YtError({
-					message: `Failed to fetch RSS for channel ${ytChannelId} (HTTP ${response.status})`
-				})
-			}
-
-			const xml = yield* Effect.tryPromise({
-				try: () => response.text(),
-				catch: (cause) => new YtError({ message: "Failed to read RSS text", cause })
-			})
-
-			return parseYtRSS(xml)
-		}).pipe(Effect.retry(Schedule.max([Schedule.exponential("1 second"), Schedule.recurs(3)])))
+			.pipe(
+				Effect.flatMap((response) => response.text),
+				Effect.map(parseYtRSS),
+				Effect.mapError(
+					(cause) =>
+						new YtError({
+							message: `Failed to fetch RSS for channel ${ytChannelId}`,
+							cause
+						})
+				)
+			)
 	})
 
 	const isVideoShort = Effect.fn("YtService.isVideoShort")(function* (
@@ -397,5 +392,5 @@ export class YtService extends Context.Service<YtService>()(
 	"@hc/content-sync/yt-service/YtService",
 	{ make: ytService }
 ) {
-	static readonly layer = Layer.effect(this, this.make)
+	static readonly layer = Layer.effect(this, this.make).pipe(Layer.provide(FetchHttpClient.layer))
 }
