@@ -18,11 +18,11 @@ const twitchService = Effect.gen(function* () {
 	const clientSecret = Redacted.value(yield* Config.redacted("TWITCH_CLIENT_SECRET"))
 
 	const authProvider = new AppTokenAuthProvider(clientId, clientSecret)
-	const twitch = new ApiClient({ authProvider })
+	const twitchApi = new ApiClient({ authProvider })
 
 	const isChannelLive = Effect.fn("TwitchService.isChannelLive")(function* (userId: string) {
 		const response = yield* Effect.tryPromise({
-			try: () => twitch.streams.getStreamByUserId(userId),
+			try: () => twitchApi.streams.getStreamByUserId(userId),
 			catch: (cause) =>
 				new TwitchError({
 					message: `Failed to get stream for user ${userId}`,
@@ -38,7 +38,7 @@ const twitchService = Effect.gen(function* () {
 
 		const responses = yield* Effect.forEach(Arr.chunksOf(new Set(userIds), 100), (userIdChunk) =>
 			Effect.tryPromise({
-				try: () => twitch.streams.getStreams({ userId: userIdChunk, limit: 100 }),
+				try: () => twitchApi.streams.getStreams({ userId: userIdChunk, limit: 100 }),
 				catch: (cause) =>
 					new TwitchError({
 						message: "Failed to get streams for users",
