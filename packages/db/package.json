@@ -8,11 +8,16 @@
 		"format": "prettier --ignore-path ../../.prettierignore --write ."
 	},
 	"devDependencies": {
+		"@effect/sql-pg": "catalog:effect",
 		"@hc/eslint-config": "workspace:*",
 		"@hc/prettier-config": "workspace:*",
 		"@hc/ts-config": "workspace:*",
 		"@types/bun": "catalog:base",
+		"@types/pg": "catalog:db",
 		"eslint": "catalog:eslint",
+		"drizzle-kit": "catalog:db",
+		"drizzle-orm": "catalog:db",
+		"pg": "catalog:db",
 		"prettier": "catalog:prettier",
 		"@typescript/native": "catalog:base",
 		"typescript": "catalog:base"
