@@ -1,0 +1,30 @@
+{
+	"name": "@hc/content-sync",
+	"private": true,
+	"type": "module",
+	"exports": {},
+	"scripts": {
+		"check": "tsc --noEmit",
+		"lint": "prettier --ignore-path ../../.prettierignore --check . && eslint .",
+		"format": "prettier --ignore-path ../../.prettierignore --write ."
+	},
+	"dependencies": {
+		"@hc/db": "workspace:*",
+		"@twurple/api": "catalog:content-sync",
+		"@twurple/auth": "catalog:content-sync",
+		"effect": "catalog:effect",
+		"googleapis": "catalog:content-sync",
+		"sharp": "catalog:content-sync",
+		"thumbhash": "catalog:content-sync"
+	},
+	"devDependencies": {
+		"@hc/eslint-config": "workspace:*",
+		"@hc/prettier-config": "workspace:*",
+		"@hc/ts-config": "workspace:*",
+		"@types/bun": "catalog:base",
+		"eslint": "catalog:eslint",
+		"prettier": "catalog:prettier",
+		"@typescript/native": "catalog:base",
+		"typescript": "catalog:base"
+	}
+}
