@@ -3,7 +3,7 @@ import sharp from "sharp"
 import * as Effect from "effect/Effect"
 import * as HttpClient from "effect/unstable/http/HttpClient"
 import { rgbaToThumbHash, thumbHashToDataURL } from "thumbhash"
-import { YtError } from "./service"
+import { YtError } from "./errors"
 import { getThumbnailUrl, parseDate } from "./shared"
 
 export type ChannelDetails = {

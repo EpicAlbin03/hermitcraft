@@ -1,6 +1,6 @@
 import { youtube_v3 as yt_v3 } from "googleapis"
 import * as Effect from "effect/Effect"
-import { YtError } from "./service"
+import { YtError } from "./errors"
 
 const ytPlaylistPrefixes = {
 	videos: "UULF", // Doesn't include shorts and livestreams

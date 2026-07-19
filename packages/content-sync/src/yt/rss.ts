@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect"
 import * as HttpClient from "effect/unstable/http/HttpClient"
 import { XMLParser } from "fast-xml-parser"
-import { YtError } from "./service"
+import { YtError } from "./errors"
 
 type YtRss = {
 	feed?: {

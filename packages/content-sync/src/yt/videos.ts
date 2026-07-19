@@ -2,7 +2,7 @@ import type { Video } from "@hc/db/schema"
 import { Temporal } from "@js-temporal/polyfill"
 import { youtube_v3 as yt_v3 } from "googleapis"
 import * as Effect from "effect/Effect"
-import { YtError } from "./service"
+import { YtError } from "./errors"
 import { getThumbnailUrl, parseDate } from "./shared"
 
 export type VideoDetails = Omit<Video, "isShort">

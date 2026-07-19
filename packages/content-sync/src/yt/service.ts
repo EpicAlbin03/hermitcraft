@@ -1,7 +1,6 @@
 import { google } from "googleapis"
 import * as Config from "effect/Config"
 import * as Context from "effect/Context"
-import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Redacted from "effect/Redacted"
@@ -11,12 +10,8 @@ import * as HttpClient from "effect/unstable/http/HttpClient"
 import { makeChannelMethods, type ChannelDetails } from "./channel"
 import { makePlaylistMethods } from "./playlists"
 import { makeRssMethods } from "./rss"
+import { YtError } from "./errors"
 import { makeVideoMethods, type VideoDetails } from "./videos"
-
-export class YtError extends Data.TaggedError("YtError")<{
-	message: string
-	cause?: unknown
-}> {}
 
 export class YtService extends Context.Service<
 	YtService,

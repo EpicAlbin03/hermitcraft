@@ -3,10 +3,10 @@ import { AppTokenAuthProvider } from "@twurple/auth"
 import * as Arr from "effect/Array"
 import * as Config from "effect/Config"
 import * as Context from "effect/Context"
-import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Redacted from "effect/Redacted"
+import { TwitchError } from "./errors"
 
 export class TwitchService extends Context.Service<
 	TwitchService,
@@ -70,8 +70,3 @@ export class TwitchService extends Context.Service<
 }
 
 export type TwitchServiceType = TwitchService["Service"]
-
-export class TwitchError extends Data.TaggedError("TwitchError")<{
-	message: string
-	cause?: unknown
-}> {}
