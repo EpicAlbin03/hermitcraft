@@ -47,6 +47,11 @@ const ytService = Effect.gen(function* () {
 			try: () => fetch(`${bannerUrl}=w100`),
 			catch: (cause) => new YtError({ message: "Failed to fetch banner for thumbhash", cause })
 		})
+		if (!res.ok) {
+			return yield* new YtError({
+				message: `Failed to fetch banner for thumbhash (HTTP ${res.status})`
+			})
+		}
 		const buffer = yield* Effect.tryPromise({
 			try: () => res.arrayBuffer(),
 			catch: (cause) => new YtError({ message: "Failed to read banner buffer", cause })
@@ -105,7 +110,7 @@ const ytService = Effect.gen(function* () {
 		}
 	})
 
-	const setVideoDetails = Effect.fn("YtService.setVideoDetails")(function* (
+	const parseVideoDetails = Effect.fn("YtService.parseVideoDetails")(function* (
 		item: yt_v3.Schema$Video | undefined,
 		ytVideoId: string
 	) {
@@ -136,7 +141,9 @@ const ytService = Effect.gen(function* () {
 			livestreamActualStartTime: item.liveStreamingDetails?.actualStartTime
 				? parseDate(item.liveStreamingDetails.actualStartTime)
 				: null,
-			livestreamConcurrentViewers: parseInt(item.liveStreamingDetails?.concurrentViewers || "0", 10)
+			livestreamConcurrentViewers: item.liveStreamingDetails?.concurrentViewers
+				? parseInt(item.liveStreamingDetails.concurrentViewers, 10)
+				: null
 		} as Omit<Video, "isShort">
 	})
 
@@ -154,12 +161,13 @@ const ytService = Effect.gen(function* () {
 				})
 		})
 
-		return yield* setVideoDetails(response.data.items?.[0], ytVideoId)
+		return yield* parseVideoDetails(response.data.items?.[0], ytVideoId)
 	})
 
 	const getBatchVideoDetails = Effect.fn("YtService.getBatchVideoDetails")(function* (
 		ytVideoIds: string[]
 	) {
+		if (ytVideoIds.length === 0) return new Map<string, Omit<Video, "isShort">>()
 		if (ytVideoIds.length > 50) {
 			return yield* new YtError({ message: "Maximum of 50 videos can be fetched at once" })
 		}
@@ -177,28 +185,21 @@ const ytService = Effect.gen(function* () {
 				})
 		})
 
-		const videoDetailsMap = new Map<string, Omit<Video, "isShort">>()
-		const items = response.data.items ?? []
+		const entries = yield* Effect.forEach(response.data.items ?? [], (item) => {
+			const videoId = item.id
+			if (!videoId) return Effect.succeed(null)
 
-		yield* Effect.forEach(
-			items,
-			(item) => {
-				const videoId = item?.id
-				if (!videoId) return Effect.void
-
-				return setVideoDetails(item, videoId).pipe(
-					Effect.tap((videoDetails) =>
-						Effect.sync(() => videoDetailsMap.set(videoId, videoDetails))
-					),
-					Effect.catchTag("YtError", (error) =>
-						Effect.logWarning(`Failed to parse video ${videoId}: ${error.message}`)
+			return parseVideoDetails(item, videoId).pipe(
+				Effect.map((videoDetails) => [videoId, videoDetails] as const),
+				Effect.catchTag("YtError", (error) =>
+					Effect.logWarning(`Failed to parse video ${videoId}: ${error.message}`).pipe(
+						Effect.as(null)
 					)
 				)
-			},
-			{ concurrency: "unbounded" }
-		)
+			)
+		})
 
-		return videoDetailsMap
+		return new Map(entries.filter((entry) => entry !== null))
 	})
 
 	const getVideoIdsFromUploadsPlaylist = Effect.fn("YtService.getVideoIdsFromUploadsPlaylist")(
@@ -226,6 +227,7 @@ const ytService = Effect.gen(function* () {
 			yield* Effect.logInfo(`Uploads playlist ID: ${uploadsPlaylistId}`)
 
 			const videoIds: string[] = []
+			const targetResults = maxResults === undefined ? undefined : maxResults + 15
 			let nextPageToken: string | undefined
 
 			do {
@@ -250,10 +252,10 @@ const ytService = Effect.gen(function* () {
 					}
 				}
 				nextPageToken = playlistResponse.data.nextPageToken || undefined
-			} while (nextPageToken && (maxResults === undefined || videoIds.length < maxResults))
+			} while (nextPageToken && (targetResults === undefined || videoIds.length < targetResults))
 
 			// Remove first 15 videos to not conflict with RSS feed / videoSyncProgram
-			return videoIds.slice(15)
+			return videoIds.slice(15, targetResults)
 		}
 	)
 
@@ -314,7 +316,9 @@ const ytService = Effect.gen(function* () {
 		maxResults?: number
 	) {
 		const shortsPlaylistId = getYtPlaylistId(ytChannelId, "shorts")
-		if (!shortsPlaylistId) return new Map<string, boolean>()
+		if (!shortsPlaylistId) {
+			return new Map(ytVideoIds.map((videoId) => [videoId, false]))
+		}
 
 		const shortsSet = new Set<string>()
 		let nextPageToken: string | undefined
