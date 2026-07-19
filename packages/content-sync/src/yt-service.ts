@@ -175,8 +175,8 @@ export class YtService extends Context.Service<
 					title: item.snippet.title || "",
 					thumbnailUrl: getThumbnailUrl(item),
 					publishedAt: parseDate(item.snippet.publishedAt),
-					privacyStatus: item.status?.privacyStatus || "public",
-					uploadStatus: item.status?.uploadStatus || "uploaded",
+					privacyStatus: (item.status?.privacyStatus as Video["privacyStatus"]) || "public",
+					uploadStatus: (item.status?.uploadStatus as Video["uploadStatus"]) || "uploaded",
 					viewCount: parseInt(item.statistics?.viewCount || "0", 10),
 					likeCount: parseInt(item.statistics?.likeCount || "0", 10),
 					commentCount: parseInt(item.statistics?.commentCount || "0", 10),
@@ -442,7 +442,7 @@ export class YtService extends Context.Service<
 				return (
 					response.data.items
 						?.map((item) => item.contentDetails?.videoId)
-						.filter((videoId) => videoId !== undefined) ?? []
+						.filter((videoId) => videoId !== null && videoId !== undefined) ?? []
 				)
 			})
 

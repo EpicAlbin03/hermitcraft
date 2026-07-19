@@ -17,7 +17,11 @@ const ytRssParser = new XMLParser({
 
 export function parseYtRSS(xml: string) {
 	const rss = ytRssParser.parse(xml) as YtRss
-	return rss.feed?.entry?.map((entry) => entry["yt:videoId"]) ?? []
+	return (
+		rss.feed?.entry
+			?.map((entry) => entry["yt:videoId"])
+			.filter((videoId) => videoId !== undefined) ?? []
+	)
 }
 
 export function parseIsoDurationToSeconds(duration: string) {
