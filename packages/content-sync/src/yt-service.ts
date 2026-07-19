@@ -19,7 +19,10 @@ import {
 	parseYtRSS
 } from "./utils"
 
-export class YtError extends Data.TaggedError("YtError")<{ message: string; cause?: unknown }> {}
+export class YtError extends Data.TaggedError("YtError")<{
+	message: string
+	cause?: unknown
+}> {}
 
 const parseDate = (value: string | null | undefined) =>
 	DateTime.toDate(DateTime.makeUnsafe(value ?? 0))
@@ -392,14 +395,11 @@ const ytService = Effect.gen(function* () {
 				})
 		})
 
-		const videoIds: string[] = []
-		for (const item of response.data.items || []) {
-			if (item.contentDetails?.videoId) {
-				videoIds.push(item.contentDetails.videoId)
-			}
-		}
-
-		return videoIds
+		return (
+			response.data.items
+				?.map((item) => item.contentDetails?.videoId)
+				.filter((videoId) => videoId !== undefined) ?? []
+		)
 	})
 
 	return {
@@ -411,7 +411,7 @@ const ytService = Effect.gen(function* () {
 		isVideoShort,
 		areVideosShorts,
 		getLiveStreamVideoIds
-	} as const
+	}
 })
 
 export class YtService extends Context.Service<YtService>()(

@@ -56,7 +56,7 @@ const twitchService = Effect.gen(function* () {
 	return {
 		isChannelLive,
 		areChannelsLive
-	} as const
+	}
 })
 
 export class TwitchService extends Context.Service<TwitchService>()(
