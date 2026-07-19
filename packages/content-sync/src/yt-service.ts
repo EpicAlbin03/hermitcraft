@@ -40,7 +40,7 @@ const ytService = Effect.gen(function* () {
 		auth: ytApiKey
 	})
 
-	const generateBannerThumbHash = Effect.fn("generateBannerThumbHash")(function* (
+	const generateBannerThumbHash = Effect.fn("YtService.generateBannerThumbHash")(function* (
 		bannerUrl: string
 	) {
 		const res = yield* Effect.tryPromise({
@@ -60,7 +60,9 @@ const ytService = Effect.gen(function* () {
 		return thumbHashToDataURL(hash)
 	})
 
-	const getChannelDetails = Effect.fn("getChannelDetails")(function* (ytChannelId: string) {
+	const getChannelDetails = Effect.fn("YtService.getChannelDetails")(function* (
+		ytChannelId: string
+	) {
 		const response = yield* Effect.tryPromise({
 			try: () =>
 				ytApi.channels.list({
@@ -103,7 +105,7 @@ const ytService = Effect.gen(function* () {
 		}
 	})
 
-	const setVideoDetails = Effect.fn("setVideoDetails")(function* (
+	const setVideoDetails = Effect.fn("YtService.setVideoDetails")(function* (
 		item: yt_v3.Schema$Video | undefined,
 		ytVideoId: string
 	) {
@@ -138,7 +140,7 @@ const ytService = Effect.gen(function* () {
 		} as Omit<Video, "isShort">
 	})
 
-	const getVideoDetails = Effect.fn("getVideoDetails")(function* (ytVideoId: string) {
+	const getVideoDetails = Effect.fn("YtService.getVideoDetails")(function* (ytVideoId: string) {
 		const response = yield* Effect.tryPromise({
 			try: () =>
 				ytApi.videos.list({
@@ -155,7 +157,9 @@ const ytService = Effect.gen(function* () {
 		return yield* setVideoDetails(response.data.items?.[0], ytVideoId)
 	})
 
-	const getBatchVideoDetails = Effect.fn("getBatchVideoDetails")(function* (ytVideoIds: string[]) {
+	const getBatchVideoDetails = Effect.fn("YtService.getBatchVideoDetails")(function* (
+		ytVideoIds: string[]
+	) {
 		if (ytVideoIds.length > 50) {
 			return yield* new YtError({ message: "Maximum of 50 videos can be fetched at once" })
 		}
@@ -197,64 +201,63 @@ const ytService = Effect.gen(function* () {
 		return videoDetailsMap
 	})
 
-	const getVideoIdsFromUploadsPlaylist = Effect.fn("getVideoIdsFromUploadsPlaylist")(function* (
-		ytChannelId: string,
-		maxResults?: number
-	) {
-		const playlists = yield* Effect.tryPromise({
-			try: () =>
-				ytApi.channels.list({
-					part: ["contentDetails"],
-					id: [ytChannelId]
-				}),
-			catch: (cause) =>
-				new YtError({
-					message: `Failed to get playlists for channel ${ytChannelId}`,
-					cause
-				})
-		})
-
-		const uploadsPlaylistId = playlists.data.items?.[0]?.contentDetails?.relatedPlaylists?.uploads
-		if (!uploadsPlaylistId) {
-			return yield* new YtError({
-				message: `Could not find uploads playlist for channel ${ytChannelId}`
-			})
-		}
-
-		yield* Effect.logInfo(`Uploads playlist ID: ${uploadsPlaylistId}`)
-
-		const videoIds: string[] = []
-		let nextPageToken: string | undefined
-
-		do {
-			const playlistResponse = yield* Effect.tryPromise({
+	const getVideoIdsFromUploadsPlaylist = Effect.fn("YtService.getVideoIdsFromUploadsPlaylist")(
+		function* (ytChannelId: string, maxResults?: number) {
+			const playlists = yield* Effect.tryPromise({
 				try: () =>
-					ytApi.playlistItems.list({
+					ytApi.channels.list({
 						part: ["contentDetails"],
-						playlistId: uploadsPlaylistId,
-						maxResults: 50,
-						...(nextPageToken !== undefined ? { pageToken: nextPageToken } : {})
+						id: [ytChannelId]
 					}),
 				catch: (cause) =>
 					new YtError({
-						message: `Failed to get playlist items for playlist ${uploadsPlaylistId}`,
+						message: `Failed to get playlists for channel ${ytChannelId}`,
 						cause
 					})
 			})
 
-			for (const item of playlistResponse.data.items || []) {
-				if (item.contentDetails?.videoId) {
-					videoIds.push(item.contentDetails.videoId)
-				}
+			const uploadsPlaylistId = playlists.data.items?.[0]?.contentDetails?.relatedPlaylists?.uploads
+			if (!uploadsPlaylistId) {
+				return yield* new YtError({
+					message: `Could not find uploads playlist for channel ${ytChannelId}`
+				})
 			}
-			nextPageToken = playlistResponse.data.nextPageToken || undefined
-		} while (nextPageToken && (maxResults === undefined || videoIds.length < maxResults))
 
-		// Remove first 15 videos to not conflict with RSS feed / videoSyncProgram
-		return videoIds.slice(15)
-	})
+			yield* Effect.logInfo(`Uploads playlist ID: ${uploadsPlaylistId}`)
 
-	const getRSSVideoIds = Effect.fn("getRSSVideoIds")(function* (ytChannelId: string) {
+			const videoIds: string[] = []
+			let nextPageToken: string | undefined
+
+			do {
+				const playlistResponse = yield* Effect.tryPromise({
+					try: () =>
+						ytApi.playlistItems.list({
+							part: ["contentDetails"],
+							playlistId: uploadsPlaylistId,
+							maxResults: 50,
+							...(nextPageToken !== undefined ? { pageToken: nextPageToken } : {})
+						}),
+					catch: (cause) =>
+						new YtError({
+							message: `Failed to get playlist items for playlist ${uploadsPlaylistId}`,
+							cause
+						})
+				})
+
+				for (const item of playlistResponse.data.items || []) {
+					if (item.contentDetails?.videoId) {
+						videoIds.push(item.contentDetails.videoId)
+					}
+				}
+				nextPageToken = playlistResponse.data.nextPageToken || undefined
+			} while (nextPageToken && (maxResults === undefined || videoIds.length < maxResults))
+
+			// Remove first 15 videos to not conflict with RSS feed / videoSyncProgram
+			return videoIds.slice(15)
+		}
+	)
+
+	const getRSSVideoIds = Effect.fn("YtService.getRSSVideoIds")(function* (ytChannelId: string) {
 		return yield* Effect.gen(function* () {
 			const response = yield* Effect.tryPromise({
 				try: () => fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${ytChannelId}`),
@@ -277,12 +280,10 @@ const ytService = Effect.gen(function* () {
 			})
 
 			return parseYtRSS(xml)
-		}).pipe(
-			Effect.retry(Schedule.exponential("1 seconds").pipe(Schedule.andThen(Schedule.recurs(3))))
-		)
+		}).pipe(Effect.retry(Schedule.max([Schedule.exponential("1 second"), Schedule.recurs(3)])))
 	})
 
-	const isVideoShort = Effect.fn("isVideoShort")(function* (
+	const isVideoShort = Effect.fn("YtService.isVideoShort")(function* (
 		ytVideoId: string,
 		ytChannelId: string
 	) {
@@ -307,7 +308,7 @@ const ytService = Effect.gen(function* () {
 		return (response.data.items?.length ?? 0) > 0
 	})
 
-	const areVideosShorts = Effect.fn("areVideosShorts")(function* (
+	const areVideosShorts = Effect.fn("YtService.areVideosShorts")(function* (
 		ytVideoIds: string[],
 		ytChannelId: string,
 		maxResults?: number
@@ -345,7 +346,7 @@ const ytService = Effect.gen(function* () {
 		return new Map(ytVideoIds.map((videoId) => [videoId, shortsSet.has(videoId)]))
 	})
 
-	const getLiveStreamVideoIds = Effect.fn("getLiveStreamVideoIds")(function* (
+	const getLiveStreamVideoIds = Effect.fn("YtService.getLiveStreamVideoIds")(function* (
 		ytChannelId: string,
 		maxResults: number = 10
 	) {
