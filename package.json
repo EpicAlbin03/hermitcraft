@@ -56,6 +56,7 @@
       "content-sync": {
         "@twurple/api": "^8.1.4",
         "@twurple/auth": "^8.1.4",
+        "fast-xml-parser": "^5.10.1",
         "googleapis": "^173.0.0",
         "sharp": "^0.35.3",
         "thumbhash": "^0.1.1"

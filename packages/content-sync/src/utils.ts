@@ -1,3 +1,24 @@
+import { XMLParser } from "fast-xml-parser"
+
+type YtRss = {
+	feed?: {
+		entry?: {
+			"yt:videoId"?: string
+		}[]
+	}
+}
+
+const ytRssParser = new XMLParser({
+	ignoreAttributes: false,
+	parseTagValue: false,
+	isArray: (_tagName, jPath) => jPath === "feed.entry"
+})
+
+export function parseYtRSS(xml: string) {
+	const rss = ytRssParser.parse(xml) as YtRss
+	return rss.feed?.entry?.map((entry) => entry["yt:videoId"]) ?? []
+}
+
 export function parseIsoDurationToSeconds(duration: string) {
 	const ISO_DURATION_PATTERN = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/
 	const match = ISO_DURATION_PATTERN.exec(duration)
@@ -10,32 +31,6 @@ export function parseIsoDurationToSeconds(duration: string) {
 
 	const totalSeconds = ((days * 24 + hours) * 60 + minutes) * 60 + seconds
 	return Number.isNaN(totalSeconds) ? null : totalSeconds
-}
-
-export function parseYtRSS(xml: string) {
-	const ytVideoIds: string[] = []
-
-	const entryRegex = /<entry>([\s\S]*?)<\/entry>/g
-	let match
-
-	while ((match = entryRegex.exec(xml)) !== null) {
-		const entryXml = match[1]
-
-		if (!entryXml) continue
-
-		const videoIdMatch = entryXml.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)
-		// const titleMatch = entryXml.match(/<title>([^<]+)<\/title>/);
-		// const thumbnailMatch = entryXml.match(/<media:thumbnail[^>]+url="([^"]+)"/);
-		// const publishedMatch = entryXml.match(/<published>([^<]+)<\/published>/);
-		// const viewCountMatch = entryXml.match(/<media:statistics[^>]+views="([^"]+)"/);
-		// const likeCountMatch = entryXml.match(/<media:starRating[^>]+count="([^"]+)"/);
-
-		if (!videoIdMatch) continue
-
-		ytVideoIds.push(videoIdMatch[1]!)
-	}
-
-	return ytVideoIds
 }
 
 export function getYtPlaylistId(
@@ -84,12 +79,6 @@ export function getVideoLivestreamType(
 	liveBroadcastContent: "live" | "none" | "upcoming",
 	hasBeenLivestream: boolean
 ) {
-	switch (liveBroadcastContent) {
-		case "live":
-			return "live"
-		case "upcoming":
-			return "upcoming"
-		case "none":
-			return hasBeenLivestream ? "completed" : "none"
-	}
+	if (liveBroadcastContent !== "none") return liveBroadcastContent
+	return hasBeenLivestream ? "completed" : "none"
 }

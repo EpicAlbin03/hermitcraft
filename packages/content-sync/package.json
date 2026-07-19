@@ -13,6 +13,7 @@
 		"@twurple/api": "catalog:content-sync",
 		"@twurple/auth": "catalog:content-sync",
 		"effect": "catalog:effect",
+		"fast-xml-parser": "catalog:content-sync",
 		"googleapis": "catalog:content-sync",
 		"sharp": "catalog:content-sync",
 		"thumbhash": "catalog:content-sync"
