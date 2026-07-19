@@ -7,6 +7,7 @@
 
 ## General Rules
 
+- NEVER use subagents unless explicitly asked to do so.
 - Be extremely concise.
 - NEVER add unit tests. No standard test command.
 - NEVER run `dev` or `build` commands.

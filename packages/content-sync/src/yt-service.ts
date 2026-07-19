@@ -72,11 +72,14 @@ const ytService = Effect.gen(function* () {
 		ytChannelId: string
 	) {
 		const response = yield* Effect.tryPromise({
-			try: () =>
-				ytApi.channels.list({
-					part: ["id", "snippet", "statistics", "brandingSettings"],
-					id: [ytChannelId]
-				}),
+			try: (signal) =>
+				ytApi.channels.list(
+					{
+						part: ["id", "snippet", "statistics", "brandingSettings"],
+						id: [ytChannelId]
+					},
+					{ signal }
+				),
 			catch: (cause) =>
 				new YtError({
 					message: `Failed to get details for channel ${ytChannelId}`,
@@ -152,11 +155,14 @@ const ytService = Effect.gen(function* () {
 
 	const getVideoDetails = Effect.fn("YtService.getVideoDetails")(function* (ytVideoId: string) {
 		const response = yield* Effect.tryPromise({
-			try: () =>
-				ytApi.videos.list({
-					part: ["snippet", "statistics", "contentDetails", "liveStreamingDetails", "status"],
-					id: [ytVideoId]
-				}),
+			try: (signal) =>
+				ytApi.videos.list(
+					{
+						part: ["snippet", "statistics", "contentDetails", "liveStreamingDetails", "status"],
+						id: [ytVideoId]
+					},
+					{ signal }
+				),
 			catch: (cause) =>
 				new YtError({
 					message: `Failed to get details for video ${ytVideoId}`,
@@ -176,11 +182,14 @@ const ytService = Effect.gen(function* () {
 		}
 
 		const response = yield* Effect.tryPromise({
-			try: () =>
-				ytApi.videos.list({
-					part: ["snippet", "statistics", "contentDetails", "liveStreamingDetails", "status"],
-					id: ytVideoIds
-				}),
+			try: (signal) =>
+				ytApi.videos.list(
+					{
+						part: ["snippet", "statistics", "contentDetails", "liveStreamingDetails", "status"],
+						id: ytVideoIds
+					},
+					{ signal }
+				),
 			catch: (cause) =>
 				new YtError({
 					message: `Failed to get batch video details for ${ytVideoIds}`,
@@ -208,11 +217,14 @@ const ytService = Effect.gen(function* () {
 	const getVideoIdsFromUploadsPlaylist = Effect.fn("YtService.getVideoIdsFromUploadsPlaylist")(
 		function* (ytChannelId: string, maxResults?: number) {
 			const playlists = yield* Effect.tryPromise({
-				try: () =>
-					ytApi.channels.list({
-						part: ["contentDetails"],
-						id: [ytChannelId]
-					}),
+				try: (signal) =>
+					ytApi.channels.list(
+						{
+							part: ["contentDetails"],
+							id: [ytChannelId]
+						},
+						{ signal }
+					),
 				catch: (cause) =>
 					new YtError({
 						message: `Failed to get playlists for channel ${ytChannelId}`,
@@ -235,13 +247,16 @@ const ytService = Effect.gen(function* () {
 
 			do {
 				const playlistResponse = yield* Effect.tryPromise({
-					try: () =>
-						ytApi.playlistItems.list({
-							part: ["contentDetails"],
-							playlistId: uploadsPlaylistId,
-							maxResults: 50,
-							...(nextPageToken !== undefined ? { pageToken: nextPageToken } : {})
-						}),
+					try: (signal) =>
+						ytApi.playlistItems.list(
+							{
+								part: ["contentDetails"],
+								playlistId: uploadsPlaylistId,
+								maxResults: 50,
+								...(nextPageToken !== undefined ? { pageToken: nextPageToken } : {})
+							},
+							{ signal }
+						),
 					catch: (cause) =>
 						new YtError({
 							message: `Failed to get playlist items for playlist ${uploadsPlaylistId}`,
@@ -288,13 +303,16 @@ const ytService = Effect.gen(function* () {
 		if (!shortsPlaylistId) return false
 
 		const response = yield* Effect.tryPromise({
-			try: () =>
-				ytApi.playlistItems.list({
-					part: ["id"],
-					playlistId: shortsPlaylistId,
-					videoId: ytVideoId,
-					maxResults: 1
-				}),
+			try: (signal) =>
+				ytApi.playlistItems.list(
+					{
+						part: ["id"],
+						playlistId: shortsPlaylistId,
+						videoId: ytVideoId,
+						maxResults: 1
+					},
+					{ signal }
+				),
 			catch: (cause) =>
 				new YtError({
 					message: `Failed to check if video ${ytVideoId} is a short`,
@@ -322,13 +340,16 @@ const ytService = Effect.gen(function* () {
 
 		do {
 			const playlistResponse = yield* Effect.tryPromise({
-				try: () =>
-					ytApi.playlistItems.list({
-						part: ["contentDetails"],
-						playlistId: shortsPlaylistId,
-						maxResults: 50,
-						...(nextPageToken !== undefined ? { pageToken: nextPageToken } : {})
-					}),
+				try: (signal) =>
+					ytApi.playlistItems.list(
+						{
+							part: ["contentDetails"],
+							playlistId: shortsPlaylistId,
+							maxResults: 50,
+							...(nextPageToken !== undefined ? { pageToken: nextPageToken } : {})
+						},
+						{ signal }
+					),
 				catch: (cause) =>
 					new YtError({
 						message: `Failed to fetch shorts playlist for ${ytChannelId}`,
@@ -355,12 +376,15 @@ const ytService = Effect.gen(function* () {
 		if (!livestreamsPlaylistId) return []
 
 		const response = yield* Effect.tryPromise({
-			try: () =>
-				ytApi.playlistItems.list({
-					part: ["contentDetails"],
-					playlistId: livestreamsPlaylistId,
-					maxResults
-				}),
+			try: (signal) =>
+				ytApi.playlistItems.list(
+					{
+						part: ["contentDetails"],
+						playlistId: livestreamsPlaylistId,
+						maxResults
+					},
+					{ signal }
+				),
 			catch: (cause) =>
 				new YtError({
 					message: `Failed to fetch livestreams playlist for ${ytChannelId}`,
