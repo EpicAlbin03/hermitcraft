@@ -24,46 +24,24 @@ export function parseIsoDurationToSeconds(duration: string) {
 	return Temporal.Duration.from(duration).total("seconds")
 }
 
-export function getYtPlaylistId(
-	ytChannelId: string,
-	type:
-		| "videos"
-		| "popularVideos"
-		| "livestreams"
-		| "membersOnlyVideos"
-		| "membersOnlyContents"
-		| "membersOnlyShorts"
-		| "membersOnlyLivestreams"
-		| "popularShorts"
-		| "popularLivestreams"
-		| "shorts"
-) {
-	if (!ytChannelId.startsWith("UC")) {
-		return null
-	}
+const ytPlaylistPrefixes = {
+	videos: "UULF", // Doesn't include shorts and livestreams
+	popularVideos: "UULP",
+	livestreams: "UULV",
+	membersOnlyVideos: "UUMF",
+	membersOnlyContents: "UUMO",
+	membersOnlyShorts: "UUMS",
+	membersOnlyLivestreams: "UUMV",
+	popularShorts: "UUPS",
+	popularLivestreams: "UUPV",
+	shorts: "UUSH"
+} as const
 
-	switch (type) {
-		case "videos": // Doesn't include shorts and livestreams
-			return "UULF" + ytChannelId.slice(2)
-		case "popularVideos":
-			return "UULP" + ytChannelId.slice(2)
-		case "livestreams":
-			return "UULV" + ytChannelId.slice(2)
-		case "membersOnlyVideos":
-			return "UUMF" + ytChannelId.slice(2)
-		case "membersOnlyContents":
-			return "UUMO" + ytChannelId.slice(2)
-		case "membersOnlyShorts":
-			return "UUMS" + ytChannelId.slice(2)
-		case "membersOnlyLivestreams":
-			return "UUMV" + ytChannelId.slice(2)
-		case "popularShorts":
-			return "UUPS" + ytChannelId.slice(2)
-		case "popularLivestreams":
-			return "UUPV" + ytChannelId.slice(2)
-		case "shorts":
-			return "UUSH" + ytChannelId.slice(2)
-	}
+type YtPlaylistType = keyof typeof ytPlaylistPrefixes
+
+export function getYtPlaylistId(ytChannelId: string, type: YtPlaylistType) {
+	if (!ytChannelId.startsWith("UC")) return null
+	return `${ytPlaylistPrefixes[type]}${ytChannelId.slice(2)}`
 }
 
 export function getVideoLivestreamType(
