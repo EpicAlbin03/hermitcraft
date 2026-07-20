@@ -18,12 +18,16 @@ export const uploadStatusEnum = d.pgEnum("upload_status", [
 	"rejected",
 	"uploaded"
 ])
+export const liveBroadcastContent = ["live", "none", "upcoming"] as const
 export const livestreamTypeEnum = d.pgEnum("livestream_type", [
-	"live",
-	"none",
-	"upcoming",
+	...liveBroadcastContent,
 	"completed"
 ])
+
+export type PrivacyStatus = (typeof privacyStatusEnum.enumValues)[number]
+export type UploadStatus = (typeof uploadStatusEnum.enumValues)[number]
+export type LiveBroadcastContent = (typeof liveBroadcastContent)[number]
+export type LivestreamType = (typeof livestreamTypeEnum.enumValues)[number]
 
 export const creators = d.pgTable("creators", {
 	ytChannelId: d.varchar("yt_channel_id", { length: 24 }).primaryKey(),

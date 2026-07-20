@@ -1,4 +1,4 @@
-import type { Video } from "@hc/db/schema"
+import { liveBroadcastContent, privacyStatusEnum, uploadStatusEnum, type Video } from "@hc/db/schema"
 import { Temporal } from "@js-temporal/polyfill"
 import { youtube_v3 as yt_v3 } from "googleapis"
 import * as Effect from "effect/Effect"
@@ -14,11 +14,11 @@ const YtVideoItem = Schema.Struct({
 		channelId: Schema.NonEmptyString,
 		title: Schema.NonEmptyString,
 		publishedAt: Schema.DateFromString,
-		liveBroadcastContent: Schema.Literals(["live", "none", "upcoming"])
+		liveBroadcastContent: Schema.Literals(liveBroadcastContent)
 	}),
 	status: Schema.Struct({
-		privacyStatus: Schema.Literals(["private", "public", "unlisted"]),
-		uploadStatus: Schema.Literals(["deleted", "failed", "processed", "rejected", "uploaded"])
+		privacyStatus: Schema.Literals(privacyStatusEnum.enumValues),
+		uploadStatus: Schema.Literals(uploadStatusEnum.enumValues)
 	}),
 	statistics: Schema.Struct({
 		viewCount: Schema.optionalKey(Schema.NullOr(CountFromString)),
