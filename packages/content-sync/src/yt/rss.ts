@@ -22,7 +22,7 @@ const ytRssParser = new XMLParser({
 	isArray: (_tagName, jPath) => jPath === "feed.entry"
 })
 
-export function parseYtRSS(xml: string) {
+function parseYtRSS(xml: string) {
 	return Effect.try(() => ytRssParser.parse(xml) as unknown).pipe(
 		Effect.flatMap(decodeYtRss),
 		Effect.map((rss) => rss.feed.entry.map((entry) => entry["yt:videoId"]))
