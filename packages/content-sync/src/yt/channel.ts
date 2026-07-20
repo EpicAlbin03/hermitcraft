@@ -2,9 +2,10 @@ import type { Creator } from "@hc/db/schema"
 import { youtube_v3 as yt_v3 } from "googleapis"
 import sharp from "sharp"
 import * as Effect from "effect/Effect"
+import * as Encoding from "effect/Encoding"
 import * as Schema from "effect/Schema"
 import * as HttpClient from "effect/unstable/http/HttpClient"
-import { rgbaToThumbHash, thumbHashToDataURL } from "thumbhash"
+import { rgbaToThumbHash } from "thumbhash"
 import { YtError } from "./errors"
 import { CountFromString, getThumbnailUrl } from "./shared"
 
@@ -60,7 +61,7 @@ export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.
 			try: () => rgbaToThumbHash(info.width, info.height, data),
 			catch: (cause) => new YtError({ message: "Failed to generate banner ThumbHash", cause })
 		})
-		return thumbHashToDataURL(hash)
+		return Encoding.encodeBase64(hash)
 	})
 
 	const getChannelDetails = Effect.fn("YtService.getChannelDetails")(function* (
