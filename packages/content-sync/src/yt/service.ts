@@ -55,7 +55,7 @@ export class YtService extends Context.Service<
 			})
 
 			return YtService.of({
-				...makeChannelMethods(ytApi, httpClient),
+				...makeChannelMethods(ytApi, retryingHttpClient),
 				...makeVideoMethods(ytApi),
 				...makePlaylistMethods(ytApi),
 				...makeRssMethods(retryingHttpClient)

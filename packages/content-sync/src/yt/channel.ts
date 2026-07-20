@@ -1,3 +1,4 @@
+import type { Creator } from "@hc/db/schema"
 import { youtube_v3 as yt_v3 } from "googleapis"
 import sharp from "sharp"
 import * as Effect from "effect/Effect"
@@ -6,19 +7,7 @@ import { rgbaToThumbHash, thumbHashToDataURL } from "thumbhash"
 import { YtError } from "./errors"
 import { getThumbnailUrl, parseDate } from "./shared"
 
-export type ChannelDetails = {
-	ytChannelId: string
-	ytName: string
-	ytHandle: string
-	ytDescription: string
-	ytAvatarUrl: string
-	ytBannerUrl: string
-	ytBannerThumbHash: string | null
-	ytViewCount: number
-	ytSubscriberCount: number
-	ytVideoCount: number
-	ytJoinedAt: Date
-}
+export type ChannelDetails = Pick<Creator, Extract<keyof Creator, `yt${string}`>>
 
 export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.HttpClient) => {
 	const generateBannerThumbHash = Effect.fn("YtService.generateBannerThumbHash")(function* (
@@ -63,26 +52,29 @@ export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.
 			return yield* new YtError({ message: `Channel ${ytChannelId} not found` })
 		}
 
-		const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl || ""
+		const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl ?? ""
 		const ytBannerThumbHash = bannerUrl
 			? yield* generateBannerThumbHash(bannerUrl).pipe(
-					Effect.catch((err) =>
-						Effect.logWarning(`Failed to generate thumbhash: ${err.message}`).pipe(Effect.as(null))
+					Effect.catchTag("YtError", (error) =>
+						Effect.logWarning("Failed to generate banner ThumbHash", {
+							ytChannelId,
+							cause: error
+						}).pipe(Effect.as(null))
 					)
 				)
 			: null
 
 		return {
 			ytChannelId: item.id,
-			ytName: item.snippet.title || "",
-			ytHandle: item.snippet.customUrl || "",
-			ytDescription: item.snippet.description || "",
+			ytName: item.snippet.title ?? "",
+			ytHandle: item.snippet.customUrl ?? "",
+			ytDescription: item.snippet.description ?? "",
 			ytAvatarUrl: getThumbnailUrl(item),
 			ytBannerUrl: bannerUrl,
 			ytBannerThumbHash,
-			ytViewCount: parseInt(item.statistics?.viewCount || "0", 10),
-			ytSubscriberCount: parseInt(item.statistics?.subscriberCount || "0", 10),
-			ytVideoCount: parseInt(item.statistics?.videoCount || "0", 10),
+			ytViewCount: parseInt(item.statistics?.viewCount ?? "0", 10),
+			ytSubscriberCount: parseInt(item.statistics?.subscriberCount ?? "0", 10),
+			ytVideoCount: parseInt(item.statistics?.videoCount ?? "0", 10),
 			ytJoinedAt: parseDate(item.snippet.publishedAt)
 		} satisfies ChannelDetails
 	})
