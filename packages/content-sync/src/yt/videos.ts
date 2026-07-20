@@ -2,44 +2,42 @@ import type { Video } from "@hc/db/schema"
 import { Temporal } from "@js-temporal/polyfill"
 import { youtube_v3 as yt_v3 } from "googleapis"
 import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import { YtError } from "./errors"
-import { getThumbnailUrl, parseDate } from "./shared"
+import { CountFromString, getThumbnailUrl } from "./shared"
 
 export type VideoDetails = Omit<Video, "isShort">
 
-const parsePrivacyStatus = (value: string | null | undefined) => {
-	switch (value) {
-		case "private":
-		case "public":
-		case "unlisted":
-			return value
-		default:
-			return "public"
-	}
-}
+const YtVideoItem = Schema.Struct({
+	id: Schema.NonEmptyString,
+	snippet: Schema.Struct({
+		channelId: Schema.NonEmptyString,
+		title: Schema.NonEmptyString,
+		publishedAt: Schema.DateFromString,
+		liveBroadcastContent: Schema.Literals(["live", "none", "upcoming"])
+	}),
+	status: Schema.Struct({
+		privacyStatus: Schema.Literals(["private", "public", "unlisted"]),
+		uploadStatus: Schema.Literals(["deleted", "failed", "processed", "rejected", "uploaded"])
+	}),
+	statistics: Schema.Struct({
+		viewCount: Schema.optionalKey(Schema.NullOr(CountFromString)),
+		likeCount: Schema.optionalKey(Schema.NullOr(CountFromString)),
+		commentCount: Schema.optionalKey(Schema.NullOr(CountFromString))
+	}),
+	contentDetails: Schema.Struct({
+		duration: Schema.optionalKey(Schema.NullOr(Schema.NonEmptyString))
+	}),
+	liveStreamingDetails: Schema.optionalKey(
+		Schema.Struct({
+			scheduledStartTime: Schema.optionalKey(Schema.NullOr(Schema.DateFromString)),
+			actualStartTime: Schema.optionalKey(Schema.NullOr(Schema.DateFromString)),
+			concurrentViewers: Schema.optionalKey(Schema.NullOr(CountFromString))
+		})
+	)
+})
 
-const parseUploadStatus = (value: string | null | undefined) => {
-	switch (value) {
-		case "deleted":
-		case "failed":
-		case "processed":
-		case "rejected":
-		case "uploaded":
-			return value
-		default:
-			return "uploaded"
-	}
-}
-
-const parseLiveBroadcastContent = (value: string | null | undefined) => {
-	switch (value) {
-		case "live":
-		case "upcoming":
-			return value
-		default:
-			return "none"
-	}
-}
+const decodeYtVideoItem = Schema.decodeUnknownEffect(YtVideoItem)
 
 export function parseIsoDurationToSeconds(duration: string) {
 	return Temporal.Duration.from(duration).total("seconds")
@@ -58,37 +56,43 @@ export const makeVideoMethods = (ytApi: yt_v3.Youtube) => {
 		item: yt_v3.Schema$Video | undefined,
 		ytVideoId: string
 	) {
-		if (!item || !item.id || !item.snippet || !item.snippet.channelId) {
+		if (!item) {
 			return yield* new YtError({ message: `Video ${ytVideoId} not found` })
 		}
 
-		const hasBeenLivestream = item.liveStreamingDetails !== undefined
-		const liveBroadcastContent = parseLiveBroadcastContent(item.snippet.liveBroadcastContent)
+		const video = yield* decodeYtVideoItem(item).pipe(
+			Effect.mapError(
+				(cause) =>
+					new YtError({
+						message: `Video ${ytVideoId} returned invalid details`,
+						cause
+					})
+			)
+		)
+
+		const { snippet, status, statistics, contentDetails, liveStreamingDetails } = video
 
 		return {
-			ytVideoId: item.id,
-			ytChannelId: item.snippet.channelId,
-			title: item.snippet.title || "",
+			ytVideoId: video.id,
+			ytChannelId: snippet.channelId,
+			title: snippet.title,
 			thumbnailUrl: getThumbnailUrl(item),
-			publishedAt: parseDate(item.snippet.publishedAt),
-			privacyStatus: parsePrivacyStatus(item.status?.privacyStatus),
-			uploadStatus: parseUploadStatus(item.status?.uploadStatus),
-			viewCount: parseInt(item.statistics?.viewCount || "0", 10),
-			likeCount: parseInt(item.statistics?.likeCount || "0", 10),
-			commentCount: parseInt(item.statistics?.commentCount || "0", 10),
-			durationSeconds: item.contentDetails?.duration
-				? parseIsoDurationToSeconds(item.contentDetails.duration)
+			publishedAt: snippet.publishedAt,
+			privacyStatus: status.privacyStatus,
+			uploadStatus: status.uploadStatus,
+			viewCount: statistics.viewCount ?? 0,
+			likeCount: statistics.likeCount ?? 0,
+			commentCount: statistics.commentCount ?? 0,
+			durationSeconds: contentDetails.duration
+				? parseIsoDurationToSeconds(contentDetails.duration)
 				: null,
-			livestreamType: getVideoLivestreamType(liveBroadcastContent, hasBeenLivestream),
-			livestreamScheduledStartTime: item.liveStreamingDetails?.scheduledStartTime
-				? parseDate(item.liveStreamingDetails.scheduledStartTime)
-				: null,
-			livestreamActualStartTime: item.liveStreamingDetails?.actualStartTime
-				? parseDate(item.liveStreamingDetails.actualStartTime)
-				: null,
-			livestreamConcurrentViewers: item.liveStreamingDetails?.concurrentViewers
-				? parseInt(item.liveStreamingDetails.concurrentViewers, 10)
-				: null
+			livestreamType: getVideoLivestreamType(
+				snippet.liveBroadcastContent,
+				liveStreamingDetails !== undefined
+			),
+			livestreamScheduledStartTime: liveStreamingDetails?.scheduledStartTime ?? null,
+			livestreamActualStartTime: liveStreamingDetails?.actualStartTime ?? null,
+			livestreamConcurrentViewers: liveStreamingDetails?.concurrentViewers ?? null
 		} satisfies VideoDetails
 	})
 
