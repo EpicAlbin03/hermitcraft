@@ -45,10 +45,17 @@ export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.
 		)
 		const { data, info } = yield* Effect.tryPromise({
 			try: () =>
-				sharp(new Uint8Array(buffer)).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+				sharp(new Uint8Array(buffer))
+					.resize({ width: 100, height: 100, fit: "inside", withoutEnlargement: true })
+					.ensureAlpha()
+					.raw()
+					.toBuffer({ resolveWithObject: true }),
 			catch: (cause) => new YtError({ message: "Failed to decode banner image", cause })
 		})
-		const hash = rgbaToThumbHash(info.width, info.height, data)
+		const hash = yield* Effect.try({
+			try: () => rgbaToThumbHash(info.width, info.height, data),
+			catch: (cause) => new YtError({ message: "Failed to generate banner ThumbHash", cause })
+		})
 		return thumbHashToDataURL(hash)
 	})
 
