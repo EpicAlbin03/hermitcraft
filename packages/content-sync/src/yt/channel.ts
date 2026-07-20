@@ -19,7 +19,7 @@ const YtChannelItem = Schema.Struct({
 	id: Schema.NonEmptyString,
 	snippet: Schema.Struct({
 		title: Schema.NonEmptyString,
-		customUrl: Schema.NonEmptyString,
+		customUrl: Schema.optionalKey(Schema.NullOr(Schema.NonEmptyString)),
 		description: Schema.optionalKey(Schema.NullOr(Schema.String)),
 		publishedAt: Schema.DateFromString
 	}),
@@ -27,7 +27,7 @@ const YtChannelItem = Schema.Struct({
 		viewCount: CountFromString,
 		subscriberCount: Schema.optionalKey(Schema.NullOr(CountFromString)),
 		videoCount: CountFromString,
-		hiddenSubscriberCount: Schema.Boolean
+		hiddenSubscriberCount: Schema.optionalKey(Schema.NullOr(Schema.Boolean))
 	})
 })
 
@@ -103,14 +103,14 @@ export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.
 		return {
 			ytChannelId: channel.id,
 			ytName: snippet.title,
-			ytHandle: snippet.customUrl,
+			ytHandle: snippet.customUrl ?? "",
 			ytDescription: snippet.description ?? "",
 			ytAvatarUrl: getThumbnailUrl(item),
 			ytBannerUrl: bannerUrl,
 			ytBannerThumbHash,
 			ytViewCount: statistics.viewCount,
 			ytSubscriberCount: statistics.subscriberCount ?? 0,
-			ytHiddenSubscriberCount: statistics.hiddenSubscriberCount,
+			ytHiddenSubscriberCount: statistics.hiddenSubscriberCount ?? false,
 			ytVideoCount: statistics.videoCount,
 			ytJoinedAt: snippet.publishedAt
 		} satisfies ChannelDetails
