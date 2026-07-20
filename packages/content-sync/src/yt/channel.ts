@@ -28,7 +28,16 @@ const YtChannelItem = Schema.Struct({
 		subscriberCount: Schema.optionalKey(Schema.NullOr(CountFromString)),
 		videoCount: CountFromString,
 		hiddenSubscriberCount: Schema.optionalKey(Schema.NullOr(Schema.Boolean))
-	})
+	}),
+	brandingSettings: Schema.optionalKey(
+		Schema.Struct({
+			image: Schema.optionalKey(
+				Schema.Struct({
+					bannerExternalUrl: Schema.optionalKey(Schema.NullOr(Schema.String))
+				})
+			)
+		})
+	)
 })
 
 const decodeYtChannelItem = Schema.decodeUnknownEffect(YtChannelItem)
@@ -93,9 +102,9 @@ export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.
 			)
 		)
 
-		const { snippet, statistics } = channel
+		const { snippet, statistics, brandingSettings } = channel
 
-		const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl ?? ""
+		const bannerUrl = brandingSettings?.image?.bannerExternalUrl ?? ""
 		const ytBannerThumbHash = bannerUrl
 			? yield* generateBannerThumbHash(bannerUrl).pipe(
 					Effect.catchTag("YtError", (error) =>
