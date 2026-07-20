@@ -6,14 +6,9 @@ import * as Schema from "effect/Schema"
 import * as HttpClient from "effect/unstable/http/HttpClient"
 import { rgbaToThumbHash, thumbHashToDataURL } from "thumbhash"
 import { YtError } from "./errors"
-import { getThumbnailUrl } from "./shared"
+import { CountFromString, getThumbnailUrl } from "./shared"
 
 export type ChannelDetails = Pick<Creator, Extract<keyof Creator, `yt${string}`>>
-
-const CountFromString = Schema.FiniteFromString.check(
-	Schema.isInt(),
-	Schema.isGreaterThanOrEqualTo(0)
-)
 
 const YtChannelItem = Schema.Struct({
 	id: Schema.NonEmptyString,
