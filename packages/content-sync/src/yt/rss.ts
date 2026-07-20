@@ -1,15 +1,20 @@
 import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import * as HttpClient from "effect/unstable/http/HttpClient"
 import { XMLParser } from "fast-xml-parser"
 import { YtError } from "./errors"
 
-type YtRss = {
-	feed?: {
-		entry?: {
-			"yt:videoId"?: string
-		}[]
-	}
-}
+const YtRss = Schema.Struct({
+	feed: Schema.Struct({
+		entry: Schema.Array(
+			Schema.Struct({
+				"yt:videoId": Schema.NonEmptyString
+			})
+		).pipe(Schema.withDecodingDefaultKey(Effect.succeed([])))
+	})
+})
+
+const decodeYtRss = Schema.decodeUnknownEffect(YtRss)
 
 const ytRssParser = new XMLParser({
 	ignoreAttributes: false,
@@ -18,11 +23,9 @@ const ytRssParser = new XMLParser({
 })
 
 export function parseYtRSS(xml: string) {
-	const rss = ytRssParser.parse(xml) as YtRss
-	return (
-		rss.feed?.entry
-			?.map((entry) => entry["yt:videoId"])
-			.filter((videoId) => videoId !== undefined) ?? []
+	return Effect.try(() => ytRssParser.parse(xml) as unknown).pipe(
+		Effect.flatMap(decodeYtRss),
+		Effect.map((rss) => rss.feed.entry.map((entry) => entry["yt:videoId"]))
 	)
 }
 
@@ -34,7 +37,7 @@ export const makeRssMethods = (httpClient: HttpClient.HttpClient) => {
 			})
 			.pipe(
 				Effect.flatMap((response) => response.text),
-				Effect.map(parseYtRSS),
+				Effect.flatMap(parseYtRSS),
 				Effect.mapError(
 					(cause) =>
 						new YtError({
