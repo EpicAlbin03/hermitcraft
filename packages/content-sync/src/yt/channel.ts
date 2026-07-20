@@ -2,12 +2,36 @@ import type { Creator } from "@hc/db/schema"
 import { youtube_v3 as yt_v3 } from "googleapis"
 import sharp from "sharp"
 import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import * as HttpClient from "effect/unstable/http/HttpClient"
 import { rgbaToThumbHash, thumbHashToDataURL } from "thumbhash"
 import { YtError } from "./errors"
-import { getThumbnailUrl, parseDate } from "./shared"
+import { getThumbnailUrl } from "./shared"
 
 export type ChannelDetails = Pick<Creator, Extract<keyof Creator, `yt${string}`>>
+
+const CountFromString = Schema.FiniteFromString.check(
+	Schema.isInt(),
+	Schema.isGreaterThanOrEqualTo(0)
+)
+
+const YtChannelItem = Schema.Struct({
+	id: Schema.NonEmptyString,
+	snippet: Schema.Struct({
+		title: Schema.NonEmptyString,
+		customUrl: Schema.NonEmptyString,
+		description: Schema.optionalKey(Schema.NullOr(Schema.String)),
+		publishedAt: Schema.DateFromString
+	}),
+	statistics: Schema.Struct({
+		viewCount: CountFromString,
+		subscriberCount: Schema.optionalKey(Schema.NullOr(CountFromString)),
+		videoCount: CountFromString,
+		hiddenSubscriberCount: Schema.Boolean
+	})
+})
+
+const decodeYtChannelItem = Schema.decodeUnknownEffect(YtChannelItem)
 
 export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.HttpClient) => {
 	const generateBannerThumbHash = Effect.fn("YtService.generateBannerThumbHash")(function* (
@@ -48,9 +72,21 @@ export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.
 		})
 
 		const item = response.data.items?.[0]
-		if (!item || !item.id || !item.snippet) {
+		if (!item) {
 			return yield* new YtError({ message: `Channel ${ytChannelId} not found` })
 		}
+
+		const channel = yield* decodeYtChannelItem(item).pipe(
+			Effect.mapError(
+				(cause) =>
+					new YtError({
+						message: `Channel ${ytChannelId} returned invalid details`,
+						cause
+					})
+			)
+		)
+
+		const { snippet, statistics } = channel
 
 		const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl ?? ""
 		const ytBannerThumbHash = bannerUrl
@@ -65,17 +101,18 @@ export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.
 			: null
 
 		return {
-			ytChannelId: item.id,
-			ytName: item.snippet.title ?? "",
-			ytHandle: item.snippet.customUrl ?? "",
-			ytDescription: item.snippet.description ?? "",
+			ytChannelId: channel.id,
+			ytName: snippet.title,
+			ytHandle: snippet.customUrl,
+			ytDescription: snippet.description ?? "",
 			ytAvatarUrl: getThumbnailUrl(item),
 			ytBannerUrl: bannerUrl,
 			ytBannerThumbHash,
-			ytViewCount: parseInt(item.statistics?.viewCount ?? "0", 10),
-			ytSubscriberCount: parseInt(item.statistics?.subscriberCount ?? "0", 10),
-			ytVideoCount: parseInt(item.statistics?.videoCount ?? "0", 10),
-			ytJoinedAt: parseDate(item.snippet.publishedAt)
+			ytViewCount: statistics.viewCount,
+			ytSubscriberCount: statistics.subscriberCount ?? 0,
+			ytHiddenSubscriberCount: statistics.hiddenSubscriberCount,
+			ytVideoCount: statistics.videoCount,
+			ytJoinedAt: snippet.publishedAt
 		} satisfies ChannelDetails
 	})
 

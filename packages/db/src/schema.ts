@@ -35,6 +35,7 @@ export const creators = d.pgTable("creators", {
 	ytBannerThumbHash: d.text("yt_banner_thumb_hash"),
 	ytViewCount: d.bigint("yt_view_count", { mode: "number" }).notNull(),
 	ytSubscriberCount: d.integer("yt_subscriber_count").notNull(),
+	ytHiddenSubscriberCount: d.boolean("yt_hidden_subscriber_count").notNull().default(false),
 	ytVideoCount: d.integer("yt_video_count").notNull(),
 	ytJoinedAt: d.timestamp("yt_joined_at").notNull(),
 	twitchUserId: d.varchar("twitch_user_id", { length: 20 }),
