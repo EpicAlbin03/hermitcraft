@@ -2,9 +2,8 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import * as HttpClient from "effect/unstable/http/HttpClient"
 import { XMLParser } from "fast-xml-parser"
+import { REQUEST_DEADLINE } from "../constants"
 import { YtError } from "./errors"
-
-const REQUEST_DEADLINE = "30 seconds"
 
 const YtRss = Schema.Struct({
 	feed: Schema.Struct({

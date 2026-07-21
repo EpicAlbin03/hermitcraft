@@ -7,9 +7,8 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Redacted from "effect/Redacted"
 import * as Schema from "effect/Schema"
+import { REQUEST_DEADLINE, TWITCH_MAX_PAGE_SIZE } from "../constants"
 import { TwitchError } from "./errors"
-
-const REQUEST_DEADLINE = "30 seconds"
 
 const TwitchStream = Schema.Struct({
 	userId: Schema.NonEmptyString
@@ -84,10 +83,14 @@ export class TwitchService extends Context.Service<
 				if (userIds.length === 0) return new Map<string, boolean>()
 
 				const responses = yield* Effect.forEach(
-					Arr.chunksOf(new Set(userIds), 100),
+					Arr.chunksOf(new Set(userIds), TWITCH_MAX_PAGE_SIZE),
 					(userIdChunk) =>
 						Effect.tryPromise({
-							try: () => twitchApi.streams.getStreams({ userId: userIdChunk, limit: 100 }),
+							try: () =>
+								twitchApi.streams.getStreams({
+									userId: userIdChunk,
+									limit: TWITCH_MAX_PAGE_SIZE
+								}),
 							catch: () =>
 								TwitchError.make({
 									reason: "request-failed",

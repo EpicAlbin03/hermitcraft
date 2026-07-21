@@ -1,4 +1,39 @@
+import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { YtError } from "./errors"
+
+export const YtItemsResponse = <Item extends Schema.Top>(item: Item) =>
+	Schema.Struct({
+		items: Schema.optionalKey(Schema.NullOr(Schema.Array(item)))
+	})
+
+export const YtPaginatedItemsResponse = <Item extends Schema.Top>(item: Item) =>
+	Schema.Struct({
+		...YtItemsResponse(item).fields,
+		nextPageToken: Schema.optionalKey(Schema.NullOr(Schema.NonEmptyString))
+	})
+
+export const validateIntegerInRange = Effect.fn("YtService.validateIntegerInRange")(function* (
+	value: number,
+	options: {
+		name: string
+		minimum: number
+		maximum: number
+	}
+) {
+	if (
+		!Number.isFinite(value) ||
+		!Number.isSafeInteger(value) ||
+		value < options.minimum ||
+		value > options.maximum
+	) {
+		return yield* YtError.make({
+			reason: "invalid-input",
+			message: `${options.name} must be a finite safe integer between ${options.minimum} and ${options.maximum}`
+		})
+	}
+	return value
+})
 
 export const CountFromString = Schema.FiniteFromString.check(
 	Schema.isInt(),

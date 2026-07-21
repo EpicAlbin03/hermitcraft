@@ -6,12 +6,11 @@ import * as Encoding from "effect/Encoding"
 import * as Schema from "effect/Schema"
 import * as HttpClient from "effect/unstable/http/HttpClient"
 import { rgbaToThumbHash } from "thumbhash"
+import { REQUEST_DEADLINE } from "../constants"
 import { YtError } from "./errors"
-import { CountFromString, getThumbnailUrl, YtThumbnails } from "./shared"
+import { CountFromString, getThumbnailUrl, YtItemsResponse, YtThumbnails } from "./shared"
 
 export type ChannelDetails = Pick<Creator, Extract<keyof Creator, `yt${string}`>>
-
-const REQUEST_DEADLINE = "30 seconds"
 
 const YtChannelItem = Schema.Struct({
 	id: Schema.NonEmptyString,
@@ -39,9 +38,7 @@ const YtChannelItem = Schema.Struct({
 	)
 })
 
-const YtChannelResponse = Schema.Struct({
-	items: Schema.optionalKey(Schema.NullOr(Schema.Array(YtChannelItem)))
-})
+const YtChannelResponse = YtItemsResponse(YtChannelItem)
 
 const decodeYtChannelResponse = Schema.decodeUnknownEffect(YtChannelResponse)
 

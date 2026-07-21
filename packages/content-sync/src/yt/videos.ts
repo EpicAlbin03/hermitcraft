@@ -9,12 +9,11 @@ import { Temporal } from "@js-temporal/polyfill"
 import { youtube_v3 as yt_v3 } from "googleapis"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { REQUEST_DEADLINE, YT_MAX_PAGE_SIZE } from "../constants"
 import { YtError } from "./errors"
-import { CountFromString, getThumbnailUrl, YtThumbnails } from "./shared"
+import { CountFromString, getThumbnailUrl, YtItemsResponse, YtThumbnails } from "./shared"
 
 export type VideoDetails = Omit<Video, "isShort">
-
-const REQUEST_DEADLINE = "30 seconds"
 
 const YtVideoItem = Schema.Struct({
 	id: Schema.NonEmptyString,
@@ -46,9 +45,7 @@ const YtVideoItem = Schema.Struct({
 	)
 })
 
-const YtVideoResponse = Schema.Struct({
-	items: Schema.optionalKey(Schema.NullOr(Schema.Array(YtVideoItem)))
-})
+const YtVideoResponse = YtItemsResponse(YtVideoItem)
 
 type YtVideo = typeof YtVideoItem.Type
 
@@ -156,10 +153,10 @@ export const makeVideoMethods = (ytApi: yt_v3.Youtube) => {
 		ytVideoIds: string[]
 	) {
 		if (ytVideoIds.length === 0) return new Map<string, VideoDetails>()
-		if (ytVideoIds.length > 50) {
+		if (ytVideoIds.length > YT_MAX_PAGE_SIZE) {
 			return yield* YtError.make({
 				reason: "invalid-input",
-				message: "Maximum of 50 videos can be fetched at once"
+				message: `Maximum of ${YT_MAX_PAGE_SIZE} videos can be fetched at once`
 			})
 		}
 
