@@ -45,19 +45,19 @@ const YtVideoItem = Schema.Struct({
 
 const decodeYtVideoItem = Schema.decodeUnknownEffect(YtVideoItem)
 
-export function parseIsoDurationToSeconds(duration: string) {
+function parseIsoDurationToSeconds(duration: string) {
 	return Effect.try({
 		try: () => Temporal.Duration.from(duration).total("seconds"),
 		catch: (cause) => new YtError({ message: `Invalid ISO duration: ${duration}`, cause })
 	})
 }
 
-export function getVideoLivestreamType(
+function getVideoLivestreamType(
 	liveBroadcastContent: LiveBroadcastContent,
-	hasBeenLivestream: boolean
+	hasLiveStreamingDetails: boolean
 ) {
 	if (liveBroadcastContent !== "none") return liveBroadcastContent
-	return hasBeenLivestream ? "completed" : "none"
+	return hasLiveStreamingDetails ? "completed" : "none"
 }
 
 const parseVideoDetails = Effect.fn("YtService.parseVideoDetails")(function* (
