@@ -1,6 +1,13 @@
-import * as Data from "effect/Data"
+import * as Schema from "effect/Schema"
 
-export class YtError extends Data.TaggedError("YtError")<{
-	message: string
-	cause?: unknown
-}> {}
+export class YtError extends Schema.TaggedErrorClass<YtError>()("YtError", {
+	reason: Schema.Literals([
+		"invalid-input",
+		"invalid-response",
+		"not-found",
+		"processing-failed",
+		"request-failed",
+		"timeout"
+	]),
+	message: Schema.String
+}) {}

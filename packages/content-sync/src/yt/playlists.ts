@@ -11,6 +11,10 @@ const YtChannelPlaylistItem = Schema.Struct({
 	})
 })
 
+const YtChannelPlaylistResponse = Schema.Struct({
+	items: Schema.optionalKey(Schema.NullOr(Schema.Array(YtChannelPlaylistItem)))
+})
+
 const YtPlaylistItem = Schema.Struct({
 	contentDetails: Schema.Struct({
 		videoId: Schema.NonEmptyString
@@ -21,12 +25,20 @@ const YtPlaylistItemId = Schema.Struct({
 	id: Schema.NonEmptyString
 })
 
-const decodeYtChannelPlaylistItem = Schema.decodeUnknownEffect(YtChannelPlaylistItem)
+const YtPlaylistPage = Schema.Struct({
+	items: Schema.optionalKey(Schema.NullOr(Schema.Array(Schema.Unknown))),
+	nextPageToken: Schema.optionalKey(Schema.NullOr(Schema.NonEmptyString))
+})
+
+const decodeYtChannelPlaylistResponse = Schema.decodeUnknownEffect(YtChannelPlaylistResponse)
+const decodeYtPlaylistPage = Schema.decodeUnknownEffect(YtPlaylistPage)
 const decodeYtPlaylistItems = Schema.decodeUnknownEffect(Schema.Array(YtPlaylistItem))
 const decodeYtPlaylistItemIds = Schema.decodeUnknownEffect(Schema.Array(YtPlaylistItemId))
 
 const RSS_VIDEOS_COUNT = 15
 const YOUTUBE_MAX_PAGE_SIZE = 50
+const REQUEST_DEADLINE = "30 seconds"
+const MAX_UPLOADS_LIMIT = Number.MAX_SAFE_INTEGER - RSS_VIDEOS_COUNT
 
 // YouTube does not officially document these derived playlist ID prefixes.
 const ytPlaylistPrefixes = {
@@ -48,9 +60,31 @@ const validateYtChannelId = Effect.fn("YtService.validateYtChannelId")(function*
 	ytChannelId: string
 ) {
 	if (!ytChannelId.startsWith("UC")) {
-		return yield* new YtError({ message: `Invalid YouTube channel ID: ${ytChannelId}` })
+		return yield* YtError.make({
+			reason: "invalid-input",
+			message: `Invalid YouTube channel ID: ${ytChannelId}`
+		})
 	}
 	return ytChannelId
+})
+
+const validateLimit = Effect.fn("YtService.validateLimit")(function* (
+	limit: number,
+	minimum: number,
+	maximum: number
+) {
+	if (
+		!Number.isFinite(limit) ||
+		!Number.isSafeInteger(limit) ||
+		limit < minimum ||
+		limit > maximum
+	) {
+		return yield* YtError.make({
+			reason: "invalid-input",
+			message: `Limit must be a finite safe integer between ${minimum} and ${maximum}`
+		})
+	}
+	return limit
 })
 
 const getYtPlaylistId = Effect.fn("YtService.getYtPlaylistId")(function* (
@@ -70,38 +104,56 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 		pageToken?: string
 		videoId?: string
 	}) {
+		const maxResults = yield* validateLimit(options.limit, 1, YOUTUBE_MAX_PAGE_SIZE)
 		const response = yield* Effect.tryPromise({
 			try: (signal) =>
 				ytApi.playlistItems.list(
 					{
 						part: [options.part],
 						playlistId: options.playlistId,
-						maxResults: options.limit,
+						maxResults,
 						...(options.pageToken !== undefined ? { pageToken: options.pageToken } : {}),
 						...(options.videoId !== undefined ? { videoId: options.videoId } : {})
 					},
 					{ signal }
 				),
-			catch: (cause) =>
-				new YtError({
-					message: `Failed to fetch ${options.context}`,
-					cause
+			catch: () =>
+				YtError.make({
+					reason: "request-failed",
+					message: `Failed to fetch ${options.context}`
 				})
-		})
+		}).pipe(
+			Effect.timeoutOrElse({
+				duration: REQUEST_DEADLINE,
+				orElse: () =>
+					Effect.fail(
+						YtError.make({
+							reason: "timeout",
+							message: `Timed out fetching ${options.context}`
+						})
+					)
+			})
+		)
 
-		return response.data
+		return yield* decodeYtPlaylistPage(response.data).pipe(
+			Effect.mapError(() =>
+				YtError.make({
+					reason: "invalid-response",
+					message: `Invalid page returned by ${options.context}`
+				})
+			)
+		)
 	})
 
 	const decodePlaylistVideoIds = Effect.fn("YtService.decodePlaylistVideoIds")(
 		(items: unknown, context: string) =>
 			decodeYtPlaylistItems(items).pipe(
 				Effect.map((items) => items.map((item) => item.contentDetails.videoId)),
-				Effect.mapError(
-					(cause) =>
-						new YtError({
-							message: `Invalid items returned by ${context}`,
-							cause
-						})
+				Effect.mapError(() =>
+					YtError.make({
+						reason: "invalid-response",
+						message: `Invalid items returned by ${context}`
+					})
 				)
 			)
 	)
@@ -110,12 +162,11 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 		(items: unknown, context: string) =>
 			decodeYtPlaylistItemIds(items).pipe(
 				Effect.map((items) => items.map((item) => item.id)),
-				Effect.mapError(
-					(cause) =>
-						new YtError({
-							message: `Invalid items returned by ${context}`,
-							cause
-						})
+				Effect.mapError(() =>
+					YtError.make({
+						reason: "invalid-response",
+						message: `Invalid items returned by ${context}`
+					})
 				)
 			)
 	)
@@ -146,6 +197,7 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 		limit?: number
 	) {
 		const videoIds: string[] = []
+		const seenPageTokens = new Set<string>()
 		let nextPageToken: string | undefined
 
 		do {
@@ -158,6 +210,15 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 			})
 			videoIds.push(...page.videoIds)
 			nextPageToken = page.nextPageToken
+			if (nextPageToken) {
+				if (seenPageTokens.has(nextPageToken)) {
+					return yield* YtError.make({
+						reason: "invalid-response",
+						message: `Repeated page token returned by ${context}`
+					})
+				}
+				seenPageTokens.add(nextPageToken)
+			}
 		} while (nextPageToken && (limit === undefined || videoIds.length < limit))
 
 		return limit === undefined ? videoIds : videoIds.slice(0, limit)
@@ -166,6 +227,7 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 	const getVideoIdsFromUploadsPlaylist = Effect.fn("YtService.getVideoIdsFromUploadsPlaylist")(
 		function* (ytChannelId: string, limit?: number) {
 			yield* validateYtChannelId(ytChannelId)
+			if (limit !== undefined) yield* validateLimit(limit, 0, MAX_UPLOADS_LIMIT)
 			if (limit === 0) return []
 
 			const response = yield* Effect.tryPromise({
@@ -177,29 +239,39 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 						},
 						{ signal }
 					),
-				catch: (cause) =>
-					new YtError({
-						message: `Failed to get playlists for channel ${ytChannelId}`,
-						cause
+				catch: () =>
+					YtError.make({
+						reason: "request-failed",
+						message: `Failed to get playlists for channel ${ytChannelId}`
 					})
-			})
+			}).pipe(
+				Effect.timeoutOrElse({
+					duration: REQUEST_DEADLINE,
+					orElse: () =>
+						Effect.fail(
+							YtError.make({
+								reason: "timeout",
+								message: `Timed out getting playlists for channel ${ytChannelId}`
+							})
+						)
+				})
+			)
 
-			const item = response.data.items?.[0]
-			if (!item) {
-				return yield* new YtError({
+			const data = yield* decodeYtChannelPlaylistResponse(response.data).pipe(
+				Effect.mapError(() =>
+					YtError.make({
+						reason: "invalid-response",
+						message: `Channel ${ytChannelId} returned invalid playlist details`
+					})
+				)
+			)
+			const channelPlaylist = data.items?.[0]
+			if (!channelPlaylist) {
+				return yield* YtError.make({
+					reason: "not-found",
 					message: `Could not find uploads playlist for channel ${ytChannelId}`
 				})
 			}
-
-			const channelPlaylist = yield* decodeYtChannelPlaylistItem(item).pipe(
-				Effect.mapError(
-					(cause) =>
-						new YtError({
-							message: `Channel ${ytChannelId} returned invalid playlist details`,
-							cause
-						})
-				)
-			)
 			const uploadsPlaylistId = channelPlaylist.contentDetails.relatedPlaylists.uploads
 
 			yield* Effect.logInfo("Found uploads playlist", { ytChannelId, uploadsPlaylistId })
@@ -241,11 +313,7 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 		limit: number = YOUTUBE_MAX_PAGE_SIZE
 	) {
 		const shortsPlaylistId = yield* getYtPlaylistId(ytChannelId, "shorts")
-		if (limit < 1 || limit > YOUTUBE_MAX_PAGE_SIZE) {
-			return yield* new YtError({
-				message: `Limit must be between 1 and ${YOUTUBE_MAX_PAGE_SIZE}`
-			})
-		}
+		yield* validateLimit(limit, 1, YOUTUBE_MAX_PAGE_SIZE)
 
 		const uniqueVideoIds = [...new Set(ytVideoIds)]
 		if (uniqueVideoIds.length === 0) return new Map<string, boolean>()
@@ -265,12 +333,8 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 		limit: number = 10
 	) {
 		const livestreamsPlaylistId = yield* getYtPlaylistId(ytChannelId, "livestreams")
+		yield* validateLimit(limit, 0, YOUTUBE_MAX_PAGE_SIZE)
 		if (limit === 0) return []
-		if (limit < 1 || limit > YOUTUBE_MAX_PAGE_SIZE) {
-			return yield* new YtError({
-				message: `Limit must be between 1 and ${YOUTUBE_MAX_PAGE_SIZE}`
-			})
-		}
 
 		return yield* getPlaylistVideoIds(
 			livestreamsPlaylistId,

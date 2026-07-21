@@ -59,7 +59,9 @@ export class YtService extends Context.Service<
 				...makeRssMethods(retryingHttpClient)
 			})
 		})
-	).pipe(Layer.provide(FetchHttpClient.layer))
+	)
+
+	static readonly live = YtService.layer.pipe(Layer.provide(FetchHttpClient.layer))
 }
 
 export type YtServiceType = YtService["Service"]

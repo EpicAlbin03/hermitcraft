@@ -6,7 +6,21 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Redacted from "effect/Redacted"
+import * as Schema from "effect/Schema"
 import { TwitchError } from "./errors"
+
+const REQUEST_DEADLINE = "30 seconds"
+
+const TwitchStream = Schema.Struct({
+	userId: Schema.NonEmptyString
+})
+
+const TwitchStreamsPage = Schema.Struct({
+	data: Schema.Array(TwitchStream)
+})
+
+const decodeTwitchStream = Schema.decodeUnknownEffect(Schema.NullOr(TwitchStream))
+const decodeTwitchStreamsPage = Schema.decodeUnknownEffect(TwitchStreamsPage)
 
 export class TwitchService extends Context.Service<
 	TwitchService,
@@ -27,14 +41,41 @@ export class TwitchService extends Context.Service<
 			const isChannelLive = Effect.fn("TwitchService.isChannelLive")(function* (userId: string) {
 				const response = yield* Effect.tryPromise({
 					try: () => twitchApi.streams.getStreamByUserId(userId),
-					catch: (cause) =>
-						new TwitchError({
-							message: `Failed to get stream for user ${userId}`,
-							cause
+					catch: () =>
+						TwitchError.make({
+							reason: "request-failed",
+							message: `Failed to get stream for user ${userId}`
+						})
+				}).pipe(
+					Effect.timeoutOrElse({
+						duration: REQUEST_DEADLINE,
+						orElse: () =>
+							Effect.fail(
+								TwitchError.make({
+									reason: "timeout",
+									message: `Timed out getting stream for user ${userId}`
+								})
+							)
+					})
+				)
+				const projectedResponse = yield* Effect.try({
+					try: () => (response === null ? null : { userId: response.userId }),
+					catch: () =>
+						TwitchError.make({
+							reason: "invalid-response",
+							message: `Invalid stream response for user ${userId}`
 						})
 				})
+				const stream = yield* decodeTwitchStream(projectedResponse).pipe(
+					Effect.mapError(() =>
+						TwitchError.make({
+							reason: "invalid-response",
+							message: `Invalid stream response for user ${userId}`
+						})
+					)
+				)
 
-				return response !== null
+				return stream !== null
 			})
 
 			const areChannelsLive = Effect.fn("TwitchService.areChannelsLive")(function* (
@@ -47,16 +88,47 @@ export class TwitchService extends Context.Service<
 					(userIdChunk) =>
 						Effect.tryPromise({
 							try: () => twitchApi.streams.getStreams({ userId: userIdChunk, limit: 100 }),
-							catch: (cause) =>
-								new TwitchError({
-									message: "Failed to get streams for users",
-									cause
+							catch: () =>
+								TwitchError.make({
+									reason: "request-failed",
+									message: "Failed to get streams for users"
 								})
-						})
+						}).pipe(
+							Effect.timeoutOrElse({
+								duration: REQUEST_DEADLINE,
+								orElse: () =>
+									Effect.fail(
+										TwitchError.make({
+											reason: "timeout",
+											message: "Timed out getting streams for users"
+										})
+									)
+							})
+						)
+				)
+				const pages = yield* Effect.forEach(responses, (response) =>
+					Effect.try({
+						try: () => ({
+							data: response.data.map((stream) => ({ userId: stream.userId }))
+						}),
+						catch: () =>
+							TwitchError.make({
+								reason: "invalid-response",
+								message: "Invalid streams response for users"
+							})
+					}).pipe(
+						Effect.flatMap(decodeTwitchStreamsPage),
+						Effect.mapError(() =>
+							TwitchError.make({
+								reason: "invalid-response",
+								message: "Invalid streams response for users"
+							})
+						)
+					)
 				)
 
 				const liveUserIds = new Set(
-					responses.flatMap((response) => response.data.map((stream) => stream.userId))
+					pages.flatMap((page) => page.data.map((stream) => stream.userId))
 				)
 				return new Map(userIds.map((userId) => [userId, liveUserIds.has(userId)]))
 			})

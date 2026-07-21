@@ -11,6 +11,8 @@ import { CountFromString, getThumbnailUrl, YtThumbnails } from "./shared"
 
 export type ChannelDetails = Pick<Creator, Extract<keyof Creator, `yt${string}`>>
 
+const REQUEST_DEADLINE = "30 seconds"
+
 const YtChannelItem = Schema.Struct({
 	id: Schema.NonEmptyString,
 	snippet: Schema.Struct({
@@ -37,7 +39,11 @@ const YtChannelItem = Schema.Struct({
 	)
 })
 
-const decodeYtChannelItem = Schema.decodeUnknownEffect(YtChannelItem)
+const YtChannelResponse = Schema.Struct({
+	items: Schema.optionalKey(Schema.NullOr(Schema.Array(YtChannelItem)))
+})
+
+const decodeYtChannelResponse = Schema.decodeUnknownEffect(YtChannelResponse)
 
 export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.HttpClient) => {
 	const generateBannerThumbHash = Effect.fn("YtService.generateBannerThumbHash")(function* (
@@ -45,9 +51,22 @@ export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.
 	) {
 		const buffer = yield* httpClient.get(`${bannerUrl}=w100`).pipe(
 			Effect.flatMap((response) => response.arrayBuffer),
-			Effect.mapError(
-				(cause) => new YtError({ message: "Failed to fetch banner for thumbhash", cause })
-			)
+			Effect.mapError(() =>
+				YtError.make({
+					reason: "request-failed",
+					message: "Failed to fetch banner for thumbhash"
+				})
+			),
+			Effect.timeoutOrElse({
+				duration: REQUEST_DEADLINE,
+				orElse: () =>
+					Effect.fail(
+						YtError.make({
+							reason: "timeout",
+							message: "Timed out fetching banner for thumbhash"
+						})
+					)
+			})
 		)
 		const { data, info } = yield* Effect.tryPromise({
 			try: () =>
@@ -56,11 +75,16 @@ export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.
 					.ensureAlpha()
 					.raw()
 					.toBuffer({ resolveWithObject: true }),
-			catch: (cause) => new YtError({ message: "Failed to decode banner image", cause })
+			catch: () =>
+				YtError.make({ reason: "processing-failed", message: "Failed to decode banner image" })
 		})
 		const hash = yield* Effect.try({
 			try: () => rgbaToThumbHash(info.width, info.height, data),
-			catch: (cause) => new YtError({ message: "Failed to generate banner ThumbHash", cause })
+			catch: () =>
+				YtError.make({
+					reason: "processing-failed",
+					message: "Failed to generate banner ThumbHash"
+				})
 		})
 		return Encoding.encodeBase64(hash)
 	})
@@ -77,27 +101,39 @@ export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.
 					},
 					{ signal }
 				),
-			catch: (cause) =>
-				new YtError({
-					message: `Failed to get details for channel ${ytChannelId}`,
-					cause
+			catch: () =>
+				YtError.make({
+					reason: "request-failed",
+					message: `Failed to get details for channel ${ytChannelId}`
 				})
-		})
+		}).pipe(
+			Effect.timeoutOrElse({
+				duration: REQUEST_DEADLINE,
+				orElse: () =>
+					Effect.fail(
+						YtError.make({
+							reason: "timeout",
+							message: `Timed out getting details for channel ${ytChannelId}`
+						})
+					)
+			})
+		)
 
-		const item = response.data.items?.[0]
-		if (!item) {
-			return yield* new YtError({ message: `Channel ${ytChannelId} not found` })
-		}
-
-		const channel = yield* decodeYtChannelItem(item).pipe(
-			Effect.mapError(
-				(cause) =>
-					new YtError({
-						message: `Channel ${ytChannelId} returned invalid details`,
-						cause
-					})
+		const data = yield* decodeYtChannelResponse(response.data).pipe(
+			Effect.mapError(() =>
+				YtError.make({
+					reason: "invalid-response",
+					message: `Channel ${ytChannelId} returned invalid details`
+				})
 			)
 		)
+		const channel = data.items?.[0]
+		if (!channel) {
+			return yield* YtError.make({
+				reason: "not-found",
+				message: `Channel ${ytChannelId} not found`
+			})
+		}
 
 		const { snippet, statistics, brandingSettings } = channel
 
@@ -107,7 +143,7 @@ export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.
 					Effect.catchTag("YtError", (error) =>
 						Effect.logWarning("Failed to generate banner ThumbHash", {
 							ytChannelId,
-							cause: error
+							reason: error.reason
 						}).pipe(Effect.as(null))
 					)
 				)
