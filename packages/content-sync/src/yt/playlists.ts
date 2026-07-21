@@ -232,9 +232,9 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 		const shortsPlaylistId = yield* getYtPlaylistId(ytChannelId, "shorts")
 		const uniqueVideoIds = [...new Set(ytVideoIds)]
 		if (uniqueVideoIds.length === 0) return new Map<string, boolean>()
-		if (limit <= 1 || limit > YOUTUBE_MAX_PAGE_SIZE) {
+		if (limit < 1 || limit > YOUTUBE_MAX_PAGE_SIZE) {
 			return yield* new YtError({
-				message: `Limit must be between 2 and ${YOUTUBE_MAX_PAGE_SIZE}`
+				message: `Limit must be between 1 and ${YOUTUBE_MAX_PAGE_SIZE}`
 			})
 		}
 
@@ -254,11 +254,12 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 	) {
 		const livestreamsPlaylistId = yield* getYtPlaylistId(ytChannelId, "livestreams")
 		if (limit === 0) return []
-		if (limit > YOUTUBE_MAX_PAGE_SIZE) {
+		if (limit < 1 || limit > YOUTUBE_MAX_PAGE_SIZE) {
 			return yield* new YtError({
-				message: `Livestream playlist limit cannot exceed ${YOUTUBE_MAX_PAGE_SIZE}`
+				message: `Limit must be between 1 and ${YOUTUBE_MAX_PAGE_SIZE}`
 			})
 		}
+
 		return yield* getPlaylistVideoIds(
 			livestreamsPlaylistId,
 			`Livestreams playlist for ${ytChannelId}`,
