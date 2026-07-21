@@ -1,4 +1,3 @@
-import { youtube_v3 as yt_v3 } from "googleapis"
 import * as Schema from "effect/Schema"
 
 export const CountFromString = Schema.FiniteFromString.check(
@@ -6,12 +5,24 @@ export const CountFromString = Schema.FiniteFromString.check(
 	Schema.isGreaterThanOrEqualTo(0)
 )
 
-export const getThumbnailUrl = (item: yt_v3.Schema$Video | yt_v3.Schema$Channel) => {
-	const thumbnail =
-		item.snippet?.thumbnails?.maxres ||
-		item.snippet?.thumbnails?.standard ||
-		item.snippet?.thumbnails?.high ||
-		item.snippet?.thumbnails?.medium ||
-		item.snippet?.thumbnails?.default
-	return thumbnail?.url || ""
-}
+const YtThumbnail = Schema.Struct({
+	url: Schema.optionalKey(Schema.NullOr(Schema.String))
+})
+
+export const YtThumbnails = Schema.Struct({
+	default: Schema.optionalKey(Schema.NullOr(YtThumbnail)),
+	medium: Schema.optionalKey(Schema.NullOr(YtThumbnail)),
+	high: Schema.optionalKey(Schema.NullOr(YtThumbnail)),
+	standard: Schema.optionalKey(Schema.NullOr(YtThumbnail)),
+	maxres: Schema.optionalKey(Schema.NullOr(YtThumbnail))
+})
+
+type YtThumbnailsType = typeof YtThumbnails.Type
+
+export const getThumbnailUrl = (thumbnails: YtThumbnailsType | null | undefined) =>
+	thumbnails?.maxres?.url ||
+	thumbnails?.standard?.url ||
+	thumbnails?.high?.url ||
+	thumbnails?.medium?.url ||
+	thumbnails?.default?.url ||
+	""

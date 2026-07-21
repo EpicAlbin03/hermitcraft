@@ -10,7 +10,7 @@ import { youtube_v3 as yt_v3 } from "googleapis"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { YtError } from "./errors"
-import { CountFromString, getThumbnailUrl } from "./shared"
+import { CountFromString, getThumbnailUrl, YtThumbnails } from "./shared"
 
 export type VideoDetails = Omit<Video, "isShort">
 
@@ -19,6 +19,7 @@ const YtVideoItem = Schema.Struct({
 	snippet: Schema.Struct({
 		channelId: Schema.NonEmptyString,
 		title: Schema.NonEmptyString,
+		thumbnails: Schema.optionalKey(Schema.NullOr(YtThumbnails)),
 		publishedAt: Schema.DateFromString,
 		liveBroadcastContent: Schema.Literals(liveBroadcastContent)
 	}),
@@ -83,7 +84,7 @@ const parseVideoDetails = Effect.fn("YtService.parseVideoDetails")(function* (
 		ytVideoId: video.id,
 		ytChannelId: snippet.channelId,
 		title: snippet.title,
-		thumbnailUrl: getThumbnailUrl(item),
+		thumbnailUrl: getThumbnailUrl(snippet.thumbnails),
 		publishedAt: snippet.publishedAt,
 		privacyStatus: status.privacyStatus,
 		uploadStatus: status.uploadStatus,

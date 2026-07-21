@@ -117,7 +117,7 @@ export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.
 			ytName: snippet.title,
 			ytHandle: snippet.customUrl ?? "",
 			ytDescription: snippet.description ?? "",
-			ytAvatarUrl: getThumbnailUrl(item),
+			ytAvatarUrl: getThumbnailUrl(item.snippet?.thumbnails),
 			ytBannerUrl: bannerUrl,
 			ytBannerThumbHash,
 			ytViewCount: statistics.viewCount,
