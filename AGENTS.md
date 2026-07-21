@@ -20,18 +20,18 @@
 
 ## Vendored Repositories
 
-- Vendored repositories live under `repos/`.
+- Vendored repositories live under `.repos/`.
 - Use vendored repositories as read-only reference material.
-- Do not edit files under `repos/`.
-- Do not import from `repos/`.
+- Do not edit files under `.repos/`.
+- Do not import from `.repos/`.
 
 Available repositories:
 
-- `effect-smol`: Effect v4
+- `effect`: Effect v4
 - `drizzle-orm`: Drizzle ORM
 - `t3code`: Large effect codebase with many examples and patterns.
 
 ## Using Effect v4
 
-- When writing Effect code, inspect `repos/effect-smol/` for idiomatic usage, tests, module structure, and API design.
-- Prefer patterns from `repos/effect-smol/` over guesses or web search.
+- When writing Effect code, inspect `.repos/effect/` for idiomatic usage, tests, module structure, and API design.
+- Prefer patterns from `.repos/effect/` over guesses or web search.

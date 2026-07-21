@@ -56,5 +56,5 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # Other
-repos
+.repos
 .pi-subagents
