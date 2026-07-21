@@ -1,6 +1,29 @@
 import { youtube_v3 as yt_v3 } from "googleapis"
 import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import { YtError } from "./errors"
+
+const YtChannelPlaylistItem = Schema.Struct({
+	contentDetails: Schema.Struct({
+		relatedPlaylists: Schema.Struct({
+			uploads: Schema.NonEmptyString
+		})
+	})
+})
+
+const YtPlaylistItem = Schema.Struct({
+	contentDetails: Schema.Struct({
+		videoId: Schema.NonEmptyString
+	})
+})
+
+const YtPlaylistItemId = Schema.Struct({
+	id: Schema.NonEmptyString
+})
+
+const decodeYtChannelPlaylistItem = Schema.decodeUnknownEffect(YtChannelPlaylistItem)
+const decodeYtPlaylistItems = Schema.decodeUnknownEffect(Schema.Array(YtPlaylistItem))
+const decodeYtPlaylistItemIds = Schema.decodeUnknownEffect(Schema.Array(YtPlaylistItemId))
 
 const ytPlaylistPrefixes = {
 	videos: "UULF", // Doesn't include shorts and livestreams
@@ -41,12 +64,23 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 					})
 			})
 
-			const uploadsPlaylistId = playlists.data.items?.[0]?.contentDetails?.relatedPlaylists?.uploads
-			if (!uploadsPlaylistId) {
+			const item = playlists.data.items?.[0]
+			if (!item) {
 				return yield* new YtError({
 					message: `Could not find uploads playlist for channel ${ytChannelId}`
 				})
 			}
+
+			const channelPlaylist = yield* decodeYtChannelPlaylistItem(item).pipe(
+				Effect.mapError(
+					(cause) =>
+						new YtError({
+							message: `Channel ${ytChannelId} returned invalid playlist details`,
+							cause
+						})
+				)
+			)
+			const uploadsPlaylistId = channelPlaylist.contentDetails.relatedPlaylists.uploads
 
 			yield* Effect.logInfo(`Uploads playlist ID: ${uploadsPlaylistId}`)
 
@@ -73,11 +107,16 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 						})
 				})
 
-				for (const item of playlistResponse.data.items || []) {
-					if (item.contentDetails?.videoId) {
-						videoIds.push(item.contentDetails.videoId)
-					}
-				}
+				const items = yield* decodeYtPlaylistItems(playlistResponse.data.items || []).pipe(
+					Effect.mapError(
+						(cause) =>
+							new YtError({
+								message: `Playlist ${uploadsPlaylistId} returned invalid items`,
+								cause
+							})
+					)
+				)
+				videoIds.push(...items.map((item) => item.contentDetails.videoId))
 				nextPageToken = playlistResponse.data.nextPageToken || undefined
 			} while (nextPageToken && (targetResults === undefined || videoIds.length < targetResults))
 
@@ -111,7 +150,17 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 				})
 		})
 
-		return (response.data.items?.length ?? 0) > 0
+		const items = yield* decodeYtPlaylistItemIds(response.data.items || []).pipe(
+			Effect.mapError(
+				(cause) =>
+					new YtError({
+						message: `Shorts playlist for ${ytChannelId} returned invalid items`,
+						cause
+					})
+			)
+		)
+
+		return items.length > 0
 	})
 
 	const areVideosShorts = Effect.fn("YtService.areVideosShorts")(function* (
@@ -148,11 +197,16 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 					})
 			})
 
-			for (const item of playlistResponse.data.items || []) {
-				if (item.contentDetails?.videoId) {
-					shortsSet.add(item.contentDetails.videoId)
-				}
-			}
+			const items = yield* decodeYtPlaylistItems(playlistResponse.data.items || []).pipe(
+				Effect.mapError(
+					(cause) =>
+						new YtError({
+							message: `Shorts playlist for ${ytChannelId} returned invalid items`,
+							cause
+						})
+				)
+			)
+			for (const item of items) shortsSet.add(item.contentDetails.videoId)
 			nextPageToken = playlistResponse.data.nextPageToken || undefined
 		} while (nextPageToken && (maxResults === undefined || shortsSet.size < maxResults))
 
@@ -183,12 +237,17 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 				})
 		})
 
-		return (
-			response.data.items?.flatMap((item) => {
-				const videoId = item.contentDetails?.videoId
-				return videoId ? [videoId] : []
-			}) ?? []
+		const items = yield* decodeYtPlaylistItems(response.data.items || []).pipe(
+			Effect.mapError(
+				(cause) =>
+					new YtError({
+						message: `Livestreams playlist for ${ytChannelId} returned invalid items`,
+						cause
+					})
+			)
 		)
+
+		return items.map((item) => item.contentDetails.videoId)
 	})
 
 	return {
