@@ -80,13 +80,9 @@ export const makeVideoMethods = (ytApi: yt_v3.Youtube) => {
 	)
 
 	const parseVideoDetails = Effect.fn("YtService.parseVideoDetails")(function* (
-		item: yt_v3.Schema$Video | undefined,
+		item: yt_v3.Schema$Video,
 		ytVideoId: string
 	) {
-		if (!item) {
-			return yield* new YtError({ message: `Video ${ytVideoId} not found` })
-		}
-
 		const video = yield* decodeYtVideoItem(item).pipe(
 			Effect.mapError(
 				(cause) =>
@@ -123,8 +119,9 @@ export const makeVideoMethods = (ytApi: yt_v3.Youtube) => {
 	})
 
 	const getVideoDetails = Effect.fn("YtService.getVideoDetails")(function* (ytVideoId: string) {
-		const videos = yield* fetchVideos([ytVideoId])
-		return yield* parseVideoDetails(videos[0], ytVideoId)
+		const [item] = yield* fetchVideos([ytVideoId])
+		if (!item) return yield* new YtError({ message: `Video ${ytVideoId} not found` })
+		return yield* parseVideoDetails(item, ytVideoId)
 	})
 
 	const getBatchVideoDetails = Effect.fn("YtService.getBatchVideoDetails")(function* (
