@@ -60,6 +60,45 @@ export function getVideoLivestreamType(
 	return hasBeenLivestream ? "completed" : "none"
 }
 
+const parseVideoDetails = Effect.fn("YtService.parseVideoDetails")(function* (
+	item: yt_v3.Schema$Video,
+	ytVideoId: string
+) {
+	const video = yield* decodeYtVideoItem(item).pipe(
+		Effect.mapError(
+			(cause) =>
+				new YtError({
+					message: `Video ${ytVideoId} returned invalid details`,
+					cause
+				})
+		)
+	)
+
+	const { snippet, status, statistics, contentDetails, liveStreamingDetails } = video
+	const duration = contentDetails.duration
+
+	return {
+		ytVideoId: video.id,
+		ytChannelId: snippet.channelId,
+		title: snippet.title,
+		thumbnailUrl: getThumbnailUrl(item),
+		publishedAt: snippet.publishedAt,
+		privacyStatus: status.privacyStatus,
+		uploadStatus: status.uploadStatus,
+		viewCount: statistics.viewCount ?? 0,
+		likeCount: statistics.likeCount ?? 0,
+		commentCount: statistics.commentCount ?? 0,
+		durationSeconds: duration ? yield* parseIsoDurationToSeconds(duration) : null,
+		livestreamType: getVideoLivestreamType(
+			snippet.liveBroadcastContent,
+			liveStreamingDetails !== undefined
+		),
+		livestreamScheduledStartTime: liveStreamingDetails?.scheduledStartTime ?? null,
+		livestreamActualStartTime: liveStreamingDetails?.actualStartTime ?? null,
+		livestreamConcurrentViewers: liveStreamingDetails?.concurrentViewers ?? null
+	} satisfies VideoDetails
+})
+
 export const makeVideoMethods = (ytApi: yt_v3.Youtube) => {
 	const fetchVideos = Effect.fn("YtService.fetchVideos")((ytVideoIds: string[]) =>
 		Effect.tryPromise({
@@ -78,45 +117,6 @@ export const makeVideoMethods = (ytApi: yt_v3.Youtube) => {
 				})
 		}).pipe(Effect.map((response) => response.data.items ?? []))
 	)
-
-	const parseVideoDetails = Effect.fn("YtService.parseVideoDetails")(function* (
-		item: yt_v3.Schema$Video,
-		ytVideoId: string
-	) {
-		const video = yield* decodeYtVideoItem(item).pipe(
-			Effect.mapError(
-				(cause) =>
-					new YtError({
-						message: `Video ${ytVideoId} returned invalid details`,
-						cause
-					})
-			)
-		)
-
-		const { snippet, status, statistics, contentDetails, liveStreamingDetails } = video
-		const duration = contentDetails.duration
-
-		return {
-			ytVideoId: video.id,
-			ytChannelId: snippet.channelId,
-			title: snippet.title,
-			thumbnailUrl: getThumbnailUrl(item),
-			publishedAt: snippet.publishedAt,
-			privacyStatus: status.privacyStatus,
-			uploadStatus: status.uploadStatus,
-			viewCount: statistics.viewCount ?? 0,
-			likeCount: statistics.likeCount ?? 0,
-			commentCount: statistics.commentCount ?? 0,
-			durationSeconds: duration ? yield* parseIsoDurationToSeconds(duration) : null,
-			livestreamType: getVideoLivestreamType(
-				snippet.liveBroadcastContent,
-				liveStreamingDetails !== undefined
-			),
-			livestreamScheduledStartTime: liveStreamingDetails?.scheduledStartTime ?? null,
-			livestreamActualStartTime: liveStreamingDetails?.actualStartTime ?? null,
-			livestreamConcurrentViewers: liveStreamingDetails?.concurrentViewers ?? null
-		} satisfies VideoDetails
-	})
 
 	const getVideoDetails = Effect.fn("YtService.getVideoDetails")(function* (ytVideoId: string) {
 		const [item] = yield* fetchVideos([ytVideoId])
