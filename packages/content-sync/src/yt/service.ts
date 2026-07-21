@@ -31,7 +31,7 @@ export class YtService extends Context.Service<
 			ytChannelId: string,
 			limit?: number
 		): Effect.Effect<Map<string, boolean>, YtError>
-		getLiveStreamVideoIds(ytChannelId: string, limit?: number): Effect.Effect<string[], YtError>
+		getLivestreamVideoIds(ytChannelId: string, limit?: number): Effect.Effect<string[], YtError>
 	}
 >()("@hc/content-sync/yt/service/YtService") {
 	static readonly layer = Layer.effect(
