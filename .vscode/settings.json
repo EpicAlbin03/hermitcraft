@@ -8,15 +8,15 @@
   "js/ts.tsdk.path": "./node_modules/typescript",
   "js/ts.tsdk.additionalLocations": ["./node_modules/@typescript/native/bin"],
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,
-  "js/ts.preferences.autoImportFileExcludePatterns": ["repos/**"],
+  "js/ts.preferences.autoImportFileExcludePatterns": [".repos/**"],
   // "files.exclude": {
-  //   "repos/**": true
+  //   ".repos/**": true
   // },
   "files.watcherExclude": {
-    "repos/**": true
+    ".repos/**": true
   },
   "search.exclude": {
-    "repos/**": true
+    ".repos/**": true
   },
-  "vitest.configSearchPatternExclude": "{**/node_modules/**,**/repos/**,**/.*/**,*.d.ts}"
+  "vitest.configSearchPatternExclude": "{**/node_modules/**,**/.repos/**,**/.*/**,*.d.ts}"
 }
