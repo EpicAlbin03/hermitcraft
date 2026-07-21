@@ -21,19 +21,17 @@ export class YtService extends Context.Service<
 		getBatchVideoDetails(ytVideoIds: string[]): Effect.Effect<Map<string, VideoDetails>, YtError>
 		getVideoIdsFromUploadsPlaylist(
 			ytChannelId: string,
-			maxResults?: number
+			limit?: number
 		): Effect.Effect<string[], YtError>
 		getRSSVideoIds(ytChannelId: string): Effect.Effect<string[], YtError>
 		isVideoShort(ytVideoId: string, ytChannelId: string): Effect.Effect<boolean, YtError>
+		/** Checks IDs from the latest `limit` channel uploads against the same Shorts window. */
 		areVideosShorts(
 			ytVideoIds: string[],
 			ytChannelId: string,
-			maxResults?: number
+			limit?: number
 		): Effect.Effect<Map<string, boolean>, YtError>
-		getLiveStreamVideoIds(
-			ytChannelId: string,
-			maxResults?: number
-		): Effect.Effect<string[], YtError>
+		getLiveStreamVideoIds(ytChannelId: string, limit?: number): Effect.Effect<string[], YtError>
 	}
 >()("@hc/content-sync/yt/service/YtService") {
 	static readonly layer = Layer.effect(

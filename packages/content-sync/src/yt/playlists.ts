@@ -25,6 +25,9 @@ const decodeYtChannelPlaylistItem = Schema.decodeUnknownEffect(YtChannelPlaylist
 const decodeYtPlaylistItems = Schema.decodeUnknownEffect(Schema.Array(YtPlaylistItem))
 const decodeYtPlaylistItemIds = Schema.decodeUnknownEffect(Schema.Array(YtPlaylistItemId))
 
+const RSS_VIDEOS_COUNT = 15
+const YOUTUBE_MAX_PAGE_SIZE = 50
+
 const ytPlaylistPrefixes = {
 	videos: "UULF", // Doesn't include shorts and livestreams
 	popularVideos: "UULP",
@@ -47,7 +50,7 @@ export function getYtPlaylistId(ytChannelId: string, type: YtPlaylistType) {
 
 export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 	const getVideoIdsFromUploadsPlaylist = Effect.fn("YtService.getVideoIdsFromUploadsPlaylist")(
-		function* (ytChannelId: string, maxResults?: number) {
+		function* (ytChannelId: string, limit?: number) {
 			const playlists = yield* Effect.tryPromise({
 				try: (signal) =>
 					ytApi.channels.list(
@@ -85,7 +88,7 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 			yield* Effect.logInfo(`Uploads playlist ID: ${uploadsPlaylistId}`)
 
 			const videoIds: string[] = []
-			const targetResults = maxResults === undefined ? undefined : maxResults + 15
+			const targetResults = limit === undefined ? undefined : limit + RSS_VIDEOS_COUNT
 			let nextPageToken: string | undefined
 
 			do {
@@ -95,7 +98,7 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 							{
 								part: ["contentDetails"],
 								playlistId: uploadsPlaylistId,
-								maxResults: 50,
+								maxResults: YOUTUBE_MAX_PAGE_SIZE,
 								...(nextPageToken !== undefined ? { pageToken: nextPageToken } : {})
 							},
 							{ signal }
@@ -120,8 +123,9 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 				nextPageToken = playlistResponse.data.nextPageToken || undefined
 			} while (nextPageToken && (targetResults === undefined || videoIds.length < targetResults))
 
-			// Remove first 15 videos to not conflict with RSS feed / videoSyncProgram
-			return videoIds.slice(15, targetResults)
+			// Remove the videos handled by the RSS sync to avoid processing them twice.
+			// Backfill callers should include this offset in the areVideosShorts limit.
+			return videoIds.slice(RSS_VIDEOS_COUNT, targetResults)
 		}
 	)
 
@@ -166,9 +170,14 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 	const areVideosShorts = Effect.fn("YtService.areVideosShorts")(function* (
 		ytVideoIds: string[],
 		ytChannelId: string,
-		maxResults?: number
+		limit: number = YOUTUBE_MAX_PAGE_SIZE
 	) {
 		if (ytVideoIds.length === 0) return new Map<string, boolean>()
+		if (limit <= 1) {
+			return yield* new YtError({
+				message: "Limit must be greater than 1"
+			})
+		}
 
 		const shortsPlaylistId = getYtPlaylistId(ytChannelId, "shorts")
 		if (!shortsPlaylistId) {
@@ -176,6 +185,7 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 		}
 
 		const shortsSet = new Set<string>()
+		let fetchedCount = 0
 		let nextPageToken: string | undefined
 
 		do {
@@ -185,7 +195,7 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 						{
 							part: ["contentDetails"],
 							playlistId: shortsPlaylistId,
-							maxResults: 50,
+							maxResults: Math.min(YOUTUBE_MAX_PAGE_SIZE, limit - fetchedCount),
 							...(nextPageToken !== undefined ? { pageToken: nextPageToken } : {})
 						},
 						{ signal }
@@ -207,15 +217,16 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 				)
 			)
 			for (const item of items) shortsSet.add(item.contentDetails.videoId)
+			fetchedCount += items.length
 			nextPageToken = playlistResponse.data.nextPageToken || undefined
-		} while (nextPageToken && (maxResults === undefined || shortsSet.size < maxResults))
+		} while (nextPageToken && fetchedCount < limit)
 
 		return new Map(ytVideoIds.map((videoId) => [videoId, shortsSet.has(videoId)]))
 	})
 
 	const getLiveStreamVideoIds = Effect.fn("YtService.getLiveStreamVideoIds")(function* (
 		ytChannelId: string,
-		maxResults: number = 10
+		limit: number = 10
 	) {
 		const livestreamsPlaylistId = getYtPlaylistId(ytChannelId, "livestreams")
 		if (!livestreamsPlaylistId) return []
@@ -226,7 +237,7 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 					{
 						part: ["contentDetails"],
 						playlistId: livestreamsPlaylistId,
-						maxResults
+						maxResults: limit
 					},
 					{ signal }
 				),
