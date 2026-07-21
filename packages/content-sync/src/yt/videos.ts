@@ -148,21 +148,19 @@ export const makeVideoMethods = (ytApi: yt_v3.Youtube) => {
 				})
 		})
 
-		const entries = yield* Effect.forEach(response.data.items ?? [], (item) => {
-			const videoId = item.id
-			if (!videoId) return Effect.succeed(null)
+		const videos = yield* Effect.forEach(response.data.items ?? [], (item) =>
+			parseVideoDetails(item, item.id ?? "unknown")
+		)
+		const videosById = new Map(videos.map((video) => [video.ytVideoId, video]))
+		const missingVideoIds = ytVideoIds.filter((videoId) => !videosById.has(videoId))
 
-			return parseVideoDetails(item, videoId).pipe(
-				Effect.map((videoDetails) => [videoId, videoDetails] as const),
-				Effect.catchTag("YtError", (error) =>
-					Effect.logWarning(`Failed to parse video ${videoId}: ${error.message}`).pipe(
-						Effect.as(null)
-					)
-				)
-			)
-		})
+		if (missingVideoIds.length > 0) {
+			return yield* new YtError({
+				message: `Videos not found: ${missingVideoIds.join(", ")}`
+			})
+		}
 
-		return new Map(entries.filter((entry) => entry !== null))
+		return videosById
 	})
 
 	return {
