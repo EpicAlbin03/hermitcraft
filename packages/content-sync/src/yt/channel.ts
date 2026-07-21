@@ -7,7 +7,7 @@ import * as Schema from "effect/Schema"
 import * as HttpClient from "effect/unstable/http/HttpClient"
 import { rgbaToThumbHash } from "thumbhash"
 import { YtError } from "./errors"
-import { CountFromString, getThumbnailUrl } from "./shared"
+import { CountFromString, getThumbnailUrl, YtThumbnails } from "./shared"
 
 export type ChannelDetails = Pick<Creator, Extract<keyof Creator, `yt${string}`>>
 
@@ -17,7 +17,8 @@ const YtChannelItem = Schema.Struct({
 		title: Schema.NonEmptyString,
 		customUrl: Schema.optionalKey(Schema.NullOr(Schema.NonEmptyString)),
 		description: Schema.optionalKey(Schema.NullOr(Schema.String)),
-		publishedAt: Schema.DateFromString
+		publishedAt: Schema.DateFromString,
+		thumbnails: Schema.optionalKey(Schema.NullOr(YtThumbnails))
 	}),
 	statistics: Schema.Struct({
 		viewCount: CountFromString,
@@ -117,7 +118,7 @@ export const makeChannelMethods = (ytApi: yt_v3.Youtube, httpClient: HttpClient.
 			ytName: snippet.title,
 			ytHandle: snippet.customUrl ?? "",
 			ytDescription: snippet.description ?? "",
-			ytAvatarUrl: getThumbnailUrl(item.snippet?.thumbnails),
+			ytAvatarUrl: getThumbnailUrl(snippet.thumbnails),
 			ytBannerUrl: bannerUrl,
 			ytBannerThumbHash,
 			ytViewCount: statistics.viewCount,

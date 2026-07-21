@@ -64,7 +64,7 @@ export const videos = d.pgTable(
 		publishedAt: d.timestamp("published_at").notNull(),
 		privacyStatus: privacyStatusEnum("privacy_status").notNull(),
 		uploadStatus: uploadStatusEnum("upload_status").notNull(),
-		viewCount: d.integer("view_count").notNull(),
+		viewCount: d.bigint("view_count", { mode: "number" }).notNull(),
 		likeCount: d.integer("like_count").notNull(),
 		commentCount: d.integer("comment_count").notNull(),
 		durationSeconds: d.integer("duration_seconds"),
