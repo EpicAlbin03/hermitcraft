@@ -61,6 +61,24 @@ export function getVideoLivestreamType(
 }
 
 export const makeVideoMethods = (ytApi: yt_v3.Youtube) => {
+	const fetchVideos = Effect.fn("YtService.fetchVideos")((ytVideoIds: string[]) =>
+		Effect.tryPromise({
+			try: (signal) =>
+				ytApi.videos.list(
+					{
+						part: ["snippet", "statistics", "contentDetails", "liveStreamingDetails", "status"],
+						id: ytVideoIds
+					},
+					{ signal }
+				),
+			catch: (cause) =>
+				new YtError({
+					message: `Failed to get video details for ${ytVideoIds.join(", ")}`,
+					cause
+				})
+		}).pipe(Effect.map((response) => response.data.items ?? []))
+	)
+
 	const parseVideoDetails = Effect.fn("YtService.parseVideoDetails")(function* (
 		item: yt_v3.Schema$Video | undefined,
 		ytVideoId: string
@@ -105,23 +123,8 @@ export const makeVideoMethods = (ytApi: yt_v3.Youtube) => {
 	})
 
 	const getVideoDetails = Effect.fn("YtService.getVideoDetails")(function* (ytVideoId: string) {
-		const response = yield* Effect.tryPromise({
-			try: (signal) =>
-				ytApi.videos.list(
-					{
-						part: ["snippet", "statistics", "contentDetails", "liveStreamingDetails", "status"],
-						id: [ytVideoId]
-					},
-					{ signal }
-				),
-			catch: (cause) =>
-				new YtError({
-					message: `Failed to get details for video ${ytVideoId}`,
-					cause
-				})
-		})
-
-		return yield* parseVideoDetails(response.data.items?.[0], ytVideoId)
+		const videos = yield* fetchVideos([ytVideoId])
+		return yield* parseVideoDetails(videos[0], ytVideoId)
 	})
 
 	const getBatchVideoDetails = Effect.fn("YtService.getBatchVideoDetails")(function* (
@@ -132,23 +135,8 @@ export const makeVideoMethods = (ytApi: yt_v3.Youtube) => {
 			return yield* new YtError({ message: "Maximum of 50 videos can be fetched at once" })
 		}
 
-		const response = yield* Effect.tryPromise({
-			try: (signal) =>
-				ytApi.videos.list(
-					{
-						part: ["snippet", "statistics", "contentDetails", "liveStreamingDetails", "status"],
-						id: ytVideoIds
-					},
-					{ signal }
-				),
-			catch: (cause) =>
-				new YtError({
-					message: `Failed to get batch video details for ${ytVideoIds}`,
-					cause
-				})
-		})
-
-		const videos = yield* Effect.forEach(response.data.items ?? [], (item) =>
+		const items = yield* fetchVideos(ytVideoIds)
+		const videos = yield* Effect.forEach(items, (item) =>
 			parseVideoDetails(item, item.id ?? "unknown")
 		)
 		const videosById = new Map(videos.map((video) => [video.ytVideoId, video]))
