@@ -212,11 +212,10 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 			if (limit !== undefined) {
 				yield* validateIntegerInRange(limit, {
 					name: "Limit",
-					minimum: 0,
+					minimum: 1,
 					maximum: YT_MAX_UPLOADS_LIMIT
 				})
 			}
-			if (limit === 0) return []
 
 			const response = yield* Effect.tryPromise({
 				try: (signal) =>
@@ -327,10 +326,9 @@ export const makePlaylistMethods = (ytApi: yt_v3.Youtube) => {
 		const livestreamsPlaylistId = yield* getYtPlaylistId(ytChannelId, "livestreams")
 		yield* validateIntegerInRange(limit, {
 			name: "Limit",
-			minimum: 0,
+			minimum: 1,
 			maximum: YT_MAX_PAGE_SIZE
 		})
-		if (limit === 0) return []
 
 		return yield* getPlaylistVideoIds(
 			livestreamsPlaylistId,
