@@ -62,13 +62,15 @@ export function getVideoLivestreamType(
 
 const parseVideoDetails = Effect.fn("YtService.parseVideoDetails")(function* (
 	item: yt_v3.Schema$Video,
-	ytVideoId: string
+	ytVideoId?: string
 ) {
 	const video = yield* decodeYtVideoItem(item).pipe(
 		Effect.mapError(
 			(cause) =>
 				new YtError({
-					message: `Video ${ytVideoId} returned invalid details`,
+					message: ytVideoId
+						? `Video ${ytVideoId} returned invalid details`
+						: "Video returned invalid details",
 					cause
 				})
 		)
@@ -133,9 +135,7 @@ export const makeVideoMethods = (ytApi: yt_v3.Youtube) => {
 		}
 
 		const items = yield* fetchVideos(ytVideoIds)
-		const videos = yield* Effect.forEach(items, (item) =>
-			parseVideoDetails(item, item.id ?? "unknown")
-		)
+		const videos = yield* Effect.forEach(items, (item) => parseVideoDetails(item))
 		const videosById = new Map(videos.map((video) => [video.ytVideoId, video]))
 		const missingVideoIds = ytVideoIds.filter((videoId) => !videosById.has(videoId))
 
