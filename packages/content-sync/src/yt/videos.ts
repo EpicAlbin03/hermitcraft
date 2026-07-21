@@ -1,4 +1,10 @@
-import { liveBroadcastContent, privacyStatusEnum, uploadStatusEnum, type Video } from "@hc/db/schema"
+import {
+	liveBroadcastContent,
+	privacyStatusEnum,
+	uploadStatusEnum,
+	type LiveBroadcastContent,
+	type Video
+} from "@hc/db/schema"
 import { Temporal } from "@js-temporal/polyfill"
 import { youtube_v3 as yt_v3 } from "googleapis"
 import * as Effect from "effect/Effect"
@@ -40,11 +46,14 @@ const YtVideoItem = Schema.Struct({
 const decodeYtVideoItem = Schema.decodeUnknownEffect(YtVideoItem)
 
 export function parseIsoDurationToSeconds(duration: string) {
-	return Temporal.Duration.from(duration).total("seconds")
+	return Effect.try({
+		try: () => Temporal.Duration.from(duration).total("seconds"),
+		catch: (cause) => new YtError({ message: `Invalid ISO duration: ${duration}`, cause })
+	})
 }
 
 export function getVideoLivestreamType(
-	liveBroadcastContent: "live" | "none" | "upcoming",
+	liveBroadcastContent: LiveBroadcastContent,
 	hasBeenLivestream: boolean
 ) {
 	if (liveBroadcastContent !== "none") return liveBroadcastContent
@@ -71,6 +80,7 @@ export const makeVideoMethods = (ytApi: yt_v3.Youtube) => {
 		)
 
 		const { snippet, status, statistics, contentDetails, liveStreamingDetails } = video
+		const duration = contentDetails.duration
 
 		return {
 			ytVideoId: video.id,
@@ -83,9 +93,7 @@ export const makeVideoMethods = (ytApi: yt_v3.Youtube) => {
 			viewCount: statistics.viewCount ?? 0,
 			likeCount: statistics.likeCount ?? 0,
 			commentCount: statistics.commentCount ?? 0,
-			durationSeconds: contentDetails.duration
-				? parseIsoDurationToSeconds(contentDetails.duration)
-				: null,
+			durationSeconds: duration ? yield* parseIsoDurationToSeconds(duration) : null,
 			livestreamType: getVideoLivestreamType(
 				snippet.liveBroadcastContent,
 				liveStreamingDetails !== undefined
