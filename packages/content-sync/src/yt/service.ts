@@ -7,11 +7,12 @@ import * as Redacted from "effect/Redacted"
 import * as Schedule from "effect/Schedule"
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient"
 import * as HttpClient from "effect/unstable/http/HttpClient"
-import { makeChannelMethods, type ChannelDetails } from "./channel"
-import { makePlaylistMethods } from "./playlists"
-import { makeRssMethods } from "./rss"
+import { makeChannelMethods, type ChannelDetails } from "./channel/channels"
 import { YtError } from "./errors"
-import { makeVideoMethods, type VideoDetails } from "./videos"
+import { makePlaylistMethods } from "./playlist/playlists"
+import { makeRssMethods } from "./rss"
+import type { VideoDetails } from "./videos/utils"
+import { makeVideoMethods } from "./videos/videos"
 
 export class YtService extends Context.Service<
 	YtService,
