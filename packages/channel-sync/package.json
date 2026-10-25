@@ -13,23 +13,23 @@
 		"db:backfill": "bun run scripts/backfill.ts"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.3.3",
-		"prettier": "^3.6.2"
+		"@types/bun": "1.3.3",
+		"prettier": "3.6.2"
 	},
 	"peerDependencies": {
-		"typescript": "^5",
+		"typescript": "5.9.3",
 		"@hc/db": "*"
 	},
 	"dependencies": {
-		"@effect/cli": "^0.73.2",
-		"@effect/platform-bun": "^0.86.0",
-		"@twurple/api": "^8.0.2",
-		"@twurple/auth": "^8.0.2",
-		"effect": "^3.19.5",
-		"googleapis": "^164.1.0",
-		"jpeg-js": "^0.4.4",
-		"sharp": "^0.34.5",
-		"thumbhash": "^0.1.1",
-		"zod": "^4.1.12"
+		"@effect/cli": "0.73.2",
+		"@effect/platform-bun": "0.86.0",
+		"@twurple/api": "8.0.2",
+		"@twurple/auth": "8.0.2",
+		"effect": "3.19.5",
+		"googleapis": "164.1.0",
+		"jpeg-js": "0.4.4",
+		"sharp": "0.34.5",
+		"thumbhash": "0.1.1",
+		"zod": "4.1.12"
 	}
 }
