@@ -13,7 +13,7 @@
 		"db:backfill": "bun run scripts/backfill.ts"
 	},
 	"devDependencies": {
-		"@types/bun": "latest",
+		"@types/bun": "^1.3.3",
 		"prettier": "^3.6.2"
 	},
 	"peerDependencies": {
