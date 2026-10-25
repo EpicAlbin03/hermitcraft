@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const file = s3.file(params.file);
+	const { size } = await file.stat();
 
 	return new Response(file.stream(), {
 		status: 200,
@@ -10,7 +11,7 @@ export const GET: RequestHandler = async ({ params }) => {
 			'Content-Type': 'application/octet-stream', // generic binary
 			'Content-Disposition': `attachment; filename="${params.file}"`, // triggers download
 			'Cache-Control': 'public, max-age=86400, immutable',
-			'Content-Length': file.size.toString()
+			'Content-Length': size.toString()
 		}
 	});
 };
